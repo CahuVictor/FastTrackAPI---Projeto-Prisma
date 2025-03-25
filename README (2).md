@@ -3,20 +3,7 @@
 Este repositório faz parte de uma mentoria prática de backend com Python e FastAPI.  
 O **Projeto Prisma** representa a construção de uma base sólida e estruturada, refletindo a clareza e a organização de um backend bem projetado.
 
-A proposta do **FastTrackAPI** é acelerar o aprendizado, explorando na prática os principais pilares do desenvolvimento backend moderno:
-
-- Arquitetura de Software
-- Boas Práticas de Código
-- Segurança (JWT, OAuth2, controle de acesso)
-- Versionamento com Git e GitHub
-- Testes Automatizados com Pytest
-- DevOps com Docker, Docker Compose e GitHub Actions
-- Observabilidade (Logging e Monitoramento)
-- Integração com Banco de Dados via SQLAlchemy + Alembic
-- Cache com Redis e Background Tasks
-- Documentação e Deploy
-
-O projeto é modular, versionado publicamente e busca simular um ambiente profissional, servindo como referência para estudos e futuros sistemas reais.
+A proposta do **FastTrackAPI** é acelerar o aprendizado, explorando na prática os principais pilares do desenvolvimento backend moderno.
 
 ---
 
@@ -134,17 +121,3 @@ fasttrackapi-projeto-prisma/
 ---
 
 Seja bem-vindo(a) ao Prisma, uma jornada prática para dominar o backend com clareza e boas práticas 🚀
-
-
----
-
-## 🧭 Próximo Passo do Desenvolvimento
-
-O próximo passo será **escolher uma das três frentes iniciais para iniciar o desenvolvimento prático**:
-
-1. **Criar a primeira rota da API (ex: rota de usuários ou status)**  
-2. **Configurar o banco de dados e a primeira modelagem com SQLAlchemy + Alembic**  
-3. **Implementar os primeiros testes automatizados com Pytest**
-
-> Recomendação: começar pela criação da primeira rota para já ver a API funcionando e integrar gradualmente os demais pontos.
-
