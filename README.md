@@ -1,5 +1,7 @@
 # FastTrackAPI – Projeto Prisma
 
+[![Coverage](https://codecov.io/gh/SEU_USUARIO/FastTrackAPI---Projeto-Prisma/branch/main/graph/badge.svg)](https://codecov.io/gh/SEU_USUARIO/FastTrackAPI---Projeto-Prisma)
+
 Este repositório faz parte de uma mentoria prática de backend com Python e FastAPI.  
 O **Projeto Prisma** representa a construção de uma base sólida e estruturada, refletindo a clareza e a organização de um backend bem projetado.
 
@@ -29,16 +31,16 @@ Desenvolver habilidades avançadas em desenvolvimento backend com Python utiliza
 ## 📌 Objetivos Específicos Detalhados
 
 - [ ] **Dominar os fundamentos e recursos avançados do FastAPI**
-  - [ ] Criar rotas RESTful com métodos GET, POST, PUT, DELETE
+  - [x] Criar rotas RESTful com métodos GET, POST, PUT, DELETE
   - [ ] Utilizar `Depends` para injeção de dependências
-  - [ ] Validar dados de entrada e saída com Pydantic
-  - [ ] Utilizar tags, responses e exemplos para a documentação automática
+  - [x] Validar dados de entrada e saída com Pydantic
+  - [x] Utilizar tags, responses e exemplos para a documentação automática
   - [ ] Implementar Background Tasks
   - [ ] Trabalhar com WebSockets
   - [ ] Fazer upload e download de arquivos
 
 - [ ] **Aplicar arquitetura de software adequada para aplicações backend**
-  - [ ] Organizar a aplicação em camadas (router, service, repository, schema, model)
+  - [x] Organizar a aplicação em camadas (router, service, repository, schema, model)
   - [ ] Aplicar princípios SOLID, DRY, KISS e YAGNI
   - [ ] Criar dependências reutilizáveis e testáveis
   - [ ] Adotar um padrão de projeto para escalar o backend
@@ -51,31 +53,31 @@ Desenvolver habilidades avançadas em desenvolvimento backend com Python utiliza
   - [ ] Prevenir vulnerabilidades comuns (SQL Injection, XSS, etc)
 
 - [ ] **Utilizar ferramentas e práticas de DevOps no fluxo de desenvolvimento**
-  - [ ] Utilizar Docker para empacotar a aplicação
-  - [ ] Orquestrar serviços com Docker Compose (app, banco, redis)
+  - [x] Utilizar Docker para empacotar a aplicação
+  - [x] Orquestrar serviços com Docker Compose (app, banco, redis)
   - [ ] Criar pipelines de CI com GitHub Actions (teste e lint automático)
   - [ ] Rodar migrations de banco em containers (ex: Alembic via Compose)
 
 - [ ] **Gerenciar configurações de forma segura e flexível**
-  - [ ] Utilizar `.env` com Pydantic Settings
+  - [x] Utilizar `.env` com Pydantic Settings
   - [ ] Separar configurações por ambiente (dev, prod, test)
   - [ ] Garantir fallback seguro para variáveis obrigatórias
 
-- [ ] **Desenvolver testes automatizados**
-  - [ ] Criar testes unitários com `pytest`
-  - [ ] Implementar testes de integração simulando requisições reais
-  - [ ] Utilizar mocks para isolar dependências em testes
-  - [ ] Medir cobertura de código com `pytest-cov`
+- [x] **Desenvolver testes automatizados**
+  - [x] Criar testes unitários com `pytest`
+  - [x] Implementar testes de integração simulando requisições reais
+  - [x] Utilizar mocks para isolar dependências em testes
+  - [x] Medir cobertura de código com `pytest-cov`
 
 - [ ] **Adicionar observabilidade e monitoramento à aplicação**
   - [ ] Adicionar logs estruturados com `loguru` ou `structlog`
   - [ ] Criar middlewares para registrar requisições/respostas
   - [ ] Monitorar erros e alertas (integração futura com ferramentas externas)
 
-- [ ] **Documentar a API e o projeto de forma clara e profissional**
-  - [ ] Aproveitar documentação automática do Swagger/OpenAPI
-  - [ ] Adicionar exemplos e descrições nos modelos Pydantic
-  - [ ] Manter um `README.md` atualizado e bem estruturado
+- [x] **Documentar a API e o projeto de forma clara e profissional**
+  - [x] Aproveitar documentação automática do Swagger/OpenAPI
+  - [x] Adicionar exemplos e descrições nos modelos Pydantic
+  - [x] Manter um `README.md` atualizado e bem estruturado
 
 - [ ] **Aprofundar o uso de banco de dados com SQLAlchemy**
   - [ ] Criar modelos ORM com relacionamentos
@@ -84,8 +86,8 @@ Desenvolver habilidades avançadas em desenvolvimento backend com Python utiliza
   - [ ] Gerenciar migrações com Alembic
 
 - [ ] **Trabalhar com versionamento de código no GitHub com boas práticas**
-  - [ ] Utilizar branches e pull requests para organizar o fluxo de trabalho
-  - [ ] Escrever mensagens de commit claras e informativas
+  - [x] Utilizar branches e pull requests para organizar o fluxo de trabalho
+  - [x] Escrever mensagens de commit claras e informativas
   - [ ] Resolver conflitos de merge com segurança
 
 - [ ] **Explorar funcionalidades avançadas conforme a evolução do projeto**
@@ -256,11 +258,172 @@ Os schemas representam os modelos de dados utilizados para entrada e saída de i
 
 ### Modelos Criados:
 
-- **EventoCriacao**: utilizado ao criar um novo evento. Permite inserir os dados principais, e os campos `local_info` e `forecast_info` são opcionais.
-- **EventoAtualizacao**: utilizado para atualizar os dados de um evento após a criação. Exige os campos `local_info` e `forecast_info`, que contêm dados externos.
+- **EventCreate**: utilizado ao criar um novo evento. Permite inserir os dados principais, e os campos `local_info` e `forecast_info` são opcionais.
+- **EventUpdate**: utilizado para atualizar os dados de um evento após a criação. Exige os campos `local_info` e `forecast_info`, que contêm dados externos.
 - **LocalInfo**: estrutura esperada da API simulada com dados sobre o local do evento, como capacidade, tipo, acessibilidade e endereço.
-- **PrevisaoClima**: estrutura que representa os dados retornados pela API pública de previsão do tempo.
+- **WeatherForecast**: estrutura que representa os dados retornados pela API pública de previsão do tempo.
 
 Todos esses modelos estão localizados na pasta `app/schemas/` e são essenciais para garantir a validação de dados, a integridade da aplicação e a geração automática da documentação da API via OpenAPI/Swagger.
 
 ---
+
+## 🔧 Modificações recentes
+
+- Migração da estrutura de armazenamento de lista para `dict` (`eventos_db`)
+- Uso de tipos explícitos de retorno nas funções de endpoint
+- `location_name` removido da entrada direta do usuário (`EventCreate`)
+- `LocalInfo` é gerado com base em API externa; se não houver retorno, salva-se apenas `location_name`
+
+---
+
+## 🤪 Como executar localmente
+
+### Pré-requisitos
+- Python 3.12+
+- [Poetry](https://python-poetry.org/docs/)
+
+### Instalação e execução
+
+```bash
+# Clone o repositório
+https://github.com/seu-usuario/FastTrackAPI---Projeto-Prisma.git
+cd FastTrackAPI---Projeto-Prisma
+
+# Instale as dependências
+poetry install
+
+# (opcional) Ative o shell do poetry
+poetry self add poetry-plugin-shell  # somente na primeira vez
+poetry shell
+
+# Execute a aplicação
+uvicorn app.main:app --reload
+```
+
+projetos FastAPI.
+
+✅ Passo a passo para testar localmente
+1. 📦 Ative o ambiente virtual (ou use o poetry se estiver configurado)
+Se estiver usando venv:
+
+poetry install
+
+Habilitar o plugin de shell antigo
+Se você quiser voltar a usar o poetry shell, rode isso uma única vez:
+
+poetry self add poetry-plugin-shell
+
+Depois você poderá usar normalmente:
+
+poetry shell
+
+2. 📥 Instale o FastAPI e o Uvicorn (se ainda não tiver)
+
+
+pip install fastapi uvicorn
+
+3. ▶️ Execute o servidor
+A partir da pasta raiz do projeto (onde está o diretório app/), rode:
+
+uvicorn app.main:app --reload
+
+Isso diz: “inicie a aplicação FastAPI localizada em app/main.py, dentro do objeto app”
+
+4. 🌐 Acesse a documentação da API
+
+Após rodar o comando, acesse:
+
+http://localhost:8000/docs → Swagger UI (interativo)
+
+http://localhost:8000/redoc → ReDoc (documentação formal)
+
+Você pode instalar a lib diretamente com o Poetry   como uma dependência de desenvolvimento (ideal para testes). Ex com o httpx
+
+poetry add --dev httpx
+
+### Acesse a API
+- Swagger UI: [http://localhost:8000/docs](http://localhost:8000/docs)
+- Redoc: [http://localhost:8000/redoc](http://localhost:8000/redoc)
+
+### Testes
+
+```bash
+# Execute todos os testes com cobertura
+pytest --cov=app --cov-report=term-missing
+poetry run pytest --cov=app --cov-report=xml --cov-report=html
+```
+
+Para garantir que tudo funcione corretamente, instale as dependências de teste:
+
+```bash
+poetry add --dev pytest pytest-cov httpx
+```
+
+### Sobre o pyproject.toml
+
+- As dependências principais ficam na seção `[tool.poetry.dependencies]`
+- As dependências de desenvolvimento (testes, lint, etc.) vão em `[tool.poetry.group.dev.dependencies]`
+
+Exemplo:
+```toml
+[tool.poetry.dependencies]
+fastapi = "^0.110.0"
+uvicorn = "^0.29.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.0"
+pytest-cov = "^4.1.0"
+httpx = "^0.27.0"
+```
+
+---
+
+### CI com GitHub Actions
+
+O projeto pode utilizar GitHub Actions para rodar testes automaticamente a cada push ou pull request.
+
+Crie um arquivo `.github/workflows/tests.yml` com o conteúdo:
+
+```yaml
+name: Testes e Cobertura
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v3
+
+      - name: Instalar Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.12
+
+      - name: Instalar Poetry
+        run: |
+          pip install poetry
+          poetry install
+
+      - name: Rodar testes com cobertura
+        run: |
+          poetry run pytest --cov=app --cov-report=xml --cov-report=term
+
+      - name: Enviar para Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: true
+```
+
+Certifique-se de criar uma conta no [https://codecov.io](https://codecov.io) e conectar com seu repositório GitHub para ativar o badge corretamente.
+
+---
+
+## Links de Referência
+
+https://open-meteo.com/en/docs
+https://open-meteo.com/en/docs?latitude=-8.0539&longitude=-34.8811
+https://publicapis.dev/
+https://www.mongodb.com/try/download/odbc-driver
