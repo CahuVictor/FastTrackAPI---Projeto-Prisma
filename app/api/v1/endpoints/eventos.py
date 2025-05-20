@@ -1,7 +1,14 @@
 from fastapi import APIRouter, HTTPException
+from fastapi import Query
+from datetime import datetime
+
 from app.schemas.event_create import EventCreate, EventResponse
 from app.schemas.local_info import LocalInfo
-from app.schemas.event_update import EventUpdate
+from app.schemas.event_update import LocalInfoUpdate, ForecastInfoUpdate
+from app.schemas.weather_forecast import WeatherForecast
+
+from app.services.mock_local_info import get_local_info_by_name
+from app.services.mock_forecast_info import get_mocked_forecast_info
 
 router = APIRouter()
 
@@ -9,17 +16,56 @@ router = APIRouter()
 eventos_db: dict[int,EventResponse] = {}
 id_counter = 1
 
-def buscar_local_info(location_name: str) -> LocalInfo:
-    if location_name.lower() == "CESAR":
-        return LocalInfo(
-            location_name=location_name,
-            capacity=200,
-            venue_type="Auditorio",
-            is_accessible=True,
-            address="Rua Bione, 220",
-            past_events=["Recn'n Play 2018", "Recn'n Play 2019", "Recn'n Play 2023", "Recn'n Play 2024"]
-        )
-    return LocalInfo(location_name=location_name, capacity=2, venue_type="Auditorio", is_accessible=False, address="Rua Exemplo, 123", past_events=[])
+# def buscar_local_info(location_name: str) -> LocalInfo:
+#     if location_name.lower() == "CESAR":
+#         return LocalInfo(
+#             location_name=location_name,
+#             capacity=200,
+#             venue_type="Auditorio",
+#             is_accessible=True,
+#             address="Rua Bione, 220",
+#             past_events=["Recn'n Play 2018", "Recn'n Play 2019", "Recn'n Play 2023", "Recn'n Play 2024"]
+#         )
+#     return LocalInfo(location_name=location_name, capacity=2, venue_type="Auditorio", is_accessible=False, address="Rua Exemplo, 123", past_events=[])
+
+@router.get(
+    "/local_info",
+    tags=["eventos"],
+    summary="Busca informações de um local (mock)",
+    response_model=LocalInfo,
+    responses={
+        404: {"description": "Local não encontrado"}
+    },
+)
+def obter_local_info(location_name: str = Query(..., description="Nome do local a ser buscado")):
+    """
+    Retorna as informações detalhadas de um local a partir do nome, buscando dados simulados.
+    """
+    info = get_local_info_by_name(location_name)
+    if not info:
+        raise HTTPException(status_code=404, detail="Local não encontrado")
+    return info
+
+@router.get(
+    "/forecast_info",
+    tags=["eventos"],
+    summary="Busca previsão do tempo para um local (mock)",
+    response_model=list[WeatherForecast],
+    responses={
+        404: {"description": "Previsão não encontrada"}
+    },
+)
+def obter_forecast_info(
+    location_name: str = Query(..., description="Nome do local"),
+    date: datetime = Query(..., description="Data e hora de referência para início da previsão"),
+):
+    """
+    Retorna a previsão do tempo simulada para 10 dias a partir da data/hora informada, em intervalos de 6 horas.
+    """
+    previsoes = get_mocked_forecast_info(location_name, date)
+    if not previsoes:
+        raise HTTPException(status_code=404, detail="Previsão não encontrada")
+    return previsoes
 
 @router.get("/eventos", tags=["eventos"])
 def listar_eventos()->list[EventResponse]:
@@ -38,18 +84,14 @@ def obter_evento_por_id(evento_id: int)->EventResponse:
 def criar_evento(evento: EventCreate)->EventResponse:
 # def criar_evento(title: str, description: str, event_date: str, participants: list[str], location_name: str):
     global eventos_db, id_counter
-    # evento.id = id_counter
-    # local_info = buscar_local_info(location_name)  # ❌ erro aqui
-    location_name = evento.local_info.location_name  # ✅ Pega o valor corretamente
-    local_info = buscar_local_info(location_name)
     evento = EventResponse(
         id=id_counter,
         title=evento.title,
         description=evento.description,
         event_date=evento.event_date,
         participants=evento.participants,
-        local_info=local_info
-        # adicionar forecat
+        local_info=evento.local_info,
+        forecast_info=evento.forecast_info
     )
     eventos_db[id_counter] = evento
     id_counter += 1
@@ -108,14 +150,51 @@ def concatenar_eventos(eventos: list[EventResponse])->list[EventResponse]:
         novos_eventos.append(evento)
     return novos_eventos
 
-@router.patch("/eventos/{evento_id}", tags=["eventos"])
-def atualizar_parcial_evento(evento_id: int, atualizacao: EventUpdate)->EventResponse:
+# @router.patch("/eventos/{evento_id}", tags=["eventos"])
+# def atualizar_parcial_evento(evento_id: int, atualizacao: EventUpdate)->EventResponse:
+#     global eventos_db
+#     if evento_id not in eventos_db:
+#         raise HTTPException(status_code=404, detail="Evento não encontrado")
+#     evento = eventos_db[evento_id]
+#     if atualizacao.local_info:
+#         evento.local_info = atualizacao.local_info
+#     if atualizacao.forecast_info:
+#         evento.forecast_info = atualizacao.forecast_info
+#     return EventResponse.model_validate(evento)
+
+@router.patch("/eventos/{evento_id}/local_info", tags=["eventos"])
+def atualizar_local_info(evento_id: int, atualizacao: LocalInfoUpdate) -> EventResponse:
     global eventos_db
-    if evento_id not in eventos_db:
+    evento = eventos_db.get(evento_id)
+    if evento is None:
         raise HTTPException(status_code=404, detail="Evento não encontrado")
-    evento = eventos_db[evento_id]
-    if atualizacao.local_info:
-        evento.local_info = atualizacao.local_info
-    if atualizacao.forecast_info:
-        evento.forecast_info = atualizacao.forecast_info
+
+    dados_atualizados = evento.local_info.model_dump()
+
+    # Atualização Parcial Segura: exclude_unset=True garante que só campos passados na requisição sejam atualizados.
+    update_data = atualizacao.model_dump(exclude_unset=True)
+    dados_atualizados.update(update_data)
+    dados_atualizados['manually_edited'] = True  # marcando edição manual
+
+    evento.local_info = LocalInfo(**dados_atualizados)
+
+    eventos_db[evento_id] = evento
+    return EventResponse.model_validate(evento)
+
+@router.patch("/eventos/{evento_id}/forecast_info", tags=["eventos"])
+def atualizar_forecast_info(evento_id: int, atualizacao: ForecastInfoUpdate) -> EventResponse:
+    global eventos_db
+    evento = eventos_db.get(evento_id)
+    if evento is None:
+        raise HTTPException(status_code=404, detail="Evento não encontrado")
+
+    dados_atualizados = evento.forecast_info.model_dump() if evento.forecast_info else {}
+
+    # Atualização Parcial Segura: exclude_unset=True garante que só campos passados na requisição sejam atualizados.
+    update_data = atualizacao.model_dump(exclude_unset=True)
+    dados_atualizados.update(update_data)
+
+    evento.forecast_info = WeatherForecast(**dados_atualizados)
+
+    eventos_db[evento_id] = evento
     return EventResponse.model_validate(evento)
