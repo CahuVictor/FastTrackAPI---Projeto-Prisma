@@ -4,7 +4,7 @@ from datetime import datetime
 
 from app.schemas.event_create import EventCreate, EventResponse
 from app.schemas.local_info import LocalInfo
-from app.schemas.event_update import LocalInfoUpdate, ForecastInfoUpdate
+from app.schemas.event_update import EventUpdate, LocalInfoUpdate, ForecastInfoUpdate
 from app.schemas.weather_forecast import WeatherForecast
 
 from app.services.mock_local_info import get_local_info_by_name
@@ -16,17 +16,43 @@ router = APIRouter()
 eventos_db: dict[int,EventResponse] = {}
 id_counter = 1
 
-# def buscar_local_info(location_name: str) -> LocalInfo:
-#     if location_name.lower() == "CESAR":
-#         return LocalInfo(
-#             location_name=location_name,
-#             capacity=200,
-#             venue_type="Auditorio",
-#             is_accessible=True,
-#             address="Rua Bione, 220",
-#             past_events=["Recn'n Play 2018", "Recn'n Play 2019", "Recn'n Play 2023", "Recn'n Play 2024"]
-#         )
-#     return LocalInfo(location_name=location_name, capacity=2, venue_type="Auditorio", is_accessible=False, address="Rua Exemplo, 123", past_events=[])
+def update_event(
+                 evento: EventResponse, 
+                 atualizacao: EventUpdate | LocalInfoUpdate | ForecastInfoUpdate, 
+                 attr: str | None = None
+):
+    """
+    Atualiza parcial e de forma segura o evento ou seus campos aninhados.
+    - Se attr for None, atualiza diretamente os campos do evento.
+    - Se attr for 'forecast_info' ou 'local_info', faz a atualização parcial segura do objeto aninhado.
+    """
+    try:
+        if attr is None:
+            # Atualiza os campos do evento principal
+            update_data = atualizacao.model_dump(exclude_unset=True)
+            for field, value in update_data.items():
+                setattr(evento, field, value)
+        else:
+            # Atualiza um campo aninhado (ex: local_info, forecast_info)
+            objeto = getattr(evento, attr)
+            dados_atualizados = objeto.model_dump() if objeto else {}
+            update_data = atualizacao.model_dump(exclude_unset=True)
+            dados_atualizados.update(update_data)
+            # Descobre a classe do objeto aninhado
+            field_cls = type(objeto) if objeto else None
+            # Se não existir, pega o type pelo update (usando __annotations__ se quiser ser mais robusto)
+            if field_cls is None and hasattr(evento, '__annotations__'):
+                field_cls = evento.__annotations__.get(attr)
+            if field_cls:
+                setattr(evento, attr, field_cls(**dados_atualizados))
+            else:
+                # fallback (não deveria acontecer em uso normal)
+                setattr(evento, attr, dados_atualizados)
+    except ValidationError as ve:
+        # Você pode fazer log, print, raise HTTPException, etc
+        # Exemplo: lançar erro HTTP para o FastAPI capturar e retornar pro usuário
+        raise HTTPException(status_code=422, detail=ve.errors())
+    return evento
 
 @router.get(
     "/local_info",
@@ -49,152 +75,289 @@ def obter_local_info(location_name: str = Query(..., description="Nome do local 
 @router.get(
     "/forecast_info",
     tags=["eventos"],
-    summary="Busca previsão do tempo para um local (mock)",
-    response_model=list[WeatherForecast],
+    summary="Busca previsão do tempo para uma cidade e data/hora (mock)",
+    response_model=WeatherForecast,
     responses={
         404: {"description": "Previsão não encontrada"}
     },
 )
 def obter_forecast_info(
-    location_name: str = Query(..., description="Nome do local"),
-    date: datetime = Query(..., description="Data e hora de referência para início da previsão"),
+    city: str = Query(..., description="Nome da cidade"),
+    date: datetime = Query(..., description="Data e hora de referência para a previsão"),
 ):
     """
-    Retorna a previsão do tempo simulada para 10 dias a partir da data/hora informada, em intervalos de 6 horas.
+    Retorna a previsão do tempo simulada para a cidade e data/hora informadas.
     """
-    previsoes = get_mocked_forecast_info(location_name, date)
-    if not previsoes:
+    previsao = get_mocked_forecast_info(city, date)  # Ajuste sua função mock para aceitar city e date!
+    if not previsao:
         raise HTTPException(status_code=404, detail="Previsão não encontrada")
-    return previsoes
+    return previsao
 
-@router.get("/eventos", tags=["eventos"])
-def listar_eventos()->list[EventResponse]:
+@router.get(
+    "/eventos",
+    tags=["eventos"],
+    summary="Lista todos os eventos registrados.",
+    response_model=list[EventResponse],
+    responses={
+        200: {"description": "Lista de eventos retornada com sucesso."},
+        404: {"description": "Nenhum evento encontrado."}
+    },
+)
+def listar_eventos() -> list[EventResponse]:
+    """
+    Retorna todos os eventos cadastrados.
+    """
     global eventos_db
+    if not eventos_db:
+        raise HTTPException(status_code=404, detail="Nenhum evento encontrado.")
     return list(eventos_db.values())
 
-@router.get("/eventos/{evento_id}", tags=["eventos"])
-def obter_evento_por_id(evento_id: int)->EventResponse:
+@router.get(
+    "/eventos/{evento_id}",
+    tags=["eventos"],
+    summary="Obtém um evento pelo ID.",
+    response_model=EventResponse,
+    responses={
+        200: {"description": "Evento encontrado."},
+        404: {"description": "Evento não encontrado."}
+    },
+)
+def obter_evento_por_id(evento_id: int) -> EventResponse:
+    """
+    Busca um evento pelo seu identificador único.
+    """
     global eventos_db
     evento = eventos_db.get(evento_id)
     if evento is None:
         raise HTTPException(status_code=404, detail="Evento não encontrado")
     return EventResponse.model_validate(evento)
 
-@router.post("/eventos", tags=["eventos"])
-def criar_evento(evento: EventCreate)->EventResponse:
-# def criar_evento(title: str, description: str, event_date: str, participants: list[str], location_name: str):
+@router.post(
+    "/eventos",
+    tags=["eventos"],
+    summary="Cria um novo evento e tenta enriquecer com previsão do tempo.",
+    response_model=EventResponse,
+    responses={
+        201: {"description": "Evento criado com sucesso, podendo conter ou não previsão do tempo."},
+        201: {"description": "Evento criado, mas sem previsão do tempo por falha ao acessar a API externa."} # 207 caso queria utilizar outro
+    },
+)
+def criar_evento(evento: EventCreate) -> EventResponse:
+    """
+    Cria um evento e tenta buscar a previsão do tempo automaticamente para preenchimento do campo forecast_info.
+    Se a previsão não puder ser obtida, o evento é criado normalmente, porém forecast_info fica vazio.
+    """
     global eventos_db, id_counter
-    evento = EventResponse(
+    forecast_info = None
+    try:
+        forecast_info = get_mocked_forecast_info(evento.city, evento.event_date)
+    except Exception:
+        # Se a função de forecast lançar erro, ignora (ou faça logging)
+        pass
+    evento_resp = EventResponse(
         id=id_counter,
         title=evento.title,
         description=evento.description,
         event_date=evento.event_date,
+        city=evento.city,
         participants=evento.participants,
         local_info=evento.local_info,
-        forecast_info=evento.forecast_info
+        forecast_info=forecast_info
     )
-    eventos_db[id_counter] = evento
+    eventos_db[id_counter] = evento_resp
     id_counter += 1
-    return EventResponse.model_validate(evento)
+    return EventResponse.model_validate(evento_resp)
 
-@router.put("/eventos", tags=["eventos"])
-# def substituir_todos_os_eventos(eventos: list[EventCreate])->list[EventCreate]:
-def substituir_todos_os_eventos(eventos: list[EventResponse])->list[EventResponse]:
-    global eventos_db, id_counter
-    eventos_db = {}
-    # id_counter = 1 Assume que o novo objeto já vem com o id
+@router.post(
+    "/eventos/lote",
+    tags=["eventos"],
+    summary="Adiciona uma lista de novos eventos, atribuindo novos IDs.",
+    response_model=list[EventResponse],
+    responses={
+        201: {"description": "Eventos adicionados com sucesso."},
+        400: {"description": "Lista inválida enviada."}
+    },
+)
+def adicionar_eventos_em_lote(eventos: list[EventCreate]) -> list[EventResponse]:
+    """
+    Cria múltiplos eventos de uma vez, atribuindo novos IDs para cada um.
+    Retorna apenas os eventos recém adicionados.
+    """
+    global id_counter, eventos_db
+    if not eventos:
+        raise HTTPException(status_code=400, detail="Lista inválida enviada.")
+    novos_eventos = []
     for evento in eventos:
-        # evento.id = id_counter
-        # eventos_db[id_counter] = evento
-        # id_counter += 1
+        forecast_info = get_mocked_forecast_info(evento.city, evento.event_date)
+        evento_resp = EventResponse(
+            id=id_counter,
+            title=evento.title,
+            description=evento.description,
+            event_date=evento.event_date,
+            city=evento.city,
+            participants=evento.participants,
+            local_info=evento.local_info,
+            forecast_info=forecast_info
+        )
+        eventos_db[id_counter] = evento_resp
+        id_counter += 1
+        novos_eventos.append(evento_resp)
+    return novos_eventos
+
+@router.put(
+    "/eventos",
+    tags=["eventos"],
+    summary="Substitui todos os eventos existentes por uma nova lista.",
+    response_model=list[EventResponse],
+    responses={
+        200: {"description": "Todos os eventos foram substituídos."},
+        400: {"description": "Lista inválida enviada."}
+    },
+)
+def substituir_todos_os_eventos(eventos: list[EventResponse]) -> list[EventResponse]:
+    """
+    Substitui completamente a lista de eventos registrados.
+    """
+    global eventos_db
+    if not eventos:
+        raise HTTPException(status_code=400, detail="Lista inválida enviada.")
+    eventos_db.clear()
+    for evento in eventos:
         eventos_db[evento.id] = evento
     return list(eventos_db.values())
 
-@router.put("/eventos/{evento_id}", tags=["eventos"])
-def substituir_evento_por_id(evento_id: int, novo_evento: EventResponse)->EventResponse:
+@router.put(
+    "/eventos/{evento_id}",
+    tags=["eventos"],
+    summary="Substitui os dados de um evento existente.",
+    response_model=EventResponse,
+    responses={
+        200: {"description": "Evento substituído com sucesso."},
+        404: {"description": "Evento não encontrado."}
+    },
+)
+def substituir_evento_por_id(evento_id: int, novo_evento: EventResponse) -> EventResponse:
+    """
+    Substitui por completo os dados de um evento existente pelo ID.
+    """
     global eventos_db
     if evento_id not in eventos_db:
-        raise HTTPException(status_code=404, detail="Evento não encontrado")
+        raise HTTPException(status_code=404, detail="Evento não encontrado.")
     novo_evento.id = evento_id
     eventos_db[evento_id] = novo_evento
     return novo_evento
 
-@router.delete("/eventos", tags=["eventos"])
-def deletar_todos_os_eventos()->dict[str,str]:
+@router.delete(
+    "/eventos",
+    tags=["eventos"],
+    summary="Remove todos os eventos cadastrados.",
+    response_model=dict,
+    responses={
+        200: {"description": "Todos os eventos removidos com sucesso."},
+        400: {"description": "Não foi possível remover os eventos."}
+    },
+)
+def deletar_todos_os_eventos() -> dict[str, str]:
+    """
+    Apaga todos os eventos registrados.
+    """
     global eventos_db
-    eventos_db = {}
-    return {"mensagem": "Todos os eventos foram apagados com sucesso"}
+    eventos_db.clear()
+    return {"mensagem": "Todos os eventos foram apagados com sucesso."}
 
-@router.delete("/eventos/{evento_id}", tags=["eventos"])
-# def deletar_evento_por_id(evento_id: int)->EventCreate:
-def deletar_evento_por_id(evento_id: int)->dict[str,str]:
+@router.delete(
+    "/eventos/{evento_id}",
+    tags=["eventos"],
+    summary="Remove um evento específico pelo ID.",
+    response_model=dict,
+    responses={
+        200: {"description": "Evento removido com sucesso."},
+        404: {"description": "Evento não encontrado."}
+    },
+)
+def deletar_evento_por_id(evento_id: int) -> dict[str, str]:
+    """
+    Remove um evento pelo seu ID.
+    """
     global eventos_db
-    # if evento_id not in eventos_db:
-    #     raise HTTPException(status_code=404, detail="Evento não encontrado")
-    # del_evento = eventos_db[evento_id]
-    # del eventos_db[evento_id]
-    # return del_evento
     evento = eventos_db.pop(evento_id, None)
     if evento is None:
-        raise HTTPException(status_code=404, detail="Evento não encontrado")
-    return {"mensagem": f"Evento com ID {evento_id} removido com sucesso"}
+        raise HTTPException(status_code=404, detail="Evento não encontrado.")
+    return {"mensagem": f"Evento com ID {evento_id} removido com sucesso."}
 
-@router.patch("/eventos", tags=["eventos"])
-def concatenar_eventos(eventos: list[EventResponse])->list[EventResponse]:
-    global id_counter, eventos_db
-    novos_eventos = []
-    for evento in eventos:
-        evento.id = id_counter
-        eventos_db[id_counter] = evento
-        id_counter += 1
-        novos_eventos.append(evento)
-    return novos_eventos
-
-# @router.patch("/eventos/{evento_id}", tags=["eventos"])
-# def atualizar_parcial_evento(evento_id: int, atualizacao: EventUpdate)->EventResponse:
-#     global eventos_db
-#     if evento_id not in eventos_db:
-#         raise HTTPException(status_code=404, detail="Evento não encontrado")
-#     evento = eventos_db[evento_id]
-#     if atualizacao.local_info:
-#         evento.local_info = atualizacao.local_info
-#     if atualizacao.forecast_info:
-#         evento.forecast_info = atualizacao.forecast_info
-#     return EventResponse.model_validate(evento)
-
-@router.patch("/eventos/{evento_id}/local_info", tags=["eventos"])
-def atualizar_local_info(evento_id: int, atualizacao: LocalInfoUpdate) -> EventResponse:
+@router.patch(
+    "/eventos/{evento_id}",
+    tags=["eventos"],
+    summary="Atualiza parcialmente as informações de um evento.",
+    response_model=EventResponse,
+    responses={
+        200: {"description": "Evento atualizado com sucesso."},
+        404: {"description": "Evento não encontrado."}
+    },
+)
+def atualizar_evento(evento_id: int, atualizacao: EventUpdate) -> EventResponse:
+    """
+    Atualiza parcialmente os dados do evento informado pelo ID.
+    Só os campos enviados serão alterados.
+    """
     global eventos_db
-    evento = eventos_db.get(evento_id)
-    if evento is None:
-        raise HTTPException(status_code=404, detail="Evento não encontrado")
+    if evento_id not in eventos_db:
+        raise HTTPException(status_code=404, detail="Evento não encontrado.")
 
-    dados_atualizados = evento.local_info.model_dump()
-
-    # Atualização Parcial Segura: exclude_unset=True garante que só campos passados na requisição sejam atualizados.
-    update_data = atualizacao.model_dump(exclude_unset=True)
-    dados_atualizados.update(update_data)
-    dados_atualizados['manually_edited'] = True  # marcando edição manual
-
-    evento.local_info = LocalInfo(**dados_atualizados)
+    evento = eventos_db[evento_id]
+    
+    update_event(evento, atualizacao)
 
     eventos_db[evento_id] = evento
+    return evento
+
+@router.patch(
+    "/eventos/{evento_id}/local_info",
+    tags=["eventos"],
+    summary="Atualiza informações do local de um evento.",
+    response_model=EventResponse,
+    responses={
+        200: {"description": "Informações do local atualizadas com sucesso."},
+        404: {"description": "Evento não encontrado."}
+    },
+)
+def atualizar_local_info(evento_id: int, atualizacao: LocalInfoUpdate) -> EventResponse:
+    """
+    Atualiza o campo local_info de um evento específico.
+    """
+    global eventos_db
+    if evento_id not in eventos_db:
+        raise HTTPException(status_code=404, detail="Evento não encontrado.")
+    evento = eventos_db[evento_id]
+    
+    update_event(evento, atualizacao, attr='local_info')
+
+    eventos_db[evento_id] = evento
+
     return EventResponse.model_validate(evento)
 
-@router.patch("/eventos/{evento_id}/forecast_info", tags=["eventos"])
+@router.patch(
+    "/eventos/{evento_id}/forecast_info",
+    tags=["eventos"],
+    summary="Atualiza a previsão do tempo de um evento.",
+    response_model=EventResponse,
+    responses={
+        200: {"description": "Previsão do tempo atualizada com sucesso."},
+        404: {"description": "Evento não encontrado."}
+    },
+)
 def atualizar_forecast_info(evento_id: int, atualizacao: ForecastInfoUpdate) -> EventResponse:
+    """
+    Atualiza o campo forecast_info de um evento específico.
+    """
     global eventos_db
-    evento = eventos_db.get(evento_id)
-    if evento is None:
-        raise HTTPException(status_code=404, detail="Evento não encontrado")
-
-    dados_atualizados = evento.forecast_info.model_dump() if evento.forecast_info else {}
-
-    # Atualização Parcial Segura: exclude_unset=True garante que só campos passados na requisição sejam atualizados.
-    update_data = atualizacao.model_dump(exclude_unset=True)
-    dados_atualizados.update(update_data)
-
-    evento.forecast_info = WeatherForecast(**dados_atualizados)
+    if evento_id not in eventos_db:
+        raise HTTPException(status_code=404, detail="Evento não encontrado.")
+    
+    evento = eventos_db[evento_id]
+    
+    update_event(evento, atualizacao, attr='forecast_info')
 
     eventos_db[evento_id] = evento
+    
     return EventResponse.model_validate(evento)
