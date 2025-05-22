@@ -346,7 +346,7 @@ def atualizar_local_info(evento_id: int, atualizacao: LocalInfoUpdate) -> EventR
         404: {"description": "Evento não encontrado."}
     },
 )
-def atualizar_forecast_info(evento_id: int, atualizacao: ForecastInfoUpdate) -> EventResponse:
+def atualizar_forecast_info(evento_id: int) -> EventResponse:
     """
     Atualiza o campo forecast_info de um evento específico.
     """
@@ -355,6 +355,13 @@ def atualizar_forecast_info(evento_id: int, atualizacao: ForecastInfoUpdate) -> 
         raise HTTPException(status_code=404, detail="Evento não encontrado.")
     
     evento = eventos_db[evento_id]
+    
+    atualizacao = None
+    try:
+        atualizacao = get_mocked_forecast_info(evento.city, evento.event_date)
+    except Exception:
+        # Se a função de forecast lançar erro, ignora (ou faça logging)
+        pass
     
     update_event(evento, atualizacao, attr='forecast_info')
 
