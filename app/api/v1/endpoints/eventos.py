@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from fastapi import Query
 from datetime import datetime
+from pydantic import ValidationError
 
 from app.schemas.event_create import EventCreate, EventResponse
 from app.schemas.local_info import LocalInfo
@@ -26,6 +27,7 @@ def update_event(
     - Se attr for None, atualiza diretamente os campos do evento.
     - Se attr for 'forecast_info' ou 'local_info', faz a atualização parcial segura do objeto aninhado.
     """
+    
     try:
         if attr is None:
             # Atualiza os campos do evento principal
@@ -137,6 +139,7 @@ def obter_evento_por_id(evento_id: int) -> EventResponse:
     tags=["eventos"],
     summary="Cria um novo evento e tenta enriquecer com previsão do tempo.",
     response_model=EventResponse,
+    status_code=201,
     responses={
         201: {"description": "Evento criado com sucesso, podendo conter ou não previsão do tempo."},
         201: {"description": "Evento criado, mas sem previsão do tempo por falha ao acessar a API externa."} # 207 caso queria utilizar outro
@@ -152,8 +155,7 @@ def criar_evento(evento: EventCreate) -> EventResponse:
     try:
         forecast_info = get_mocked_forecast_info(evento.city, evento.event_date)
     except Exception:
-        # Se a função de forecast lançar erro, ignora (ou faça logging)
-        pass
+        forecast_info = None
     evento_resp = EventResponse(
         id=id_counter,
         title=evento.title,
@@ -166,6 +168,13 @@ def criar_evento(evento: EventCreate) -> EventResponse:
     )
     eventos_db[id_counter] = evento_resp
     id_counter += 1
+    # if forecast_info is None:
+    #     return JSONResponse(
+    #         status_code=201,
+    #         content={**evento_resp.model_dump(), "detalhe": "Evento criado sem previsão do tempo."}
+    #     )
+    # else:
+    #     return EventResponse.model_validate(evento_resp)
     return EventResponse.model_validate(evento_resp)
 
 @router.post(
@@ -173,6 +182,7 @@ def criar_evento(evento: EventCreate) -> EventResponse:
     tags=["eventos"],
     summary="Adiciona uma lista de novos eventos, atribuindo novos IDs.",
     response_model=list[EventResponse],
+    status_code=201,
     responses={
         201: {"description": "Eventos adicionados com sucesso."},
         400: {"description": "Lista inválida enviada."}
@@ -292,6 +302,7 @@ def deletar_evento_por_id(evento_id: int) -> dict[str, str]:
     response_model=EventResponse,
     responses={
         200: {"description": "Evento atualizado com sucesso."},
+        400: {"description": "Nenhum campo válido para atualização."},
         404: {"description": "Evento não encontrado."}
     },
 )
@@ -305,6 +316,15 @@ def atualizar_evento(evento_id: int, atualizacao: EventUpdate) -> EventResponse:
         raise HTTPException(status_code=404, detail="Evento não encontrado.")
 
     evento = eventos_db[evento_id]
+    
+    if atualizacao is None:
+        raise HTTPException(status_code=502, detail="Erro ao receber dados do evento")
+    
+    if not isinstance(atualizacao, EventUpdate):
+        raise HTTPException(status_code=500, detail="Tipo inválido para EventUpdate")
+    
+    if not any(value is not None for value in atualizacao.model_dump().values()):
+        raise HTTPException(status_code=400, detail="Nenhum campo válido para atualização.")
     
     update_event(evento, atualizacao)
 
@@ -329,6 +349,12 @@ def atualizar_local_info(evento_id: int, atualizacao: LocalInfoUpdate) -> EventR
     if evento_id not in eventos_db:
         raise HTTPException(status_code=404, detail="Evento não encontrado.")
     evento = eventos_db[evento_id]
+    
+    if atualizacao is None:
+        raise HTTPException(status_code=502, detail="Erro ao receber dados do Local")
+    
+    if not isinstance(atualizacao, LocalInfoUpdate):
+        raise HTTPException(status_code=500, detail="Tipo inválido para LocalInfoUpdate")
     
     update_event(evento, atualizacao, attr='local_info')
 
@@ -358,10 +384,16 @@ def atualizar_forecast_info(evento_id: int) -> EventResponse:
     
     atualizacao = None
     try:
-        atualizacao = get_mocked_forecast_info(evento.city, evento.event_date)
+        __atualizacao = get_mocked_forecast_info(evento.city, evento.event_date)
+        atualizacao = ForecastInfoUpdate.model_validate(__atualizacao.model_dump())
     except Exception:
-        # Se a função de forecast lançar erro, ignora (ou faça logging)
-        pass
+        atualizacao = None
+    
+    if atualizacao is None:
+        raise HTTPException(status_code=502, detail="Erro ao obter previsão do tempo")
+    
+    # if not isinstance(atualizacao, ForecastInfoUpdate):
+    #     raise HTTPException(status_code=500, detail="Tipo inválido para forecast_info")
     
     update_event(evento, atualizacao, attr='forecast_info')
 
