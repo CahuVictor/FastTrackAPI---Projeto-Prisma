@@ -138,3 +138,19 @@ def evento(request):
         }
     else:
         raise ValueError(f"Fixture de evento desconhecida: {request.param}")
+
+@pytest.fixture(scope="session")
+def client():
+    with TestClient(app) as c:
+        yield c
+
+@pytest.fixture
+def auth_header(client):
+    """Faz login com o usuário mockado 'alice' e devolve o header Authorization."""
+    resp = client.post(
+        "/api/v1/auth/login",
+        data={"username": "alice", "password": "secret123"},
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
+    token = resp.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
