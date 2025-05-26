@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, status
 from fastapi import Query
 from datetime import datetime
 from pydantic import ValidationError
+from typing import Callable
 
 from app.schemas.event_create import EventCreate, EventResponse
 from app.schemas.local_info import LocalInfo
@@ -25,6 +26,16 @@ router = APIRouter()
 # Armazenamento em memória
 eventos_db: dict[int,EventResponse] = {}
 id_counter = 1
+
+def require_roles(*allowed: str) -> Callable:
+    def verifier(user = Depends(get_current_user)):
+        if not set(allowed) & set(user.roles):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Permissão insuficiente"
+            )
+        return user
+    return verifier
 
 def update_event(
                  evento: EventResponse, 
@@ -70,7 +81,7 @@ def update_event(
     tags=["eventos"],
     summary="Busca informações de um local (mock)",
     response_model=LocalInfo,
-    dependencies=[auth_dep],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
     responses={
         404: {"description": "Local não encontrado"}
     },
@@ -89,7 +100,7 @@ def obter_local_info(location_name: str = Query(..., description="Nome do local 
     tags=["eventos"],
     summary="Busca previsão do tempo para uma cidade e data/hora (mock)",
     response_model=WeatherForecast,
-    dependencies=[auth_dep],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
     responses={
         404: {"description": "Previsão não encontrada"}
     },
@@ -111,7 +122,7 @@ def obter_forecast_info(
     tags=["eventos"],
     summary="Lista todos os eventos registrados.",
     response_model=list[EventResponse],
-    dependencies=[auth_dep],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
     responses={
         200: {"description": "Lista de eventos retornada com sucesso."},
         404: {"description": "Nenhum evento encontrado."}
@@ -131,7 +142,7 @@ def listar_eventos() -> list[EventResponse]:
     tags=["eventos"],
     summary="Obtém um evento pelo ID.",
     response_model=EventResponse,
-    dependencies=[auth_dep],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
     responses={
         200: {"description": "Evento encontrado."},
         404: {"description": "Evento não encontrado."}
@@ -153,7 +164,7 @@ def obter_evento_por_id(evento_id: int) -> EventResponse:
     summary="Cria um novo evento e tenta enriquecer com previsão do tempo.",
     response_model=EventResponse,
     status_code=201,
-    dependencies=[auth_dep],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
     responses={
         201: {"description": "Evento criado com sucesso, podendo conter ou não previsão do tempo."},
         201: {"description": "Evento criado, mas sem previsão do tempo por falha ao acessar a API externa."} # 207 caso queria utilizar outro
@@ -197,7 +208,7 @@ def criar_evento(evento: EventCreate) -> EventResponse:
     summary="Adiciona uma lista de novos eventos, atribuindo novos IDs.",
     response_model=list[EventResponse],
     status_code=201,
-    dependencies=[auth_dep],
+    dependencies=[auth_dep, Depends(require_roles("admin"))],
     responses={
         201: {"description": "Eventos adicionados com sucesso."},
         400: {"description": "Lista inválida enviada."}
@@ -234,7 +245,7 @@ def adicionar_eventos_em_lote(eventos: list[EventCreate]) -> list[EventResponse]
     tags=["eventos"],
     summary="Substitui todos os eventos existentes por uma nova lista.",
     response_model=list[EventResponse],
-    dependencies=[auth_dep],
+    dependencies=[auth_dep, Depends(require_roles("admin"))],
     responses={
         200: {"description": "Todos os eventos foram substituídos."},
         400: {"description": "Lista inválida enviada."}
@@ -257,7 +268,7 @@ def substituir_todos_os_eventos(eventos: list[EventResponse]) -> list[EventRespo
     tags=["eventos"],
     summary="Substitui os dados de um evento existente.",
     response_model=EventResponse,
-    dependencies=[auth_dep],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
     responses={
         200: {"description": "Evento substituído com sucesso."},
         404: {"description": "Evento não encontrado."}
@@ -279,7 +290,7 @@ def substituir_evento_por_id(evento_id: int, novo_evento: EventResponse) -> Even
     tags=["eventos"],
     summary="Remove todos os eventos cadastrados.",
     response_model=dict,
-    dependencies=[auth_dep],
+    dependencies=[auth_dep, Depends(require_roles("admin"))],
     responses={
         200: {"description": "Todos os eventos removidos com sucesso."},
         400: {"description": "Não foi possível remover os eventos."}
@@ -298,7 +309,7 @@ def deletar_todos_os_eventos() -> dict[str, str]:
     tags=["eventos"],
     summary="Remove um evento específico pelo ID.",
     response_model=dict,
-    dependencies=[auth_dep],
+    dependencies=[auth_dep, Depends(require_roles("admin"))],
     responses={
         200: {"description": "Evento removido com sucesso."},
         404: {"description": "Evento não encontrado."}
@@ -319,7 +330,7 @@ def deletar_evento_por_id(evento_id: int) -> dict[str, str]:
     tags=["eventos"],
     summary="Atualiza parcialmente as informações de um evento.",
     response_model=EventResponse,
-    dependencies=[auth_dep],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
     responses={
         200: {"description": "Evento atualizado com sucesso."},
         400: {"description": "Nenhum campo válido para atualização."},
@@ -356,7 +367,7 @@ def atualizar_evento(evento_id: int, atualizacao: EventUpdate) -> EventResponse:
     tags=["eventos"],
     summary="Atualiza informações do local de um evento.",
     response_model=EventResponse,
-    dependencies=[auth_dep],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
     responses={
         200: {"description": "Informações do local atualizadas com sucesso."},
         404: {"description": "Evento não encontrado."}
@@ -388,7 +399,7 @@ def atualizar_local_info(evento_id: int, atualizacao: LocalInfoUpdate) -> EventR
     tags=["eventos"],
     summary="Atualiza a previsão do tempo de um evento.",
     response_model=EventResponse,
-    dependencies=[auth_dep],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
     responses={
         200: {"description": "Previsão do tempo atualizada com sucesso."},
         404: {"description": "Evento não encontrado."},
