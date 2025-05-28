@@ -1,12 +1,12 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from jose import jwt
 from passlib.context import CryptContext
 
 from app.core.config import get_settings
 
-settings = get_settings()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+_settings = get_settings()
 
 def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
@@ -26,9 +26,10 @@ def create_access_token(subject: str  # usuário
       1. Descomente o parâmetro `roles` acima.
       2. Descomente o bloco comentado mais abaixo.
     """
-    expire = datetime.now() + timedelta(
-        minutes=settings.auth_access_token_expire
+    expire = datetime.now(timezone.utc) + timedelta(
+        minutes=_settings.auth_access_token_expire
     )
+    
     payload = {"sub": subject, "exp": expire}
     
     # ---- FUTURO: papéis dentro do token ---------------------------------
@@ -37,5 +38,5 @@ def create_access_token(subject: str  # usuário
     # ---------------------------------------------------------------------
     
     return jwt.encode(payload,
-                      settings.auth_secret_key,
-                      settings.auth_algorithm)
+                      _settings.auth_secret_key,
+                      _settings.auth_algorithm)

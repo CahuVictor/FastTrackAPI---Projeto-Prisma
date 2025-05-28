@@ -35,7 +35,7 @@ Desenvolver habilidades avançadas em desenvolvimento backend com Python utiliza
 
 - [ ] **Dominar os fundamentos e recursos avançados do FastAPI**
   - [x] Criar rotas RESTful com métodos GET, POST, PUT, DELETE
-  - [ ] Utilizar `Depends` para injeção de dependências
+  - [x] Utilizar `Depends` para injeção de dependências
   - [x] Validar dados de entrada e saída com Pydantic
   - [x] Utilizar tags, responses e exemplos para a documentação automática
   - [ ] Implementar Background Tasks
@@ -49,10 +49,10 @@ Desenvolver habilidades avançadas em desenvolvimento backend com Python utiliza
   - [ ] Adotar um padrão de projeto para escalar o backend
 
 - [ ] **Implementar boas práticas de segurança no backend**
-  - [ ] Utilizar autenticação com JWT
-  - [ ] Implementar autorização com escopos e permissões
-  - [ ] Proteger rotas com `Depends` e lógica de verificação
-  - [ ] Armazenar senhas com hash seguro (bcrypt, passlib)
+  - [x] Utilizar autenticação com JWT
+  - [x] Implementar autorização com escopos e permissões
+  - [x] Proteger rotas com `Depends` e lógica de verificação
+  - [x] Armazenar senhas com hash seguro (bcrypt, passlib)
   - [ ] Prevenir vulnerabilidades comuns (SQL Injection, XSS, etc)
 
 - [ ] **Utilizar ferramentas e práticas de DevOps no fluxo de desenvolvimento**

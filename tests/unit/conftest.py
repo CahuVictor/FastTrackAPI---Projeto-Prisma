@@ -1,36 +1,37 @@
-
+#conftest.py
 import pytest
 from fastapi.testclient import TestClient
 from app.main import app
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def client():
-    return TestClient(app)
+    with TestClient(app) as c:
+        yield c
 
-# @pytest.fixture
-# def evento_valido():
-#     return {
-#         "title": "Concerto de Jazz",
-#         "description": "Uma apresentação musical.",
-#         "event_date": "2025-06-01T20:00:00",
-#         "participants": ["Alice", "Bruno"],
-#         "local_info": {
-#             "location_name": "Auditório Central",
-#             "capacity": 200,
-#             "venue_type": "Auditorio",
-#             "is_accessible": True,
-#             "address": "Rua Exemplo, 123",
-#             "past_events": ["Feira 2023", "Hackathon"]
-#         }
-#     }
+@pytest.fixture
+def auth_header(get_token):
+    return {"Authorization": f"Bearer {get_token}"}
 
-# @pytest.fixture
-# def evento_invalido():
-#     return {
-#         "title": "Evento Incompleto",
-#         "event_date": "2025-06-01T20:00:00",
-#         "participants": ["Zé"]
-#     }
+@pytest.fixture
+def get_token(client):
+    resp = client.post(
+        "/api/v1/auth/login",
+        data={"username": "alice", "password": "secret123"},
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
+    assert resp.status_code == 200
+    return resp.json()["access_token"]
+
+@pytest.fixture(scope="function")
+def client_autenticado(get_token):
+    """Retorna um TestClient que envia o header Authorization automaticamente."""
+    class AuthClient(TestClient):
+        def request(self, method, url, **kwargs):
+            headers = kwargs.pop("headers", {}) or {}
+            headers["Authorization"] = f"Bearer {get_token}"
+            return super().request(method, url, headers=headers, **kwargs)
+    with AuthClient(app) as c:
+        yield c
 
 @pytest.fixture
 def evento(request):
@@ -138,19 +139,3 @@ def evento(request):
         }
     else:
         raise ValueError(f"Fixture de evento desconhecida: {request.param}")
-
-@pytest.fixture(scope="session")
-def client():
-    with TestClient(app) as c:
-        yield c
-
-@pytest.fixture
-def auth_header(client):
-    """Faz login com o usuário mockado 'alice' e devolve o header Authorization."""
-    resp = client.post(
-        "/api/v1/auth/login",
-        data={"username": "alice", "password": "secret123"},
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-    )
-    token = resp.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}

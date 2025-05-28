@@ -9,13 +9,17 @@ from app.schemas.local_info import LocalInfo
 from app.schemas.event_update import EventUpdate, LocalInfoUpdate, ForecastInfoUpdate
 from app.schemas.weather_forecast import WeatherForecast
 
-from app.services.auth import get_current_user
+from app.services.auth_service import get_current_user
 # from app.schemas.user import User
 
-from app.services.mock_local_info import get_local_info_by_name
-from app.services.mock_forecast_info import get_mocked_forecast_info
+from app.services.interfaces.local_info import AbstractLocalInfoService
+from app.services.interfaces.forecast_info import AbstractForecastService
+from app.deps import provide_local_info_service, provide_forecast_service
+
 
 auth_dep = Depends(get_current_user)
+_provide_local_info_service = Depends(provide_local_info_service)
+_provide_forecast_service = Depends(provide_forecast_service)
 
 router = APIRouter()
 
@@ -28,7 +32,7 @@ eventos_db: dict[int,EventResponse] = {}
 id_counter = 1
 
 def require_roles(*allowed: str) -> Callable:
-    def verifier(user = Depends(get_current_user)):
+    def verifier(user = auth_dep):
         if not set(allowed) & set(user.roles):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -86,11 +90,14 @@ def update_event(
         404: {"description": "Local não encontrado"}
     },
 )
-def obter_local_info(location_name: str = Query(..., description="Nome do local a ser buscado")):
+def obter_local_info(
+    location_name: str = Query(..., description="Nome do local a ser buscado"),
+    service: AbstractLocalInfoService = _provide_local_info_service
+):
     """
     Retorna as informações detalhadas de um local a partir do nome, buscando dados simulados.
     """
-    info = get_local_info_by_name(location_name)
+    info = service.get_by_name(location_name)
     if not info:
         raise HTTPException(status_code=404, detail="Local não encontrado")
     return info
@@ -108,11 +115,12 @@ def obter_local_info(location_name: str = Query(..., description="Nome do local 
 def obter_forecast_info(
     city: str = Query(..., description="Nome da cidade"),
     date: datetime = Query(..., description="Data e hora de referência para a previsão"),
+    service: AbstractForecastService = _provide_forecast_service,
 ):
     """
     Retorna a previsão do tempo simulada para a cidade e data/hora informadas.
     """
-    previsao = get_mocked_forecast_info(city, date)  # Ajuste sua função mock para aceitar city e date!
+    previsao = service.get_by_city_and_datetime(city, date)
     if not previsao:
         raise HTTPException(status_code=404, detail="Previsão não encontrada")
     return previsao
@@ -170,7 +178,10 @@ def obter_evento_por_id(evento_id: int) -> EventResponse:
         201: {"description": "Evento criado, mas sem previsão do tempo por falha ao acessar a API externa."} # 207 caso queria utilizar outro
     },
 )
-def criar_evento(evento: EventCreate) -> EventResponse:
+def criar_evento(
+    evento: EventCreate,
+    service: AbstractForecastService = _provide_forecast_service,
+) -> EventResponse:
     """
     Cria um evento e tenta buscar a previsão do tempo automaticamente para preenchimento do campo forecast_info.
     Se a previsão não puder ser obtida, o evento é criado normalmente, porém forecast_info fica vazio.
@@ -178,7 +189,7 @@ def criar_evento(evento: EventCreate) -> EventResponse:
     global eventos_db, id_counter
     forecast_info = None
     try:
-        forecast_info = get_mocked_forecast_info(evento.city, evento.event_date)
+        forecast_info = service.get_by_city_and_datetime(evento.city, evento.event_date)
     except Exception:
         forecast_info = None
     evento_resp = EventResponse(
@@ -214,7 +225,10 @@ def criar_evento(evento: EventCreate) -> EventResponse:
         400: {"description": "Lista inválida enviada."}
     },
 )
-def adicionar_eventos_em_lote(eventos: list[EventCreate]) -> list[EventResponse]:
+def adicionar_eventos_em_lote(
+    eventos: list[EventCreate],
+    service: AbstractForecastService = _provide_forecast_service,
+) -> list[EventResponse]:
     """
     Cria múltiplos eventos de uma vez, atribuindo novos IDs para cada um.
     Retorna apenas os eventos recém adicionados.
@@ -224,7 +238,7 @@ def adicionar_eventos_em_lote(eventos: list[EventCreate]) -> list[EventResponse]
         raise HTTPException(status_code=400, detail="Lista inválida enviada.")
     novos_eventos = []
     for evento in eventos:
-        forecast_info = get_mocked_forecast_info(evento.city, evento.event_date)
+        forecast_info = service.get_by_city_and_datetime(evento.city, evento.event_date)
         evento_resp = EventResponse(
             id=id_counter,
             title=evento.title,
@@ -268,7 +282,7 @@ def substituir_todos_os_eventos(eventos: list[EventResponse]) -> list[EventRespo
     tags=["eventos"],
     summary="Substitui os dados de um evento existente.",
     response_model=EventResponse,
-    dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
+    dependencies=[auth_dep],
     responses={
         200: {"description": "Evento substituído com sucesso."},
         404: {"description": "Evento não encontrado."}
@@ -406,7 +420,10 @@ def atualizar_local_info(evento_id: int, atualizacao: LocalInfoUpdate) -> EventR
         502: {"description": "Erro ao obter previsão do tempo"}
     },
 )
-def atualizar_forecast_info(evento_id: int) -> EventResponse:
+def atualizar_forecast_info(
+    evento_id: int,
+    service: AbstractForecastService = _provide_forecast_service,
+) -> EventResponse:
     """
     Atualiza o campo forecast_info de um evento específico.
     """
@@ -418,7 +435,7 @@ def atualizar_forecast_info(evento_id: int) -> EventResponse:
     
     atualizacao = None
     try:
-        __atualizacao = get_mocked_forecast_info(evento.city, evento.event_date)
+        __atualizacao = service.get_by_city_and_datetime(evento.city, evento.event_date)
         atualizacao = ForecastInfoUpdate.model_validate(__atualizacao.model_dump())
     except Exception:
         atualizacao = None

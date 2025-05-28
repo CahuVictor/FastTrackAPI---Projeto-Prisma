@@ -1,6 +1,7 @@
 from fastapi import FastAPI
+
 from app.api.v1.endpoints import eventos, auth          #  ←  agora importamos auth
-from app.services.auth import get_current_user          #  ←  dependência global
+from app.services.auth_service import get_current_user          #  ←  dependência global
 
 
 app = FastAPI(

@@ -1,153 +1,168 @@
+# tests/unit/test_eventos_completo.py
 # cobre rotas de substituição, concatenação, atualização parcial, etc.
 
 import pytest
+from app.main import app
+from app.deps import provide_forecast_service
 
 @pytest.mark.parametrize("evento", ["evento_valido_com_id"], indirect=True)
-def test_substituir_todos_os_eventos(client, evento):
+def test_substituir_todos_os_eventos(client_autenticado, evento):
 # def test_substituir_todos_os_eventos():
 #     novo_evento = evento_valido.copy()
 #     novo_evento["title"] = "Evento Substituto"
     evento["title"] = "Evento Substituto"
-    response = client.put("/api/v1/eventos", json=[evento])
-#     response = client.put("/api/v1/eventos", json=[novo_evento])
+    response = client_autenticado.put("/api/v1/eventos", json=[evento])
+#     response = client_autenticado.put("/api/v1/eventos", json=[novo_evento])
     assert response.status_code == 200
 #     assert len(response.json()) == 1
     assert response.json()[0]["title"] == "Evento Substituto"
 
 # Testar PUT /eventos/{id} para substituir um evento inexistente
 @pytest.mark.parametrize("evento", ["evento_valido_com_id_e_forecast"], indirect=True)
-def test_substituir_evento_inexistente(client, evento):
-    response = client.put("/api/v1/eventos/99999", json=evento)
+def test_substituir_evento_inexistente(client_autenticado, evento):
+    response = client_autenticado.put("/api/v1/eventos/99999", json=evento)
     assert response.status_code == 404
 
 @pytest.mark.parametrize("evento", ["evento_valido_com_id"], indirect=True)
-def test_substituir_evento_por_id(client, evento):
+def test_substituir_evento_por_id(client_autenticado, evento):
 # def test_substituir_evento_por_id():
     # cria um evento
-#     post_response = client.post("/api/v1/eventos", json=evento_valido)
-    post_response = client.post("/api/v1/eventos", json=evento)
+#     post_response = client_autenticado.post("/api/v1/eventos", json=evento_valido)
+    post_response = client_autenticado.post("/api/v1/eventos", json=evento)
     evento_id = post_response.json()["id"]
     evento["title"] = "Novo Título"
 #     novo_evento = evento_valido.copy()
 #     novo_evento["title"] = "Novo Título"
 #     novo_evento["local_info"] = evento_valido["local_info"]
-#     response = client.put(f"/api/v1/eventos/{evento_id}", json=novo_evento)
-    response = client.put(f"/api/v1/eventos/{evento_id}", json=evento)
+#     response = client_autenticado.put(f"/api/v1/eventos/{evento_id}", json=novo_evento)
+    response = client_autenticado.put(f"/api/v1/eventos/{evento_id}", json=evento)
     assert response.status_code == 200
     assert response.json()["title"] == "Novo Título"
 
 @pytest.mark.parametrize("evento", ["evento_valido"], indirect=True)
-def test_deletar_todos_os_eventos(client, evento):
+def test_deletar_todos_os_eventos(client_autenticado, evento):
 # def test_deletar_todos_os_eventos():
-#     client.post("/api/v1/eventos", json=evento_valido)
-    client.post("/api/v1/eventos", json=evento)
-    response = client.delete("/api/v1/eventos")
+#     client_autenticado.post("/api/v1/eventos", json=evento_valido)
+    client_autenticado.post("/api/v1/eventos", json=evento)
+    response = client_autenticado.delete("/api/v1/eventos")
     assert response.status_code == 200
     assert response.json()["mensagem"].startswith("Todos os eventos foram apagados")
 
 # @pytest.mark.parametrize("evento", ["evento_valido_com_id"], indirect=True)
-# def test_concatenar_eventos(client, evento):
+# def test_concatenar_eventos(client_autenticado, evento):
 # # def test_concatenar_eventos():
 # #     novo_evento = evento_valido.copy()
-# #     response = client.patch("/api/v1/eventos", json=[novo_evento])
-#     response = client.patch("/api/v1/eventos", json=[evento])
+# #     response = client_autenticado.patch("/api/v1/eventos", json=[novo_evento])
+#     response = client_autenticado.patch("/api/v1/eventos", json=[evento])
 #     assert response.status_code == 200
 #     assert len(response.json()) >= 1
 
 @pytest.mark.parametrize("evento", ["evento_valido_com_id"], indirect=True)
-def test_atualizar_local_info(client, evento):
-    post_response = client.post("/api/v1/eventos", json=evento)
+def test_atualizar_local_info(client_autenticado, evento):
+    post_response = client_autenticado.post("/api/v1/eventos", json=evento)
     evento_id = post_response.json()["id"]
     atualizacao = {
         "capacity": 999,
         "manually_edited": True  # Obrigatório!
     }
-    response = client.patch(f"/api/v1/eventos/{evento_id}/local_info", json=atualizacao)
+    response = client_autenticado.patch(f"/api/v1/eventos/{evento_id}/local_info", json=atualizacao)
     assert response.status_code == 200
     assert response.json()["local_info"]["capacity"] == 999
     assert response.json()["local_info"]["manually_edited"] is True
 
 @pytest.mark.parametrize("evento", ["evento_valido"], indirect=True)
-def test_atualizar_forecast_info(client, evento):
-    post_response = client.post("/api/v1/eventos", json=evento)
+def test_atualizar_forecast_info(client_autenticado, evento):
+    post_response = client_autenticado.post("/api/v1/eventos", json=evento)
     evento_id = post_response.json()["id"]
-    response = client.patch(f"/api/v1/eventos/{evento_id}/forecast_info")
+    response = client_autenticado.patch(f"/api/v1/eventos/{evento_id}/forecast_info")
     assert response.status_code == 200
     assert "forecast_info" in response.json()
 
 # Testar PATCH /eventos/{id} para atualizar um evento inexistente
-def test_atualizar_evento_inexistente(client):
+def test_atualizar_evento_inexistente(client_autenticado):
     atualizacao = {"title": "Novo Título"}
-    response = client.patch("/api/v1/eventos/99999", json=atualizacao)
+    response = client_autenticado.patch("/api/v1/eventos/99999", json=atualizacao)
     assert response.status_code == 404
 
 # Testar PUT /eventos com lista vazia
-def test_substituir_todos_os_eventos_vazio(client):
-    response = client.put("/api/v1/eventos", json=[])
+def test_substituir_todos_os_eventos_vazio(client_autenticado):
+    response = client_autenticado.put("/api/v1/eventos", json=[])
     assert response.status_code == 400
 
 # Testar PATCH /eventos/{id}/local_info para evento inexistente
-def test_atualizar_local_info_inexistente(client):
+def test_atualizar_local_info_inexistente(client_autenticado):
     atualizacao = {"capacity": 100, "manually_edited": True}
-    response = client.patch("/api/v1/eventos/99999/local_info", json=atualizacao)
+    response = client_autenticado.patch("/api/v1/eventos/99999/local_info", json=atualizacao)
     assert response.status_code == 404
 
 # Testar PATCH /eventos/{id}/forecast_info para evento inexistente
-def test_atualizar_forecast_info_inexistente(client):
-    response = client.patch("/api/v1/eventos/99999/forecast_info")
+def test_atualizar_forecast_info_inexistente(client_autenticado):
+    response = client_autenticado.patch("/api/v1/eventos/99999/forecast_info")
     assert response.status_code == 404
 
 # Simular erro na atualização de forecast_info (try/except de forecast)
-@pytest.mark.parametrize("evento", ["evento_valido"], indirect=True)
-def test_atualizar_forecast_info_com_erro(client, evento):
-    # Simule erro em get_mocked_forecast_info, forçando city inválida ou monkeypatch
-    post = client.post("/api/v1/eventos", json=evento)
-    evento_id = post.json()["id"]
-
-    # Monkeypatch para simular exception
-    # from app.services import mock_forecast_info
-    # Monkeypatch o módulo correto!
-    import app.api.v1.endpoints.eventos as eventos_module
-
-    def fake_forecast_info(city, date):
-        raise Exception("erro de mock")
-
-    original = eventos_module.get_mocked_forecast_info # mock_forecast_info.get_mocked_forecast_info
-    # mock_forecast_info.get_mocked_forecast_info = fake_forecast_info
-    eventos_module.get_mocked_forecast_info = fake_forecast_info
+def test_atualizar_forecast_info_com_erro(client_autenticado):
+    def fake_forecast_service():
+        class FakeService:
+            def get_by_city_and_datetime(self, city, date):
+                raise Exception("erro simulado")
+        return FakeService()
+    # Override a dependência
+    from app.deps import provide_forecast_service
+    app.dependency_overrides[provide_forecast_service] = fake_forecast_service
+    
+    # Crie o evento e obtenha o evento_id
+    evento = {
+        "title": "Evento Teste",
+        "description": "Teste sem forecast.",
+        "event_date": "2025-06-01T20:00:00",
+        "city": "Recife",
+        "participants": [],
+        "local_info": {
+            "location_name": "auditório central",
+            "capacity": 100,
+            "venue_type": "Auditorio",
+            "is_accessible": True,
+            "address": "Rua Principal, 1",
+            "past_events": [],
+            "manually_edited": False
+        }
+    }
+    post_resp = client_autenticado.post("/api/v1/eventos", json=evento)
+    assert post_resp.status_code == 201
+    evento_id = post_resp.json()["id"]
     
     try:
-        resp = client.patch(f"/api/v1/eventos/{evento_id}/forecast_info")
+        resp = client_autenticado.patch(f"/api/v1/eventos/{evento_id}/forecast_info")
         # Mesmo com erro, deve continuar funcionando, forecast_info fica None ou não muda
         assert resp.status_code == 502
         assert resp.json()["detail"] == "Erro ao obter previsão do tempo"
         # assert resp.json()["forecast_info"] is None or resp.json()["forecast_info"] == {}
     finally:
         # Restaura função original
-        # mock_forecast_info.get_mocked_forecast_info = original
-        eventos_module.get_mocked_forecast_info = original
+        app.dependency_overrides = {}
 
 # Testar erro de validação em update_event (try/except do update_event)
 @pytest.mark.parametrize("evento", ["evento_valido"], indirect=True)
-def test_update_event_validationerror(client, evento):
+def test_update_event_validationerror(client_autenticado, evento):
     from app.api.v1.endpoints import eventos as eventos_module
     from pydantic import ValidationError
 
     # Cria evento
-    post = client.post("/api/v1/eventos", json=evento)
+    post = client_autenticado.post("/api/v1/eventos", json=evento)
     evento_id = post.json()["id"]
 
     # Envie update inválido para local_info (ex: capacity string)
     atualizacao = {"capacity": "invalido", "manually_edited": True}
-    resp = client.patch(f"/api/v1/eventos/{evento_id}/local_info", json=atualizacao)
+    resp = client_autenticado.patch(f"/api/v1/eventos/{evento_id}/local_info", json=atualizacao)
     assert resp.status_code == 422
     # Detalhe do erro pode ser validado aqui se quiser
 
 # Testar fallback do update_event (branch 'else' no update_event)
 @pytest.mark.parametrize("evento", ["evento_valido"], indirect=True)
-def test_update_event_fallback_branch(client, evento):
+def test_update_event_fallback_branch(client_autenticado, evento):
     # cria evento
-    post = client.post("/api/v1/eventos", json=evento)
+    post = client_autenticado.post("/api/v1/eventos", json=evento)
     evento_id = post.json()["id"]
 
     from app.api.v1.endpoints import eventos as eventos_module
@@ -167,36 +182,36 @@ def test_update_event_fallback_branch(client, evento):
 
 # # Testar o caso: atualizacao é None (502)
 # @pytest.mark.parametrize("evento", ["evento_valido"], indirect=True)
-# def test_atualizar_evento_none(client, evento):
+# def test_atualizar_evento_none(client_autenticado, evento):
 #     # Crie um evento antes
-#     post_response = client.post("/api/v1/eventos", json=evento)
+#     post_response = client_autenticado.post("/api/v1/eventos", json=evento)
 #     evento_id = post_response.json()["id"]
 #     # Envie um body explícito None (JSON 'null')
-#     response = client.patch(f"/api/v1/eventos/{evento_id}", data="null", headers={"Content-Type": "application/json"})
+#     response = client_autenticado.patch(f"/api/v1/eventos/{evento_id}", data="null", headers={"Content-Type": "application/json"})
 #     assert response.status_code == 502
 #     assert response.json()["detail"] == "Erro ao receber dados do evento"
 
 # Testar o caso: atualizacao não é EventUpdate (500)
 @pytest.mark.parametrize("evento", ["evento_valido"], indirect=True)
-def test_atualizar_evento_tipo_invalido(client, evento):
+def test_atualizar_evento_tipo_invalido(client_autenticado, evento):
     # Crie um evento antes
-    post_response = client.post("/api/v1/eventos", json=evento)
+    post_response = client_autenticado.post("/api/v1/eventos", json=evento)
     evento_id = post_response.json()["id"]
     # Envie um objeto com campo inválido ou tipo totalmente inválido
-    response = client.patch(f"/api/v1/eventos/{evento_id}", json={"not_expected_field": 123})
+    response = client_autenticado.patch(f"/api/v1/eventos/{evento_id}", json={"not_expected_field": 123})
     assert response.status_code == 400
     assert response.json()["detail"] == "Nenhum campo válido para atualização."
 
 @pytest.mark.parametrize("evento", ["evento_valido"], indirect=True)
-def test_atualizar_evento_tipo_valido(client, evento):
+def test_atualizar_evento_tipo_valido(client_autenticado, evento):
     # Crie um evento antes
-    post_resp = client.post("/api/v1/eventos", json=evento)
+    post_resp = client_autenticado.post("/api/v1/eventos", json=evento)
     assert post_resp.status_code == 201
     evento_id = post_resp.json()["id"]
 
     # 2. PATCH com um campo diferente
     atualizacao = {"description": "Descrição atualizada."}
-    patch_resp = client.patch(f"/api/v1/eventos/{evento_id}", json=atualizacao)
+    patch_resp = client_autenticado.patch(f"/api/v1/eventos/{evento_id}", json=atualizacao)
     assert patch_resp.status_code == 200
 
     # 3. Confira que mudou
@@ -204,15 +219,13 @@ def test_atualizar_evento_tipo_valido(client, evento):
     assert evento_resp["description"] == "Descrição atualizada."
     assert evento_resp["title"] == "Concerto De Jazz"
 
-def test_criar_evento_forecast_exception(client, monkeypatch):
-    # Monkeypatch para forçar exception
-    from app.api.v1.endpoints import eventos as eventos_module
-
-    def fake_forecast_info(city, date):
-        raise Exception("erro simulado")
-
-    original = eventos_module.get_mocked_forecast_info
-    eventos_module.get_mocked_forecast_info = fake_forecast_info
+def test_criar_evento_forecast_exception(client_autenticado, monkeypatch):
+    def fake_forecast_service():
+        class FakeService:
+            def get_by_city_and_datetime(self, city, date):
+                raise Exception("erro simulado")
+        return FakeService()
+    app.dependency_overrides[provide_forecast_service] = fake_forecast_service
 
     evento = {
         "title": "Evento Teste",
@@ -223,7 +236,7 @@ def test_criar_evento_forecast_exception(client, monkeypatch):
         "local_info": {
             "location_name": "auditório central",
             "capacity": 100,
-            "venue_type": "auditório",
+            "venue_type": "Auditorio",
             "is_accessible": True,
             "address": "Rua Principal, 1",
             "past_events": [],
@@ -231,10 +244,9 @@ def test_criar_evento_forecast_exception(client, monkeypatch):
         }
     }
 
-    resp = client.post("/api/v1/eventos", json=evento)
+    resp = client_autenticado.post("/api/v1/eventos", json=evento)
     assert resp.status_code == 201
     result = resp.json()
     assert result["forecast_info"] is None
 
-    # Restore original function to avoid side effects
-    eventos_module.get_mocked_forecast_info = original
+    app.dependency_overrides = {}

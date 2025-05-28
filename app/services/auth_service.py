@@ -1,28 +1,31 @@
 from fastapi import HTTPException, status, Depends
+from app.services.interfaces.user import AbstractUserRepo
+from app.deps import provide_user_repo
 
 from jose import JWTError, jwt
 from fastapi.security import OAuth2PasswordBearer
 
 from app.core.security import verify_password, create_access_token
 from app.core.config import get_settings
-from app.services.mock_users import get_user
-from app.schemas.user import UserInDB
 
 settings = get_settings()
+
+_AbstractUserRepo = Depends(provide_user_repo)
 
 # pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
-
-def authenticate(username: str, password: str) -> UserInDB | None:
-    user = get_user(username)
+def authenticate(username: str, password: str, repo: AbstractUserRepo = _AbstractUserRepo):
+    user = repo.get_by_username(username)
     if not user or not verify_password(password, user.hashed_password):
         return None
     return user
 
-
-def get_current_user(token: str = Depends(oauth2_scheme)):
+def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    repo: AbstractUserRepo = _AbstractUserRepo
+):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Credenciais inválidas",
@@ -37,7 +40,8 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-    user = get_user(username)
+
+    user = repo.get_by_username(username)
     if user is None:
         raise credentials_exception
-    return user  # pode retornar User sem hashed se preferir
+    return user

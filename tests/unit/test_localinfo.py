@@ -1,5 +1,9 @@
-from app.schemas.local_info import LocalInfo
+# tests/unit/test_localinfo.py
+
 import pytest
+
+from app.schemas.local_info import LocalInfo
+from app.services.mock_local_info import MockLocalInfoService
 
 def test_location_name_validator_typeerror():
     with pytest.raises(TypeError):
@@ -37,9 +41,11 @@ def test_past_events_validator_valueerror():
             manually_edited=False
         )
 
-# mock_local_info.py
-
-from app.services.mock_local_info import get_local_info_by_name
-
 def test_get_local_info_by_name_none():
-    assert get_local_info_by_name("não existe") is None
+    service = MockLocalInfoService()
+    assert service.get_by_name("não existe") is None
+
+def test_mock_local_info_service():
+    service = MockLocalInfoService()
+    info = service.get_by_name("auditorio central")
+    assert info is not None
