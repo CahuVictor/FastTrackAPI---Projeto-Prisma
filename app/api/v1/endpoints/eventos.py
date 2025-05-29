@@ -128,7 +128,9 @@ def obter_forecast_info(
     return previsao
 
 @router.get(
-    "/eventos",
+    "/eventos/todos",
+    deprecated=True,                                    # Marca rota como obsoleta, sem removê-la
+    include_in_schema=False,                            # Oculta rota da doc quando False
     tags=["eventos"],
     summary="Lista todos os eventos registrados.",
     response_model=list[EventResponse],
@@ -145,6 +147,27 @@ def listar_eventos(repo: AbstractEventoRepo = Depends(provide_evento_repo)) -> l
     eventos = repo.list_all()
     if not eventos:
         raise HTTPException(status_code=404, detail="Nenhum evento encontrado.")
+    return eventos
+
+@router.get(
+    "/eventos",
+    tags=["eventos"],
+    summary="Lista eventos com filtros e paginação",
+    response_model=list[EventResponse],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
+)
+def listar_eventos(
+    skip: int = Query(0, ge=0, description="Quantos registros pular"),
+    limit: int = Query(20, le=100, description="Tamanho da página"),
+    city: str | None = Query(None, description="Filtrar por cidade"),
+    repo: AbstractEventoRepo = Depends(provide_evento_repo),
+) -> list[EventResponse]:
+    """
+    Retorna uma fatia paginada dos eventos; opcionalmente filtra por cidade.
+    """
+    eventos = repo.list_partial(skip=skip, limit=limit, city=city)
+    if not eventos:
+        raise HTTPException(404, "Nenhum evento encontrado")
     return eventos
 
 @router.get(

@@ -12,6 +12,12 @@ class InMemoryEventoRepo(AbstractEventoRepo):
     def list_all(self) -> list[EventResponse]:
         return list(self._db.values())
 
+    def list_partial(self, *, skip: int = 0, limit: int = 20, city: str | None = None):
+        data = list(self._db.values())
+        if city:
+            data = [e for e in data if e.city.lower() == city.lower()]
+        return data[skip : skip + limit]
+
     def get(self, evento_id: int) -> EventResponse | None:
         return self._db.get(evento_id)
 

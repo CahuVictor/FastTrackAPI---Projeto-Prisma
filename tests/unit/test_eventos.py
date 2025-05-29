@@ -1,6 +1,8 @@
 # tests/unit/test_eventos.py
 # (eventos & manipulação geral)
 
+from typing import Literal
+from fastapi.testclient import TestClient
 import pytest
 
 from fastapi import HTTPException
@@ -11,35 +13,35 @@ from app.api.v1.endpoints.eventos import atualizar_evento
 from app.repositories.evento_mem import InMemoryEventoRepo
 
 @pytest.mark.parametrize("evento", ["evento_valido"], indirect=True)
-def test_criar_evento_valido(client, auth_header, evento):
+def test_criar_evento_valido(client: TestClient, auth_header: dict[str, str], evento: Literal['evento_valido']):
     resp = client.post("/api/v1/eventos", json=evento, headers=auth_header) # evento_valido
     assert resp.status_code == 201
     assert resp.json()["title"].lower() == evento["title"].lower() # evento_valido
 
 @pytest.mark.parametrize("evento", ["evento_invalido"], indirect=True)
-def test_criar_evento_invalido(client, auth_header, evento):
+def test_criar_evento_invalido(client: TestClient, auth_header: dict[str, str], evento: Literal['evento_invalido']):
     resp = client.post("/api/v1/eventos", json=evento, headers=auth_header) # evento_invalido
     assert resp.status_code == 422
 
-def test_listar_eventos(client, auth_header):
+def test_listar_eventos(client: TestClient, auth_header: dict[str, str]):
     resp = client.get("/api/v1/eventos", headers=auth_header)
     # Pode ser 200 ou 404, dependendo se já apagou ou não
     assert resp.status_code in (200, 404)
 
 @pytest.mark.parametrize("evento", ["evento_valido_com_id"], indirect=True)
-def test_substituir_todos_os_eventos(client, auth_header, evento):
+def test_substituir_todos_os_eventos(client: TestClient, auth_header: dict[str, str], evento: Literal['evento_valido_com_id']):
     evento["title"] = "Evento Substituto"
     resp = client.put("/api/v1/eventos", json=[evento], headers=auth_header)
     assert resp.status_code == 200
     assert resp.json()[0]["title"] == "Evento Substituto"
 
 @pytest.mark.parametrize("evento", ["evento_valido_com_id_forecast"], indirect=True)
-def test_substituir_evento_inexistente(client, auth_header, evento):
+def test_substituir_evento_inexistente(client: TestClient, auth_header: dict[str, str], evento: Literal['evento_valido_com_id_forecast']):
     resp = client.put("/api/v1/eventos/99999", json=evento, headers=auth_header)
     assert resp.status_code == 404
 
 @pytest.mark.parametrize("evento", ["evento_valido_com_id"], indirect=True)
-def test_atualizar_evento_none_unit(client, auth_header, evento):
+def test_atualizar_evento_none_unit(client: TestClient, auth_header: dict[str, str], evento: Literal['evento_valido_com_id']):
     """
     Testa a branch onde 'atualizacao' é None na função atualizar_evento.
     FastAPI nunca permite isso via HTTP, mas pode ocorrer em uso direto da função.
@@ -65,7 +67,7 @@ def test_atualizar_evento_none_unit(client, auth_header, evento):
     assert detail["type"] in {"missing", "model_attributes_type"}
 
 @pytest.mark.parametrize("evento", ["evento_valido_com_id"], indirect=True)
-def test_atualizar_evento_tipo_invalido_unit(client, auth_header, evento):
+def test_atualizar_evento_tipo_invalido_unit(client: TestClient, auth_header: dict[str, str], evento: Literal['evento_valido_com_id']):
     """
     Testa a branch onde 'atualizacao' é de tipo inválido na função atualizar_evento.
     FastAPI/Pydantic nunca permite isso via HTTP, mas pode ocorrer em uso direto da função.
@@ -89,7 +91,7 @@ def test_atualizar_evento_tipo_invalido_unit(client, auth_header, evento):
     assert detail["type"] in {"missing", "model_attributes_type"}
 
 @pytest.mark.parametrize("evento", ["evento_valido_com_id"], indirect=True)
-def test_substituir_todos_os_eventos(client, auth_header, evento):
+def test_substituir_todos_os_eventos(client: TestClient, auth_header: dict[str, str], evento: Literal['evento_valido_com_id']):
     evento["title"] = "Evento Substituto"
     resp = client.put("/api/v1/eventos", json=[evento], headers=auth_header)
 #     response = client_autenticado.put("/api/v1/eventos", json=[novo_evento])
@@ -99,12 +101,12 @@ def test_substituir_todos_os_eventos(client, auth_header, evento):
 
 # Testar PUT /eventos/{id} para substituir um evento inexistente
 @pytest.mark.parametrize("evento", ["evento_valido_com_id_e_forecast"], indirect=True)
-def test_substituir_evento_inexistente(client, auth_header, evento):
+def test_substituir_evento_inexistente(client: TestClient, auth_header: dict[str, str], evento: Literal['evento_valido_com_id_e_forecast']):
     resp = client.put("/api/v1/eventos/99999", json=evento, headers=auth_header)
     assert resp.status_code == 404
     
 @pytest.mark.parametrize("evento", ["evento_valido"], indirect=True)
-def test_substituir_evento_por_id(client, auth_header, evento):
+def test_substituir_evento_por_id(client: TestClient, auth_header: dict[str, str], evento: Literal['evento_valido']):
     # 1) cria o evento original
     post = client.post("/api/v1/eventos", json=evento, headers=auth_header)
     evento_id = post.json()["id"]
@@ -125,26 +127,26 @@ def test_substituir_evento_por_id(client, auth_header, evento):
     assert resp.json()["title"] == "Novo Título"
 
 @pytest.mark.parametrize("evento", ["evento_valido"], indirect=True)
-def test_deletar_todos_os_eventos(client, auth_header, evento):
+def test_deletar_todos_os_eventos(client: TestClient, auth_header: dict[str, str], evento: Literal['evento_valido']):
     client.post("/api/v1/eventos", json=evento, headers=auth_header)
     resp = client.delete("/api/v1/eventos", headers=auth_header)
     assert resp.status_code == 200
     assert resp.json()["mensagem"].startswith("Todos os eventos foram apagados")
 
 # Testar PATCH /eventos/{id} para atualizar um evento inexistente
-def test_atualizar_evento_inexistente(client, auth_header):
+def test_atualizar_evento_inexistente(client: TestClient, auth_header: dict[str, str]):
     atualizacao = {"title": "Novo Título"}
     response = client.patch("/api/v1/eventos/99999", json=atualizacao, headers=auth_header)
     assert response.status_code == 404
 
 # Testar PUT /eventos com lista vazia
-def test_substituir_todos_os_eventos_vazio(client, auth_header):
+def test_substituir_todos_os_eventos_vazio(client: TestClient, auth_header: dict[str, str]):
     response = client.put("/api/v1/eventos", json=[], headers=auth_header)
     assert response.status_code == 400
 
 # Testar erro de validação em update_event (try/except do update_event)
 @pytest.mark.parametrize("evento", ["evento_valido"], indirect=True)
-def test_update_event_validationerror(client, auth_header, evento):
+def test_update_event_validationerror(client: TestClient, auth_header: dict[str, str], evento: Literal['evento_valido']):
     from app.api.v1.endpoints import eventos as eventos_module
     from pydantic import ValidationError
 
@@ -171,7 +173,7 @@ def test_update_event_validationerror(client, auth_header, evento):
 
 # Testar o caso: atualizacao não é EventUpdate (500)
 @pytest.mark.parametrize("evento", ["evento_valido"], indirect=True)
-def test_atualizar_evento_tipo_invalido(client, auth_header, evento):
+def test_atualizar_evento_tipo_invalido(client: TestClient, auth_header: dict[str, str], evento: Literal['evento_valido']):
     # Crie um evento antes
     post_resp = client.post("/api/v1/eventos", json=evento, headers=auth_header)
     evento_id = post_resp.json()["id"]
@@ -181,7 +183,7 @@ def test_atualizar_evento_tipo_invalido(client, auth_header, evento):
     assert resp.json()["detail"] == "Nenhum campo válido para atualização."
 
 @pytest.mark.parametrize("evento", ["evento_valido"], indirect=True)
-def test_atualizar_evento_tipo_valido(client, auth_header, evento):
+def test_atualizar_evento_tipo_valido(client: TestClient, auth_header: dict[str, str], evento: Literal['evento_valido']):
     """PATCH deve aceitar EventUpdate válido e alterar apenas os campos enviados."""
     # --- 1. fixa o repositório (singleton em memória) ---
     repo_singleton = InMemoryEventoRepo()
@@ -209,3 +211,20 @@ def test_atualizar_evento_tipo_valido(client, auth_header, evento):
     finally:
         # limpa override para não interferir em outros testes
         app.dependency_overrides.pop(provide_evento_repo, None)
+
+@pytest.mark.parametrize("n,skip,limit", [(30,0,10), (30,10,10), (5,0,10)])
+def test_paginacao(client: TestClient, auth_header: dict[str, str], repo, n: Literal[30] | Literal[5], skip: Literal[0] | Literal[10], limit: Literal[10]):
+    # cria n eventos dummy
+    for _ in range(n):
+        repo.add(EventCreate(...))   # use factory/faker
+    resp = client.get(f"/api/v1/eventos?skip={skip}&limit={limit}", headers=auth_header)
+    assert resp.status_code == 200
+    assert len(resp.json()) == min(limit, max(0, n-skip))
+
+def test_list_eventos_paginado(repo):
+    # cria 3 eventos de teste
+    for i in range(3):
+        repo.add(EventCreate(title=f"E{i}", description="...", event_date=datetime.now(),
+                             city="Recife", participants=[]))
+    page = repo.list_partial(skip=1, limit=1)
+    assert len(page) == 1
