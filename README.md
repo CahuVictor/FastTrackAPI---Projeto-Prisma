@@ -45,7 +45,7 @@ Desenvolver habilidades avançadas em desenvolvimento backend com Python utiliza
 - [ ] **Aplicar arquitetura de software adequada para aplicações backend**
   - [x] Organizar a aplicação em camadas (router, service, repository, schema, model)
   - [ ] Aplicar princípios SOLID, DRY, KISS e YAGNI
-  - [ ] Criar dependências reutilizáveis e testáveis
+  - [x] Criar dependências reutilizáveis e testáveis
   - [ ] Adotar um padrão de projeto para escalar o backend
 
 - [ ] **Implementar boas práticas de segurança no backend**
@@ -88,10 +88,10 @@ Desenvolver habilidades avançadas em desenvolvimento backend com Python utiliza
   - [ ] Implementar filtros e paginação em endpoints
   - [ ] Gerenciar migrações com Alembic
 
-- [ ] **Trabalhar com versionamento de código no GitHub com boas práticas**
+- [x] **Trabalhar com versionamento de código no GitHub com boas práticas**
   - [x] Utilizar branches e pull requests para organizar o fluxo de trabalho
   - [x] Escrever mensagens de commit claras e informativas
-  - [ ] Resolver conflitos de merge com segurança
+  - [x] Resolver conflitos de merge com segurança
 
 - [ ] **Explorar funcionalidades avançadas conforme a evolução do projeto**
   - [ ] Usar cache com Redis para otimização de desempenho
@@ -126,13 +126,16 @@ fasttrackapi-projeto-prisma/
 │   ├── integration/            # Testes de integração (rotas completas)
 │   └── conftest.py             # Configurações e fixtures para testes
 │
-├── .env                        # Variáveis de ambiente (não versionado)
-├── .env.example                # Exemplo de variáveis para replicar o ambiente
+├── .env                        # Variáveis de ambiente (não versionado) ← padrão (dev)
+├── .env.test                   # ← testes/CI
+├── .env.prod                   # ← produção
 ├── Dockerfile                  # Imagem Docker da aplicação
 ├── docker-compose.yml          # Orquestração com banco de dados e Redis
 ├── pyproject.toml              # Gerenciado pelo Poetry (dependências, versão, etc)
 ├── poetry.lock                 # Trava das versões instaladas
 ├── README.md                   # Documentação principal do projeto
+├── ROADMAP.md                  # 
+├── TROUBLESHOOTING.md          # 
 └── .gitignore                  # Arquivos ignorados pelo Git
 ```
 
@@ -170,6 +173,25 @@ A aplicação permite que usuários criem e visualizem eventos. Cada evento pode
 - Exerce o consumo de APIs externas com autenticação.
 - Trabalha com integração de banco de dados interno e APIs REST externas.
 - Promove a aplicação dos conceitos de arquitetura, segurança, testes e boas práticas.
+
+---
+
+## Divisão dos ambientes
+
+# 3.1 — DEV  (é o default – pode até omitir)
+uvicorn app.main:app --reload
+# ou
+ENV=dev uvicorn app.main:app --reload
+
+
+# 3.2 — TESTE  (útil p/ CI/local)
+ENV=test pytest -q                       # carrega .env.test
+# ou, se quiser subir a API no modo test:
+ENV=test uvicorn app.main:app
+
+
+# 3.3 — PRODUÇÃO  (simulação local)
+ENV=prod uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 ---
 
