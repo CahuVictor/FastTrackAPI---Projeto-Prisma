@@ -20,6 +20,7 @@ passlib = {extras = ["bcrypt"], version = "^1.7.4"}
 pydantic-settings = "^2.9.1"
 bcrypt = "<4.0"
 python-multipart = "^0.0.20"
+redis = "^5.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.0"
@@ -27,6 +28,21 @@ pytest-cov = "^4.1.0"
 ruff = "^0.2.0"
 mypy = "^1.8.0"
 httpx = "^0.28.1"
+fakeredis = "^2.21"
+bandit = "^1.8.3"
+pyupgrade = "^3.20.0"
+
+[tool.ruff]
+line-length = 250               # segue no nível raiz (formatação)
+
+[tool.ruff.lint]                # ⬅️ tudo abaixo diz respeito ao *linter*
+select = ["E", "F", "I", "UP"]   # incluí "D" para docstrings
+ignore = ["E241", "E302", "E231", "E226", "E261", "E262", "E305", "E251", "I001"]                           # exemplo: allow unused import
+extend-ignore = ["D203", "D213"]      # (explico no ponto 2)
+preview = true                        # já usa as regras “next-gen”
+
+# [tool.ruff.exclude]
+# extend = ["migrations", "scripts"]
 
 [build-system]
 requires = ["poetry-core"]

@@ -6,14 +6,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     # PROJECT_NAME: str = "FastTrackAPI - Projeto Prisma"
     # API_V1_PREFIX: str = "/api/v1"
-    # SECRET_KEY: str
-    # DATABASE_URL: str
-    # REDIS_URL: str = "redis://localhost:6379"
     
     # ──────────────────────────── campos ────────────────────────────
     environment: str = Field("dev", alias="ENVIRONMENT")   # fallback → "dev"
     db_url: str = Field(..., alias="DB_URL")               # obrigatório
-    redis_url: str | None = Field(None, alias="REDIS_URL") # opcional (exc. prod)
+    # redis_url: str | None = Field(None, alias="REDIS_URL") # opcional (exc. prod)
+    redis_url: str = Field("redis://localhost:6379/0", validation_alias="REDIS_URL")
     
     auth_secret_key: str = Field(..., alias="AUTH_SECRET_KEY")
     auth_algorithm: str = "HS256"

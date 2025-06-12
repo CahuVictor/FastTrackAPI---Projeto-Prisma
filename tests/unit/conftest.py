@@ -1,17 +1,20 @@
 # tests/unit/conftest.py -> Verificar se pode ficar na raiz de tests/
 import pytest
 from datetime import datetime
-from fastapi import HTTPException
+# from fastapi import HTTPException
 from fastapi.testclient import TestClient
+import fakeredis
 
 # from app.main import app
 from app.main import app as fastapi_app   # FastAPI já criado em app.main
 
-from app.schemas.local_info import LocalInfo
+# from app.schemas.local_info import LocalInfo
 from app.services.mock_local_info import MockLocalInfoService
 
 from app.repositories.evento_mem import InMemoryEventoRepo
 from app.deps import provide_evento_repo
+
+from app.deps import provide_redis
 
 # ------------------------------------------------------------------------------
 # --------------------------- XXXX --------------------------
@@ -244,9 +247,27 @@ def dt_now_iso() -> str:
 
 # ---------- Repositories --------------------------------------------------
 
+@pytest.fixture
+def repo(app):
+    """Mesmo repositório usado pelo app; útil para asserts diretos."""
+    return next(iter(app.dependency_overrides.values()))()  # _shared_repo já registra
+
 @pytest.fixture(autouse=True)
 def _shared_repo(app):
     repo = InMemoryEventoRepo()
     app.dependency_overrides[provide_evento_repo] = lambda: repo
     yield
     repo.delete_all()       # reseta entre testes
+    
+# ---------- Redis --------------------------------------------------
+
+@pytest.fixture(autouse=True)
+def fake_redis(monkeypatch):
+    r = fakeredis.FakeRedis(decode_responses=True)
+    # monkeypatch.setitem(app.main.app.dependency_overrides, provide_redis, lambda: r)
+    monkeypatch.setitem(
+        fastapi_app.dependency_overrides,     # usa a instância correta
+        provide_redis,
+        lambda: r
+    )
+    yield r

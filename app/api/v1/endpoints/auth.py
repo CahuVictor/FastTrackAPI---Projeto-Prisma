@@ -1,9 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Form
+# api/v1/endpoints/auth.py
+# from fastapi import APIRouter, Depends, HTTPException, status, Form
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from app.schemas.token import Token
 from app.deps import provide_user_repo
 from app.services.interfaces.user import AbstractUserRepo
-from app.services.auth_service import authenticate, create_access_token
+from app.services.auth_service import authenticate # , create_access_token
+from app.core.security import create_access_token
+
+# from app.services.auth_service import authenticate, get_current_user # remover
 
 
 router = APIRouter(tags=["auth"])

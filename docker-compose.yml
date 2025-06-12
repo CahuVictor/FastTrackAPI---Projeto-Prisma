@@ -31,9 +31,11 @@ services:
       - "5432:5432"
 
   redis:
-    image: redis:alpine
+    image: redis:7-alpine
+    restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "6379:6379"           # opcional em dev
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
 
 volumes:
   postgres_data:

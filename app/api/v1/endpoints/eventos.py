@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, Depends, status
 from fastapi import Query
-from datetime import datetime
+from datetime import datetime, timezone
 from pydantic import ValidationError
-from typing import Callable
+from collections.abc import Callable
 
 from app.schemas.event_create import EventCreate, EventResponse
 from app.schemas.local_info import LocalInfo
@@ -11,6 +11,8 @@ from app.schemas.weather_forecast import WeatherForecast
 
 from app.services.auth_service import get_current_user
 # from app.schemas.user import User
+
+from app.utils.cache import cached_json
 
 from app.services.interfaces.local_info import AbstractLocalInfoService
 from app.services.interfaces.forecast_info import AbstractForecastService
@@ -23,15 +25,13 @@ from app.deps import provide_evento_repo
 auth_dep = Depends(get_current_user)
 _provide_local_info_service = Depends(provide_local_info_service)
 _provide_forecast_service = Depends(provide_forecast_service)
+_provide_evento_repo = Depends(provide_evento_repo)
 
 router = APIRouter()
 
 # router = APIRouter(
 #     dependencies=[auth_dep]
 # )
-
-# Armazenamento em memória
-id_counter = 1
 
 def require_roles(*allowed: str) -> Callable:
     def verifier(user = auth_dep):
@@ -85,21 +85,24 @@ def update_event(
 @router.get(
     "/local_info",
     tags=["eventos"],
-    summary="Busca informações de um local (mock)",
+    summary="Busca informações de um local pelo nome",
     response_model=LocalInfo,
     dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
     responses={
+        200: {"description": "Local encontrado"},
         404: {"description": "Local não encontrado"}
     },
 )
-def obter_local_info(
+@cached_json("local-info", ttl=86400)              # ⬅⬅️ _a “mágica” está aqui_
+async def obter_local_info(
     location_name: str = Query(..., description="Nome do local a ser buscado"),
     service: AbstractLocalInfoService = _provide_local_info_service
 ):
     """
-    Retorna as informações detalhadas de um local a partir do nome, buscando dados simulados.
+    Retorna as informações detalhadas de um local a partir do nome.
+    Cache: 24 h (86400 s)
     """
-    info = service.get_by_name(location_name)
+    info = await service.get_by_name(location_name)
     if not info:
         raise HTTPException(status_code=404, detail="Local não encontrado")
     return info
@@ -111,16 +114,19 @@ def obter_local_info(
     response_model=WeatherForecast,
     dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
     responses={
-        404: {"description": "Previsão não encontrada"}
+        200: {"description": "Previsão recebida"},
+        404: {"description": "Previsão não recebida"}
     },
 )
-def obter_forecast_info(
+@cached_json("forecast", ttl=1800)              # ⬅⬅️ _a “mágica” está aqui_
+async def obter_forecast_info(
     city: str = Query(..., description="Nome da cidade"),
     date: datetime = Query(..., description="Data e hora de referência para a previsão"),
     service: AbstractForecastService = _provide_forecast_service,
 ):
     """
     Retorna a previsão do tempo simulada para a cidade e data/hora informadas.
+    Cache: 30 min (1800 s)
     """
     previsao = service.get_by_city_and_datetime(city, date)
     if not previsao:
@@ -140,7 +146,7 @@ def obter_forecast_info(
         404: {"description": "Nenhum evento encontrado."}
     },
 )
-def listar_eventos(repo: AbstractEventoRepo = Depends(provide_evento_repo)) -> list[EventResponse]:
+def listar_eventos_todos(repo: AbstractEventoRepo = _provide_evento_repo) -> list[EventResponse]:
     """
     Retorna todos os eventos cadastrados.
     """
@@ -160,7 +166,7 @@ def listar_eventos(
     skip: int = Query(0, ge=0, description="Quantos registros pular"),
     limit: int = Query(20, le=100, description="Tamanho da página"),
     city: str | None = Query(None, description="Filtrar por cidade"),
-    repo: AbstractEventoRepo = Depends(provide_evento_repo),
+    repo: AbstractEventoRepo = _provide_evento_repo,
 ) -> list[EventResponse]:
     """
     Retorna uma fatia paginada dos eventos; opcionalmente filtra por cidade.
@@ -183,7 +189,7 @@ def listar_eventos(
 )
 def obter_evento_por_id(
                         evento_id: int, 
-                        repo: AbstractEventoRepo = Depends(provide_evento_repo),
+                        repo: AbstractEventoRepo = _provide_evento_repo,
     ) -> EventResponse:
     """
     Busca um evento pelo seu identificador único.
@@ -191,7 +197,74 @@ def obter_evento_por_id(
     evento = repo.get(evento_id)
     if evento is None:
         raise HTTPException(status_code=404, detail="Evento não encontrado")
+    evento.views += 1
+    repo.update(evento_id, evento)
     return EventResponse.model_validate(evento)
+
+@router.get(
+    "/eventos/top/soon",
+    tags=["eventos"],
+    summary="N eventos com data mais próxima",
+    response_model=list[EventResponse],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
+    responses={
+        200: {"description": "Lista dos eventos mais próximos."},
+        404: {"description": "Sem eventos futuros encontrados"}
+    },
+    
+)
+@cached_json("top-soon", ttl=10)  # snapshot ultra-curto (10 s)
+async def eventos_proximos(
+    limit: int = Query(10, ge=1, le=50, description="Quantos eventos retornar"),
+    repo: AbstractEventoRepo = _provide_evento_repo,
+) -> list[EventResponse]:
+    """
+    Ordena todos os eventos pelo `event_date` ascendente
+    e devolve os *limit* mais próximos da data/hora atual.
+    """
+    agora = datetime.now(tz=timezone.utc)
+
+    eventos = repo.list()                     # dict[int, Evento]
+    proximos = (
+        sorted(
+            (ev for ev in eventos.values() if ev.event_date >= agora),
+            key=lambda ev: ev.event_date,
+        )[:limit]
+    )
+    if not proximos:
+        raise HTTPException(404, "Sem eventos futuros encontrados")
+    return proximos
+
+@router.get(
+    "eventos/top/most-viewed",
+    tags=["eventos"],
+    summary="N eventos mais vistos",
+    response_model=list[EventResponse],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
+    responses={
+        200: {"description": "Lista de eventos mais vistos."},
+        404: {"description": "Nenhum evento encontrado."}
+    },
+)
+@cached_json("top-viewed", ttl=30)  # 30 s é suficiente p/ ranking
+async def eventos_mais_vistos(
+    limit: int = Query(10, ge=1, le=50),
+    repo: AbstractEventoRepo = Depends(provide_evento_repo),
+) -> list[EventResponse]:
+    """
+    Retorna os *limit* eventos com maior contagem de `views`.
+    Empate é resolvido pela data do evento (mais próximo primeiro).
+    """
+    eventos = repo.list().values()
+    mais_vistos = (
+        sorted(
+            eventos,
+            key=lambda ev: (-ev.views, ev.event_date)  # decrescente por views
+        )[:limit]
+    )
+    if not mais_vistos:
+        raise HTTPException(404, "Nenhum evento encontrado")
+    return mais_vistos
 
 @router.post(
     "/eventos",
@@ -202,13 +275,13 @@ def obter_evento_por_id(
     dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
     responses={
         201: {"description": "Evento criado com sucesso, podendo conter ou não previsão do tempo."},
-        201: {"description": "Evento criado, mas sem previsão do tempo por falha ao acessar a API externa."} # 207 caso queria utilizar outro
+        207: {"description": "Evento criado, mas sem previsão do tempo por falha ao acessar a API externa."} # 207 caso queria utilizar outro
     },
 )
 def criar_evento(
     evento: EventCreate,
     service: AbstractForecastService = _provide_forecast_service,
-    repo: AbstractEventoRepo = Depends(provide_evento_repo),
+    repo: AbstractEventoRepo = _provide_evento_repo,
 ) -> EventResponse:
     """
     Cria um evento e tenta buscar a previsão do tempo automaticamente para preenchimento do campo forecast_info.
@@ -237,8 +310,8 @@ def criar_evento(
 )
 def adicionar_eventos_em_lote(
     eventos: list[EventCreate],
-    service: AbstractForecastService = Depends(provide_forecast_service),
-    repo: AbstractEventoRepo = Depends(provide_evento_repo),
+    service: AbstractForecastService = _provide_forecast_service,
+    repo: AbstractEventoRepo = _provide_evento_repo,
 ) -> list[EventResponse]:
     """
     Cria múltiplos eventos de uma vez, atribuindo novos IDs para cada um.
@@ -273,7 +346,7 @@ def adicionar_eventos_em_lote(
 )
 def substituir_todos_os_eventos(
     eventos_new: list[EventResponse],
-    repo: AbstractEventoRepo = Depends(provide_evento_repo),
+    repo: AbstractEventoRepo = _provide_evento_repo,
 ) -> list[EventResponse]:
     """
     Substitui completamente a lista de eventos registrados.
@@ -297,7 +370,7 @@ def substituir_todos_os_eventos(
 def substituir_evento_por_id(
                             evento_id: int, 
                             novo_evento: EventResponse,
-                            repo: AbstractEventoRepo = Depends(provide_evento_repo),
+                            repo: AbstractEventoRepo = _provide_evento_repo,
     ) -> EventResponse:
     """
     Substitui por completo os dados de um evento existente pelo ID.
@@ -320,7 +393,7 @@ def substituir_evento_por_id(
     },
 )
 def deletar_todos_os_eventos(
-                                repo: AbstractEventoRepo = Depends(provide_evento_repo)
+                                repo: AbstractEventoRepo = _provide_evento_repo
     ) -> dict[str, str]:
     """
     Apaga todos os eventos registrados.
@@ -341,7 +414,7 @@ def deletar_todos_os_eventos(
 )
 def deletar_evento_por_id(
                             evento_id: int,
-                            repo: AbstractEventoRepo = Depends(provide_evento_repo),
+                            repo: AbstractEventoRepo = _provide_evento_repo,
     ) -> dict[str, str]:
     """
     Remove um evento pelo seu ID.
@@ -366,7 +439,7 @@ def deletar_evento_por_id(
 def atualizar_evento(
                     evento_id: int, 
                     atualizacao: EventUpdate,
-                    repo: AbstractEventoRepo = Depends(provide_evento_repo),
+                    repo: AbstractEventoRepo = _provide_evento_repo,
     ) -> EventResponse:
     """
     Atualiza parcialmente os dados do evento informado pelo ID.
@@ -394,7 +467,7 @@ def atualizar_evento(
 def atualizar_local_info(
                             evento_id: int, 
                             atualizacao: LocalInfoUpdate,
-                            repo: AbstractEventoRepo = Depends(provide_evento_repo),
+                            repo: AbstractEventoRepo = _provide_evento_repo,
     ) -> EventResponse:
     """
     Atualiza o campo local_info de um evento específico.
@@ -421,7 +494,7 @@ def atualizar_local_info(
 def atualizar_forecast_info(
                             evento_id: int,
                             service: AbstractForecastService = _provide_forecast_service,
-                            repo: AbstractEventoRepo = Depends(provide_evento_repo),
+                            repo: AbstractEventoRepo = _provide_evento_repo,
 ) -> EventResponse:
     """
     Atualiza o campo forecast_info de um evento específico.

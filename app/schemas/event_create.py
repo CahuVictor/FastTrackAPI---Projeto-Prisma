@@ -17,17 +17,15 @@ class EventCreate(BaseModel):
     # def normalizar_nome_local(cls, v):
     #     return v.strip().lower() if isinstance(v, str) else v
 
-    # id: int | None = None
     title: Annotated[str, Field(max_length=100, description="Título do evento", json_schema_extra={"example": "Festival de Tecnologia"})]
     description: Annotated[str, Field(description="Descrição detalhada", json_schema_extra={"example": "Evento com oficinas, palestras e música."})]
     event_date: Annotated[datetime, Field(description="Data e hora do evento", json_schema_extra={"example": "2025-06-12T19:00:00"})]
-    # location_name: Annotated[str, Field(description="Nome do local", json_schema_extra={"example": "Auditório Central")] # Removido por redundância em local_info
     city: Annotated[str, Field(description="Cidade onde o evento ocorrerá", json_schema_extra={"example": "Recife"})]
     participants: Annotated[list[str], Field(description="Lista de participantes", json_schema_extra={"example": ["Alice", "Bob", "Carol"]})]
-    # local_info: LocalInfo | None = None # obsoleto Optional[dict]
-    local_info: LocalInfo
-    # forecast_info removido!
+    local_info: LocalInfo               # local_info: LocalInfo | None = None # obsoleto Optional[dict]
     
 class EventResponse(EventCreate):
     id: int
     forecast_info: WeatherForecast | None = None
+    views: int = 0 # (default = 0)
+    

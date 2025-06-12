@@ -4,12 +4,16 @@
 from typing import Literal
 from fastapi.testclient import TestClient
 import pytest
+from datetime import datetime
 
-from fastapi import HTTPException
+# from fastapi import HTTPException
 
 from app.main import app
+
+from app.schemas.event_create import EventCreate
+
 from app.deps import provide_evento_repo
-from app.api.v1.endpoints.eventos import atualizar_evento
+# from app.api.v1.endpoints.eventos import atualizar_evento
 from app.repositories.evento_mem import InMemoryEventoRepo
 
 @pytest.mark.parametrize("evento", ["evento_valido"], indirect=True)
@@ -35,8 +39,9 @@ def test_substituir_todos_os_eventos(client: TestClient, auth_header: dict[str, 
     assert resp.status_code == 200
     assert resp.json()[0]["title"] == "Evento Substituto"
 
-@pytest.mark.parametrize("evento", ["evento_valido_com_id_forecast"], indirect=True)
-def test_substituir_evento_inexistente(client: TestClient, auth_header: dict[str, str], evento: Literal['evento_valido_com_id_forecast']):
+# Testar PUT /eventos/{id} para substituir um evento inexistente
+@pytest.mark.parametrize("evento", ["evento_valido_com_id_e_forecast"], indirect=True)
+def test_substituir_evento_inexistente(client: TestClient, auth_header: dict[str, str], evento: Literal['evento_valido_com_id_e_forecast']):
     resp = client.put("/api/v1/eventos/99999", json=evento, headers=auth_header)
     assert resp.status_code == 404
 
@@ -89,21 +94,6 @@ def test_atualizar_evento_tipo_invalido_unit(client: TestClient, auth_header: di
     detail = resp.json()["detail"][0]
     # assert detail["type"] == "int_parsing" or detail["msg"].startswith("value is not a valid dict")
     assert detail["type"] in {"missing", "model_attributes_type"}
-
-@pytest.mark.parametrize("evento", ["evento_valido_com_id"], indirect=True)
-def test_substituir_todos_os_eventos(client: TestClient, auth_header: dict[str, str], evento: Literal['evento_valido_com_id']):
-    evento["title"] = "Evento Substituto"
-    resp = client.put("/api/v1/eventos", json=[evento], headers=auth_header)
-#     response = client_autenticado.put("/api/v1/eventos", json=[novo_evento])
-    assert resp.status_code == 200
-#     assert len(response.json()) == 1
-    assert resp.json()[0]["title"] == "Evento Substituto"
-
-# Testar PUT /eventos/{id} para substituir um evento inexistente
-@pytest.mark.parametrize("evento", ["evento_valido_com_id_e_forecast"], indirect=True)
-def test_substituir_evento_inexistente(client: TestClient, auth_header: dict[str, str], evento: Literal['evento_valido_com_id_e_forecast']):
-    resp = client.put("/api/v1/eventos/99999", json=evento, headers=auth_header)
-    assert resp.status_code == 404
     
 @pytest.mark.parametrize("evento", ["evento_valido"], indirect=True)
 def test_substituir_evento_por_id(client: TestClient, auth_header: dict[str, str], evento: Literal['evento_valido']):
@@ -147,8 +137,8 @@ def test_substituir_todos_os_eventos_vazio(client: TestClient, auth_header: dict
 # Testar erro de validação em update_event (try/except do update_event)
 @pytest.mark.parametrize("evento", ["evento_valido"], indirect=True)
 def test_update_event_validationerror(client: TestClient, auth_header: dict[str, str], evento: Literal['evento_valido']):
-    from app.api.v1.endpoints import eventos as eventos_module
-    from pydantic import ValidationError
+    # from app.api.v1.endpoints import eventos as eventos_module
+    # from pydantic import ValidationError
 
     # Cria evento
     post_resp = client.post("/api/v1/eventos", json=evento, headers=auth_header)

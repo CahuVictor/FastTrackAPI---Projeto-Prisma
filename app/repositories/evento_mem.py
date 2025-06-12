@@ -1,7 +1,7 @@
 # app/repositories/evento_mem.py
 from app.schemas.event_create import EventCreate, EventResponse
-from app.schemas.weather_forecast import WeatherForecast
-from app.schemas.local_info import LocalInfo
+# from app.schemas.weather_forecast import WeatherForecast
+# from app.schemas.local_info import LocalInfo
 from app.repositories.evento import AbstractEventoRepo
 
 class InMemoryEventoRepo(AbstractEventoRepo):
@@ -12,10 +12,35 @@ class InMemoryEventoRepo(AbstractEventoRepo):
     def list_all(self) -> list[EventResponse]:
         return list(self._db.values())
 
-    def list_partial(self, *, skip: int = 0, limit: int = 20, city: str | None = None):
-        data = list(self._db.values())
-        if city:
-            data = [e for e in data if e.city.lower() == city.lower()]
+    # Atualizar para utilizar kwargs
+    # def list_partial(self, *, skip: int = 0, limit: int = 20, city: str | None = None):
+    def list_partial(self, *, skip: int = 0, limit: int = 20, **filters) -> list[EventResponse]:
+        """
+        Devolve um recorte paginado da coleção em memória, aplicando
+        dinamicamente filtros recebidos como keyword-args.
+
+        Exemplos de chamada:
+            repo.list_partial(skip=0, limit=10)                    # sem filtros
+            repo.list_partial(skip=0, limit=10, city="Recife")     # filtra por cidade
+            repo.list_partial(skip=0, limit=10, xyz="ABC")         # filtra por outro campo
+        """
+        data: list[EventResponse] = list(self._db.values())
+        
+        # aplica cada filtro recebido
+        for field, expected in filters.items():
+            if expected is None:        # ignora filtros vazios
+                continue
+
+            def _match(event: EventResponse) -> bool:
+                actual = getattr(event, field, None)
+                # comparação "case-insensitive" para strings
+                if isinstance(actual, str) and isinstance(expected, str):
+                    return actual.lower() == expected.lower()
+                return actual == expected
+
+            data = [e for e in data if _match(e)]
+
+        # paginação final
         return data[skip : skip + limit]
 
     def get(self, evento_id: int) -> EventResponse | None:
@@ -43,9 +68,18 @@ class InMemoryEventoRepo(AbstractEventoRepo):
     def replace_by_id(self, evento_id: int, evento: EventResponse) -> EventResponse:
         self._db[evento_id] = evento
         return evento
+    
+    # -----------------------------------------------------------------
+    def clear(self) -> None:
+        """Remove todos os eventos e zera o contador de IDs (usado em testes)."""
+        self._db.clear()
+        self._id_counter = 1
+    # -----------------------------------------------------------------
 
     def delete_all(self) -> None:
+        """Remove todos os eventos e zera o contador de IDs (usado em testes)."""
         self._db.clear()
+        self._id_counter = 1
 
     def delete_by_id(self, evento_id: int) -> bool:
         return self._db.pop(evento_id, None) is not None

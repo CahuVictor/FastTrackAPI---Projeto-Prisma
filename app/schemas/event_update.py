@@ -1,14 +1,14 @@
 from pydantic import BaseModel, Field
-from typing import Annotated, Optional
+from typing import Annotated # , Optional
 from app.schemas.venue_type import VenueTypes
 from datetime import datetime
 
 class EventUpdate(BaseModel):
-    title: Annotated[Optional[str], Field(max_length=100, description="Novo título do evento.", json_schema_extra={"example": "Encontro de Startups"})] = None
-    description: Annotated[Optional[str], Field(description="Nova descrição do evento.", json_schema_extra={"example": "Evento com networking, pitch e painéis sobre inovação."})] = None
-    event_date: Annotated[Optional[datetime], Field(description="Nova data e hora do evento.", json_schema_extra={"example": "2025-07-05T14:30:00"})] = None
-    city: Annotated[Optional[str], Field(description="Nova cidade do evento.", json_schema_extra={"example": "Olinda"})] = None
-    participants: Annotated[Optional[list[str]], Field( description="Nova lista de participantes.", json_schema_extra={"example": ["Alice", "Bruno", "Carla"]})] = None
+    title: Annotated[str | None, Field(max_length=100, description="Novo título do evento.", json_schema_extra={"example": "Encontro de Startups"})] = None
+    description: Annotated[str | None, Field(description="Nova descrição do evento.", json_schema_extra={"example": "Evento com networking, pitch e painéis sobre inovação."})] = None
+    event_date: Annotated[datetime | None, Field(description="Nova data e hora do evento.", json_schema_extra={"example": "2025-07-05T14:30:00"})] = None
+    city: Annotated[str | None, Field(description="Nova cidade do evento.", json_schema_extra={"example": "Olinda"})] = None
+    participants: Annotated[list[str] | None, Field(description="Nova lista de participantes.", json_schema_extra={"example": ["Alice", "Bruno", "Carla"]})] = None
 
 # class EventUpdate(BaseModel):
 #     local_info: Annotated[dict|None, Field(description="Dados do local vindos da API externa", json_schema_extra={"example": {"capacity": 100}}, default=None)]

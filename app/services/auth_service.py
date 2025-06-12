@@ -5,7 +5,8 @@ from fastapi.security import OAuth2PasswordBearer
 from app.services.interfaces.user import AbstractUserRepo
 from app.deps import provide_user_repo
 
-from app.core.security import verify_password, create_access_token
+# from app.core.security import verify_password, create_access_token
+from app.core.security import verify_password
 from app.core.config import get_settings
 
 settings = get_settings()
