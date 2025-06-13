@@ -1,14 +1,14 @@
 # app/deps.py
 from redis.asyncio import Redis
 
-from app.services.interfaces.user import AbstractUserRepo
+from app.services.interfaces.user_protocol import AbstractUserRepo
 from app.services.mock_users import MockUserRepo
 
 from app.services.mock_local_info import MockLocalInfoService
-from app.services.interfaces.local_info import AbstractLocalInfoService
+from app.services.interfaces.local_info_protocol import AbstractLocalInfoService
 
 from app.services.mock_forecast_info import MockForecastService
-from app.services.interfaces.forecast_info import AbstractForecastService
+from app.services.interfaces.forecast_info_protocol import AbstractForecastService
 
 # from app.repositories.evento import AbstractEventoRepo
 
@@ -44,6 +44,8 @@ def provide_evento_repo() -> InMemoryEventoRepo:
 
 async def provide_redis() -> Redis:
     global _redis_singleton
+    if _settings.redis_url is None:
+        raise RuntimeError("REDIS_URL obrigatório")
     if _redis_singleton is None:
         _redis_singleton = Redis.from_url(
             _settings.redis_url,

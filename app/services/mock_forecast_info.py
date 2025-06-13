@@ -2,7 +2,7 @@
 from datetime import datetime, timedelta
 
 from app.schemas.weather_forecast import WeatherForecast
-from app.services.interfaces.forecast_info import AbstractForecastService
+from app.services.interfaces.forecast_info_protocol import AbstractForecastService
 
 class MockForecastService(AbstractForecastService):
     def get_by_city_and_datetime(self, city: str, date: datetime) -> WeatherForecast | None:

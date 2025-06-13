@@ -8,18 +8,17 @@ class Settings(BaseSettings):
     # API_V1_PREFIX: str = "/api/v1"
     
     # ──────────────────────────── campos ────────────────────────────
-    environment: str = Field("dev", alias="ENVIRONMENT")   # fallback → "dev"
-    db_url: str = Field(..., alias="DB_URL")               # obrigatório
-    # redis_url: str | None = Field(None, alias="REDIS_URL") # opcional (exc. prod)
+    environment: str | None = Field("dev", validation_alias="ENVIRONMENT")   # fallback → "dev"
+    db_url: str = Field("sqlite:///dev.db", validation_alias="DB_URL")       # obrigatório
     redis_url: str = Field("redis://localhost:6379/0", validation_alias="REDIS_URL")
     
-    auth_secret_key: str = Field(..., alias="AUTH_SECRET_KEY")
+    auth_secret_key: str = Field("dummy-secret", validation_alias="AUTH_SECRET_KEY")
     auth_algorithm: str = "HS256"
     auth_access_token_expire: int = 60 * 24  # min
     
     # ──────────────────────────── legado ────────────────────────────
-    database_url: str | None = Field(None, alias="DATABASE_URL")
-    secret_key: str | None = Field(None, alias="SECRET_KEY")
+    database_url: str | None = Field(None, validation_alias="DATABASE_URL")
+    secret_key: str | None = Field(None, validation_alias="SECRET_KEY")
     
     # ─────────────────────── configuração Pydantic ─────────────────
     # class Config:
@@ -29,7 +28,8 @@ class Settings(BaseSettings):
         env_file=(".env", ".env.prod", ".env.test"),
         env_file_encoding="utf-8",
         extra="forbid",               # var estranha? app aborta.
-        case_sensitive=False
+        case_sensitive=False,
+        validate_default=True          # ⬅ lê variáveis antes de validar
     )
     
     # ─────────────────────── validações extras ─────────────────────
@@ -38,7 +38,12 @@ class Settings(BaseSettings):
         if info.data.get("environment") == "prod" and not v:
             raise ValueError("REDIS_URL é obrigatório em produção")
         return v
+    
+    def _check_in_prod(self):
+        if self.environment == "prod" and not self.auth_secret_key:
+            raise ValueError("AUTH_SECRET_KEY é obrigatório em produção")
+        return self
 
 @lru_cache
 def get_settings() -> Settings: 
-    return Settings()
+    return Settings()  # type: ignore[call-arg]

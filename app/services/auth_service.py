@@ -2,7 +2,7 @@ from fastapi import HTTPException, status, Depends
 from jose import JWTError, jwt
 from fastapi.security import OAuth2PasswordBearer
 
-from app.services.interfaces.user import AbstractUserRepo
+from app.services.interfaces.user_protocol import AbstractUserRepo
 from app.deps import provide_user_repo
 
 # from app.core.security import verify_password, create_access_token
@@ -33,6 +33,8 @@ def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
+        if settings.auth_secret_key is None:
+            raise RuntimeError("AUTH_SECRET_KEY não configurada")
         payload = jwt.decode(
             token, settings.auth_secret_key, [settings.auth_algorithm]
         )

@@ -2,8 +2,10 @@
 
 [![Coverage](https://codecov.io/gh/SEU_USUARIO/FastTrackAPI---Projeto-Prisma/branch/main/graph/badge.svg)](https://codecov.io/gh/SEU_USUARIO/FastTrackAPI---Projeto-Prisma)
 ---------- coverage: platform win32, python 3.12.6-final-0 -----------
-Name                                 Stmts   Miss  Cover
-TOTAL                                  255      6    98%
+Name                                                Stmts   Miss  Cover   Missing
+TOTAL                                                 533     94    82%
+
+Required test coverage of 80% reached. Total coverage: 82.36%
 
 Este repositório faz parte de uma mentoria prática de backend com Python e FastAPI.  
 O **Projeto Prisma** representa a construção de uma base sólida e estruturada, refletindo a clareza e a organização de um backend bem projetado.

@@ -2,7 +2,9 @@
 import json
 import functools
 import inspect
-from typing import Callable, Awaitable, TypeVar
+from typing import TypeVar
+
+from collections.abc import Callable, Awaitable
 from redis.asyncio import Redis
 from fastapi import Depends
 
@@ -27,7 +29,7 @@ def cached_json(prefix: str, ttl: int = 60):
             **kwargs,
         ):
             # 🔑  pega (ou reaproveita) a conexão Redis
-            redis: Redis = await provide_redis()
+            redis_client: Redis = await provide_redis()
             
             # # Se ainda for objeto Depends, quer dizer que estamos fora do FastAPI
             # if isinstance(redis, Depends):           # ← 👈 novo
@@ -37,11 +39,11 @@ def cached_json(prefix: str, ttl: int = 60):
             bound.apply_defaults()
             key = _make_key(prefix, bound.args, bound.kwargs)
 
-            if (cached := await redis.get(key)):
+            if (cached := await redis_client.get(key)):
                 return json.loads(cached)
 
             result: T = await func(*args, **kwargs)
-            await redis.setex(key, ttl, json.dumps(result, default=str))
+            await redis_client.setex(key, ttl, json.dumps(result, default=str))
             return result
         return wrapper
     return decorator

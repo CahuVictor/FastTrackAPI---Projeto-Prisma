@@ -1,6 +1,6 @@
 from app.core.security import get_password_hash
 from app.schemas.user import UserInDB
-from app.services.interfaces.user import AbstractUserRepo
+from app.services.interfaces.user_protocol import AbstractUserRepo
 
 class MockUserRepo(AbstractUserRepo):
     def __init__(self):

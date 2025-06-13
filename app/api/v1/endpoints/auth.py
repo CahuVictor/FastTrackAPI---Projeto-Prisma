@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from app.schemas.token import Token
 from app.deps import provide_user_repo
-from app.services.interfaces.user import AbstractUserRepo
+from app.services.interfaces.user_protocol import AbstractUserRepo
 from app.services.auth_service import authenticate # , create_access_token
 from app.core.security import create_access_token
 

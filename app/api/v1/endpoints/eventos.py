@@ -14,8 +14,8 @@ from app.services.auth_service import get_current_user
 
 from app.utils.cache import cached_json
 
-from app.services.interfaces.local_info import AbstractLocalInfoService
-from app.services.interfaces.forecast_info import AbstractForecastService
+from app.services.interfaces.local_info_protocol import AbstractLocalInfoService
+from app.services.interfaces.forecast_info_protocol import AbstractForecastService
 from app.deps import provide_local_info_service, provide_forecast_service
 
 from app.repositories.evento import AbstractEventoRepo
@@ -198,7 +198,7 @@ def obter_evento_por_id(
     if evento is None:
         raise HTTPException(status_code=404, detail="Evento não encontrado")
     evento.views += 1
-    repo.update(evento_id, evento)
+    repo.update(evento_id, evento.model_dump(exclude_unset=True))
     return EventResponse.model_validate(evento)
 
 @router.get(
@@ -224,10 +224,11 @@ async def eventos_proximos(
     """
     agora = datetime.now(tz=timezone.utc)
 
-    eventos = repo.list()                     # dict[int, Evento]
+    eventos = repo.list_all()                     # dict[int, Evento] # Corrigir para list_partial()
     proximos = (
         sorted(
-            (ev for ev in eventos.values() if ev.event_date >= agora),
+            # (ev for ev in eventos.values() if ev.event_date >= agora),
+            [ev for ev in eventos if ev.event_date >= agora],
             key=lambda ev: ev.event_date,
         )[:limit]
     )
@@ -255,11 +256,11 @@ async def eventos_mais_vistos(
     Retorna os *limit* eventos com maior contagem de `views`.
     Empate é resolvido pela data do evento (mais próximo primeiro).
     """
-    eventos = repo.list().values()
+    eventos = repo.list_all()
     mais_vistos = (
         sorted(
             eventos,
-            key=lambda ev: (-ev.views, ev.event_date)  # decrescente por views
+            key=lambda ev: (-ev.views, ev.event_date)  # mais views primeiro
         )[:limit]
     )
     if not mais_vistos:
@@ -504,8 +505,9 @@ def atualizar_forecast_info(
         raise HTTPException(status_code=404, detail="Evento não encontrado.")
 
     try:
-        previsao = service.get_by_city_and_datetime(evento.city, evento.event_date)
-        atualizacao = ForecastInfoUpdate.model_validate(previsao.model_dump())
+        forecast = service.get_by_city_and_datetime(evento.city, evento.event_date)
+        if forecast is not None:
+            atualizacao = ForecastInfoUpdate.model_validate(forecast.model_dump())
     except Exception:
         raise HTTPException(status_code=502, detail="Erro ao obter previsão do tempo")
 

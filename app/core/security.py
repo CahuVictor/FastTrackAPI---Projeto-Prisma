@@ -37,6 +37,8 @@ def create_access_token(subject: str  # usuário
     #     payload["roles"] = roles
     # ---------------------------------------------------------------------
     
+    if _settings.auth_secret_key is None:
+        raise RuntimeError("AUTH_SECRET_KEY não configurada")
     return jwt.encode(payload,
                       _settings.auth_secret_key,
                       _settings.auth_algorithm)
