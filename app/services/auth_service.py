@@ -11,8 +11,6 @@ from app.core.security import verify_password
 from app.core.config import get_settings
 from app.core.contextvars import request_user
 
-
-
 logger = get_logger().bind(module="auth_service")
 
 settings = get_settings()

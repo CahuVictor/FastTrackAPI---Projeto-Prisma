@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from structlog import get_logger
 import os
 import logging
+from contextlib import asynccontextmanager
 
 from app.api.v1.endpoints import eventos, auth          #  ←  agora importamos auth
 # from app.services.auth_service import get_current_user          #  ←  dependência global
@@ -16,7 +17,6 @@ logger = get_logger().bind(app="FastTrackAPI", env="dev")
 
 uvicorn_log = logging.getLogger("uvicorn.error")   # <- o mesmo que imprime “INFO: …”
 
-from contextlib import asynccontextmanager
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 🔹 CÓDIGO DE STARTUP  (executa antes do app ficar pronto)

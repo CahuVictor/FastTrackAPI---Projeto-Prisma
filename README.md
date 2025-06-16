@@ -107,6 +107,9 @@ Desenvolver habilidades avançadas em desenvolvimento backend com Python utiliza
 
 ```bash
 fasttrackapi-projeto-prisma/
+├── .github/
+│   └── workflows/ 
+│       └── ci.yml   
 ├── app/
 │   ├── api/                    # Rotas da API (FastAPI Routers)
 │   │   ├── v1/                 # Versão da API

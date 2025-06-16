@@ -32,7 +32,6 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             user = request_user.get() or "anonymous"
             client = request.client.host if request.client else "unknown"
 
-
             logger.info(
                 "HTTP request log",
                 method=request.method,
