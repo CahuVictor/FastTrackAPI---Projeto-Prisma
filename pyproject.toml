@@ -15,6 +15,13 @@ alembic = "^1.13.0"
 pydantic = "^2.0"
 python-dotenv = "^1.0.0"
 typing-extensions = "^4.10.0"
+python-jose = {extras = ["cryptography"], version = "^3.4.0"}
+passlib = {extras = ["bcrypt"], version = "^1.7.4"}
+pydantic-settings = "^2.9.1"
+bcrypt = "<4.0"
+python-multipart = "^0.0.20"
+redis = "^5.0"
+structlog = "^25.4.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.0"
@@ -22,6 +29,27 @@ pytest-cov = "^4.1.0"
 ruff = "^0.2.0"
 mypy = "^1.8.0"
 httpx = "^0.28.1"
+fakeredis = "^2.21"
+bandit = "^1.8.3"
+pyupgrade = "^3.20.0"
+types-python-jose = "^3.5.0.20250531"
+types-passlib = "^1.7.7.20250602"
+structlog = "^25.4.0"
+
+[tool.mypy]
+check_untyped_defs = true
+
+[tool.ruff]
+line-length = 250               # segue no nível raiz (formatação)
+
+[tool.ruff.lint]                # ⬅️ tudo abaixo diz respeito ao *linter*
+select = ["E", "F", "I", "UP"]   # incluí "D" para docstrings
+ignore = ["E241", "E302", "E231", "E226", "E261", "E262", "E305", "E251", "I001"]                           # exemplo: allow unused import
+extend-ignore = ["D203", "D213"]      # (explico no ponto 2)
+preview = true                        # já usa as regras “next-gen”
+
+# [tool.ruff.exclude]
+# extend = ["migrations", "scripts"]
 
 [build-system]
 requires = ["poetry-core"]
