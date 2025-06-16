@@ -1,6 +1,10 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import Annotated
+from structlog import get_logger
+
 from app.schemas.venue_type import VenueTypes
+
+logger = get_logger().bind(module="local_info")
 
 class LocalInfo(BaseModel):
     location_name: Annotated[str, Field(description="Nome do local", min_length=2, json_schema_extra={"example":"CESAR"})]
@@ -15,6 +19,7 @@ class LocalInfo(BaseModel):
     @classmethod
     def normalizar_nome_local(cls, v):
         if not isinstance(v, str):
+            logger.warning("O campo 'location_name' deve ser uma string.", location_name=v)
             raise TypeError("O campo 'location_name' deve ser uma string.")
         return v.strip().lower()
 
@@ -22,7 +27,9 @@ class LocalInfo(BaseModel):
     @classmethod
     def limpar_eventos_passados(cls, v):
         if not isinstance(v, list):
+            logger.warning("O campo 'past_events' deve ser uma lista de strings.", past_events=v)
             raise TypeError("O campo 'past_events' deve ser uma lista de strings.")
         if not all(isinstance(item, str) for item in v):
+            logger.warning("Todos os itens em 'past_events' devem ser strings.", past_events=v)
             raise ValueError("Todos os itens em 'past_events' devem ser strings.")
         return [evento.strip() for evento in v]

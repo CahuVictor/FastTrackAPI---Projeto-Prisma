@@ -1,6 +1,11 @@
+# app/services/mock_users.py
+from structlog import get_logger
+
 from app.core.security import get_password_hash
 from app.schemas.user import UserInDB
 from app.services.interfaces.user_protocol import AbstractUserRepo
+
+logger = get_logger().bind(module="mock_users")
 
 class MockUserRepo(AbstractUserRepo):
     def __init__(self):
@@ -28,4 +33,9 @@ class MockUserRepo(AbstractUserRepo):
         }
 
     def get_by_username(self, username: str) -> UserInDB | None:
-        return self._users.get(username)
+        user = self._users.get(username)
+        if user:
+            logger.info("Usuário encontrado no mock", username=username)
+        else:
+            logger.warning("Usuário não encontrado no mock", username=username)
+        return user

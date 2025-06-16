@@ -1,8 +1,11 @@
 from datetime import datetime, timedelta, timezone
 from jose import jwt
 from passlib.context import CryptContext
+from structlog import get_logger
 
 from app.core.config import get_settings
+
+logger = get_logger().bind(module="config")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -38,7 +41,13 @@ def create_access_token(subject: str  # usuário
     # ---------------------------------------------------------------------
     
     if _settings.auth_secret_key is None:
+        logger.error("AUTH_SECRET_KEY não está configurada", environment=_settings.environment)
         raise RuntimeError("AUTH_SECRET_KEY não configurada")
-    return jwt.encode(payload,
-                      _settings.auth_secret_key,
-                      _settings.auth_algorithm)
+    token = jwt.encode(
+        payload,
+        _settings.auth_secret_key,
+        _settings.auth_algorithm
+    )
+
+    logger.info("Token JWT gerado", subject=subject, expires_at=str(expire), environment=_settings.environment)
+    return token

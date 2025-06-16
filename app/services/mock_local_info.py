@@ -1,10 +1,13 @@
 # app/services/mock_local_info.py
 import unicodedata
+from structlog import get_logger
 
 from app.schemas.local_info import LocalInfo
 from app.services.interfaces.local_info_protocol import AbstractLocalInfoService
 
 from app.schemas.venue_type import VenueTypes
+
+logger = get_logger().bind(module="mock_local_info")
 
 class MockLocalInfoService(AbstractLocalInfoService):
     def __init__(self):
@@ -23,6 +26,8 @@ class MockLocalInfoService(AbstractLocalInfoService):
 
     def _normalize(self, text: str) -> str:
         """Remove acentos, _/–, espaços duplicados e coloca tudo em minúsculas."""
+        original = text
+        
         text = text.strip().lower()
         text = text.replace("_", " ").replace("-", " ")
 
@@ -31,11 +36,17 @@ class MockLocalInfoService(AbstractLocalInfoService):
         text = "".join(c for c in text if unicodedata.category(c) != "Mn")
 
         # colapsa espaços múltiplos
-        return " ".join(text.split())
+        normalized = " ".join(text.split())
+        
+        logger.debug("Nome normalizado", original=original, normalizado=normalized)
+        return normalized
 
     async def get_by_name(self, location_name: str) -> LocalInfo | None:
         name = self._normalize(location_name)
         for item in self._db:
             if item.location_name == name:
+                logger.info("Local encontrado", original=location_name, normalizado=name)
                 return item
+
+        logger.warning("Local não encontrado", original=location_name, normalizado=name)
         return None

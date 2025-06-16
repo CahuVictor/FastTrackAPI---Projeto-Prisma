@@ -1,8 +1,11 @@
 # app/services/mock_forecast_info.py
 from datetime import datetime, timedelta
+from structlog import get_logger
 
 from app.schemas.weather_forecast import WeatherForecast
 from app.services.interfaces.forecast_info_protocol import AbstractForecastService
+
+logger = get_logger().bind(module="mock_forecast_info")
 
 class MockForecastService(AbstractForecastService):
     def get_by_city_and_datetime(self, city: str, date: datetime) -> WeatherForecast | None:
@@ -22,6 +25,7 @@ class MockForecastService(AbstractForecastService):
         temp_base = base_temp.get(city.lower())  # Não define default, retorna None se não existir
         
         if temp_base is None:
+            logger.warning("Cidade não suportada na simulação de previsão", city=city, date=str(date))
             return None
 
         previsoes = []
@@ -43,4 +47,12 @@ class MockForecastService(AbstractForecastService):
                 )
         
         # Compara todas as distâncias em segundos e devolve o objeto WeatherForecast cuja data/hora está mais próxima
-        return min(previsoes, key=lambda p: abs((p.forecast_datetime - date).total_seconds()))
+        forecast = min(previsoes, key=lambda p: abs((p.forecast_datetime - date).total_seconds()))
+        logger.info(
+            "Previsão simulada gerada",
+            city=city,
+            data_solicitada=str(date),
+            data_prevista=str(forecast.forecast_datetime),
+            condicao=forecast.weather_main
+        )
+        return forecast

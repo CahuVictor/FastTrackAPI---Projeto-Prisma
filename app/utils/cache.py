@@ -7,8 +7,11 @@ from typing import TypeVar
 from collections.abc import Callable, Awaitable
 from redis.asyncio import Redis
 from fastapi import Depends
+from structlog import get_logger
 
 from app.deps import provide_redis
+
+logger = get_logger().bind(module="cache")
 
 T = TypeVar("T")
 
@@ -39,11 +42,20 @@ def cached_json(prefix: str, ttl: int = 60):
             bound.apply_defaults()
             key = _make_key(prefix, bound.args, bound.kwargs)
 
-            if (cached := await redis_client.get(key)):
-                return json.loads(cached)
+            try:
+                if (cached := await redis_client.get(key)):
+                    logger.info("Cache hit", prefix=prefix, key=key)
+                    return json.loads(cached)
 
-            result: T = await func(*args, **kwargs)
-            await redis_client.setex(key, ttl, json.dumps(result, default=str))
-            return result
+                logger.debug("Cache miss", prefix=prefix, key=key)
+                result: T = await func(*args, **kwargs)
+                await redis_client.setex(key, ttl, json.dumps(result, default=str))
+                logger.debug("Valor armazenado no cache", prefix=prefix, key=key, ttl=ttl)
+                return result
+            
+            except Exception as e:
+                logger.warning("Erro ao acessar o cache Redis", prefix=prefix, key=key, error=str(e))
+                return await func(*args, **kwargs)
+            
         return wrapper
     return decorator

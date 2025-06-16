@@ -63,10 +63,10 @@ Desenvolver habilidades avançadas em desenvolvimento backend com Python utiliza
   - [ ] Criar pipelines de CI com GitHub Actions (teste e lint automático)
   - [ ] Rodar migrations de banco em containers (ex: Alembic via Compose)
 
-- [ ] **Gerenciar configurações de forma segura e flexível**
+- [x] **Gerenciar configurações de forma segura e flexível**
   - [x] Utilizar `.env` com Pydantic Settings
-  - [ ] Separar configurações por ambiente (dev, prod, test)
-  - [ ] Garantir fallback seguro para variáveis obrigatórias
+  - [x] Separar configurações por ambiente (dev, prod, test)
+  - [x] Garantir fallback seguro para variáveis obrigatórias
 
 - [x] **Desenvolver testes automatizados**
   - [x] Criar testes unitários com `pytest`
@@ -75,7 +75,7 @@ Desenvolver habilidades avançadas em desenvolvimento backend com Python utiliza
   - [x] Medir cobertura de código com `pytest-cov`
 
 - [ ] **Adicionar observabilidade e monitoramento à aplicação**
-  - [ ] Adicionar logs estruturados com `loguru` ou `structlog`
+  - [x] Adicionar logs estruturados com `loguru` ou `structlog`
   - [ ] Criar middlewares para registrar requisições/respostas
   - [ ] Monitorar erros e alertas (integração futura com ferramentas externas)
 
@@ -96,7 +96,7 @@ Desenvolver habilidades avançadas em desenvolvimento backend com Python utiliza
   - [x] Resolver conflitos de merge com segurança
 
 - [ ] **Explorar funcionalidades avançadas conforme a evolução do projeto**
-  - [ ] Usar cache com Redis para otimização de desempenho
+  - [x] Usar cache com Redis para otimização de desempenho
   - [ ] Realizar deploy em nuvem (Render, Railway ou VPS)
   - [ ] Testar uso de workers com Celery ou RQ (tarefa opcional)
   - [ ] Expor métricas básicas (ex: Prometheus ou logs customizados)
@@ -1456,4 +1456,72 @@ act push --job test
 O act roda um contêiner Docker que imita o ubuntu-latest, devolvendo resultados quase idênticos ao CI real sem esperar na fila.
 
 Bom código – e aproveite a rede de segurança! 🚀
+
+📊 Observabilidade e Logs
+Este projeto conta com um sistema estruturado e extensível de logs usando structlog, permitindo registros claros, padronizados e prontos para ferramentas de monitoramento, auditoria e diagnóstico.
+
+✅ Funcionalidades Implementadas
+Log estruturado com structlog, no formato JSON.
+
+Middleware de logging que registra todas as requisições HTTP com:
+
+Método (GET, POST, etc.)
+
+Caminho (/api/v1/...)
+
+Código de status da resposta (200, 404, etc.)
+
+Duração da requisição (em segundos)
+
+IP do cliente
+
+Cabeçalho User-Agent
+
+Usuário autenticado (quando houver)
+
+Contexto global por requisição com ContextVar (request_user) para registrar o nome do usuário logado ao longo da requisição.
+
+Filtragem de rotas internas: rotas como /docs, /redoc e /openapi.json são ignoradas nos logs para evitar ruído.
+
+🧱 Estrutura de Arquivos
+Arquivo	Função
+app/core/logging_config.py	Configuração do structlog (formato JSON, timestamp, nível de log etc.)
+app/core/contextvars.py	Define a variável request_user para guardar o usuário da requisição
+app/services/auth_service.py	Define o request_user após autenticação via token
+app/middleware/logging_middleware.py	Middleware que registra cada requisição HTTP, incluindo usuário
+Diversos mock_*.py, evento_mem.py, deps.py	Logs internos de operações simuladas e repositórios
+
+🧩 Exemplo de log gerado
+json
+Copiar
+Editar
+{
+  "event": "HTTP request log",
+  "method": "GET",
+  "path": "/api/v1/eventos",
+  "status_code": 200,
+  "duration": 0.015,
+  "client": "127.0.0.1",
+  "user_agent": "Mozilla/5.0...",
+  "user": "alice",
+  "timestamp": "2025-06-15T18:00:00Z",
+  "level": "info"
+}
+🛠 Como estender
+Você pode ampliar o sistema de logs com as seguintes práticas:
+
+Logar o tamanho da resposta (bytes).
+
+Registrar os corpos da requisição/resposta (útil para debugging — evite dados sensíveis).
+
+Enviar os logs para ferramentas externas como Loki, ELK (Elasticsearch + Logstash + Kibana) ou DataDog.
+
+Separar logs de erro em arquivos distintos.
+
+Adicionar um ID de correlação por requisição para rastrear logs em microsserviços.
+
+📌 Dicas
+Os logs são estruturados e podem ser consumidos facilmente por ferramentas como Grafana, Prometheus, Loki ou ElasticSearch.
+
+Utilize logger.info(...), logger.warning(...) e logger.error(...) em qualquer ponto do sistema: a estrutura já está preparada para manter os logs padronizados e legíveis.
 
