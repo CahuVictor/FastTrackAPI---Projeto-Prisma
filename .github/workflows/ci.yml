@@ -57,7 +57,7 @@ jobs:
 
       # 6️⃣  Linter / formatador (PyUpgrade)
       - name: PyUpgrade (sugere modernização)
-        run: pyupgrade --py312-plus --exit-zero-even-if-changed $(git ls-files '*.py')
+        run: poetry run pyupgrade --py312-plus --exit-zero-even-if-changed $(git ls-files '*.py')
 
       # 7️⃣  Linter / formatador (MyPy)
       - name: MyPy (type checking)
