@@ -70,10 +70,11 @@ jobs:
       # 6️⃣  Testes com fail-fast e cobertura ≥ 85 % -> testes vêm depois dos linters
       - name: Run Pytest
         run: |
-          poetry run pytest -x --cov=app \
-                             --cov-report=xml \
-                             --cov-report=term-missing \
-                             --cov-fail-under=80
+          poetry run pytest --cov=app \
+                            --cov-report=xml \
+                            --cov-report=term-missing \
+                            --cov-report=html
+                            --cov-fail-under=80
 
       # 7️⃣ (Opcional) Envia cobertura
       - name: Upload coverage to Codecov

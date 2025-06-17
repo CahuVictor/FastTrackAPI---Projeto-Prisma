@@ -517,7 +517,7 @@ Rode Ruff + Pytest com os mesmos flags:
   pyupgrade --py312-plus --exit-zero-even-if-changed $(git ls-files '*.py')
   poetry run mypy app
   poetry run bandit -q -r app -lll
-  poetry run pytest -x --cov=app --cov-fail-under=80
+  poetry run pytest -x --cov=app --cov-report=xml --cov-report=html --cov-fail-under=80
     poetry run pytest tests/unit/test_localinfo.py --cov=app --cov-fail-under=80
 
 Seguindo esses passos, você terá um pipeline que:

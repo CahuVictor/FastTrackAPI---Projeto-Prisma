@@ -5,7 +5,8 @@ from datetime import datetime, timezone
 from pydantic import ValidationError
 from collections.abc import Callable
 from structlog import get_logger
-import inspect, asyncio
+import inspect
+# import asyncio
 
 from app.schemas.event_create import EventCreate, EventResponse
 from app.schemas.local_info import LocalInfo
@@ -109,8 +110,7 @@ async def obter_local_info(
     """
     logger.info("Consulta de local iniciada", location_name=location_name)
     
-    # result = await service.get_by_name(location_name)
-    result = service.get_by_name(location_name)
+    result = await service.get_by_name(location_name)
     if inspect.iscoroutine(result):
         result = await result
         

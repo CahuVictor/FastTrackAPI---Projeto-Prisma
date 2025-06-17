@@ -78,18 +78,27 @@ def test_update_nonexistent_local_info(client: TestClient, auth_header: dict[str
     response = client.patch("/api/v1/eventos/99999/local_info", json=update, headers=auth_header)
     assert response.status_code == 404
 
+# ---------------------------------------------------------------------------
+# Testes que chamam diretamente o serviço assíncrono
+# ---------------------------------------------------------------------------
+
 # Testa o serviço diretamente, sem endpoint
-def test_service_mock_local_info_unit():
+@pytest.mark.anyio
+async def test_service_mock_local_info_unit() -> None:
     service = MockLocalInfoService()
-    info = service.get_by_name("auditório central")
+    
+    info = await service.get_by_name("auditório central")
     assert info is not None
-    info_none = service.get_by_name("local inexistente 999")
+    
+    info_none = await service.get_by_name("local inexistente 999")
     assert info_none is None
 
-def test_mock_local_info_service_unit(mock_local_info_service: MockLocalInfoService):
-    info = mock_local_info_service.get_by_name("auditório central")
+@pytest.mark.anyio
+async def test_mock_local_info_service_unit(mock_local_info_service: MockLocalInfoService):
+    info = await mock_local_info_service.get_by_name("auditório central")
     assert info is not None
-    info_none = mock_local_info_service.get_by_name("inexistente")
+    
+    info_none = await mock_local_info_service.get_by_name("inexistente")
     assert info_none is None
 
 @pytest.mark.parametrize("localinfo", ["localinfo_type_error"], indirect=True)
@@ -113,13 +122,22 @@ def test_past_events_validator_valueerror(localinfo: Literal['localinfo_past_eve
         # localinfo
         LocalInfo(**localinfo)
 
+# ---------------------------------------------------------------------------
+# Test helpers & fixtures
+# ---------------------------------------------------------------------------
+
 def fake_local_info_service():
+    """Fake que satisfaz o contrato `AbstractLocalInfoService`."""
+    
     class FakeLocalInfo:
-        def get_by_name(self, location_name):
+        # precisa ser assíncrono porque o endpoint faz `await`
+        async def get_by_name(self, location_name: str):
             return None  # ou qualquer comportamento desejado
+        
     return FakeLocalInfo()
 
-def test_endpoint_dependency_override(client: TestClient, auth_header: dict[str, str]):
+@pytest.mark.anyio
+async def test_endpoint_dependency_override(client: TestClient, auth_header: dict[str, str]):
     app.dependency_overrides[provide_local_info_service] = fake_local_info_service
     # agora qualquer chamada à rota vai usar esse fake em vez do padrão
     resp = client.get("/api/v1/local_info?location_name=fake", headers=auth_header)

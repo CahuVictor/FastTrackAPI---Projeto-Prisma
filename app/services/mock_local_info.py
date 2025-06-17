@@ -42,7 +42,7 @@ class MockLocalInfoService(AbstractLocalInfoService):
         return normalized
 
     # era: async def get_by_name(…)
-    def get_by_name(self, location_name: str) -> LocalInfo | None:
+    async def get_by_name(self, location_name: str) -> LocalInfo | None:
         name = self._normalize(location_name)
         for item in self._db:
             if item.location_name == name:
