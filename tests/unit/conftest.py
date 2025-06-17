@@ -76,7 +76,7 @@ def client_autenticado(access_token):
 # ---------- Eventos -----------------------------------------------------------
 
 @pytest.fixture
-def evento(request):
+def event(request):
     if request.param == "evento_valido":
         return {
             "title": "Concerto de Jazz",

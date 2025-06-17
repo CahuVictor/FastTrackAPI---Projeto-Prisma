@@ -31,5 +31,6 @@ class LocalInfo(BaseModel):
             raise TypeError("O campo 'past_events' deve ser uma lista de strings.")
         if not all(isinstance(item, str) for item in v):
             logger.warning("Todos os itens em 'past_events' devem ser strings.", past_events=v)
-            raise ValueError("Todos os itens em 'past_events' devem ser strings.")
+            # raise ValueError("Todos os itens em 'past_events' devem ser strings.")
+            raise TypeError("Todos os itens em 'past_events' devem ser strings.")
         return [evento.strip() for evento in v]

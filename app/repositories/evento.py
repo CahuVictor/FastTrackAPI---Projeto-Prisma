@@ -3,7 +3,7 @@ from typing import Protocol
 from app.schemas.event_create import EventCreate
 from app.schemas.event_create import EventResponse
 
-class AbstractEventoRepo(Protocol):
+class AbstractEventRepo(Protocol):
     def list_all(self) -> list[EventResponse]: ...
     
     # def list_partial(

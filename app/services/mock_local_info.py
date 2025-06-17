@@ -41,7 +41,8 @@ class MockLocalInfoService(AbstractLocalInfoService):
         logger.debug("Nome normalizado", original=original, normalizado=normalized)
         return normalized
 
-    async def get_by_name(self, location_name: str) -> LocalInfo | None:
+    # era: async def get_by_name(…)
+    def get_by_name(self, location_name: str) -> LocalInfo | None:
         name = self._normalize(location_name)
         for item in self._db:
             if item.location_name == name:

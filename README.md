@@ -3,7 +3,7 @@
 [![Coverage](https://codecov.io/gh/SEU_USUARIO/FastTrackAPI---Projeto-Prisma/branch/main/graph/badge.svg)](https://codecov.io/gh/SEU_USUARIO/FastTrackAPI---Projeto-Prisma)
 ---------- coverage: platform win32, python 3.12.6-final-0 -----------
 Name                                                Stmts   Miss  Cover   Missing
-TOTAL                                                 533     94    82%
+TOTAL                                                 755     68    91%
 
 Required test coverage of 80% reached. Total coverage: 82.36%
 
@@ -518,6 +518,7 @@ Rode Ruff + Pytest com os mesmos flags:
   poetry run mypy app
   poetry run bandit -q -r app -lll
   poetry run pytest -x --cov=app --cov-fail-under=80
+    poetry run pytest tests/unit/test_localinfo.py --cov=app --cov-fail-under=80
 
 Seguindo esses passos, você terá um pipeline que:
   Corrige estilo e ordena imports (Ruff)
@@ -778,7 +779,7 @@ Com o uso de dependências injetáveis, é possível testar isoladamente:
 from typing import Protocol
 from app.schemas.event_create import EventCreate, EventResponse
 
-class AbstractEventoRepo(Protocol):
+class AbstractEventRepo(Protocol):
     def list_all(self) -> list[EventResponse]: ...
     def get(self, evento_id: int) -> EventResponse | None: ...
     def add(self, evento: EventCreate) -> EventResponse: ...
@@ -886,7 +887,7 @@ Aplica cada filtro recebido (city, date_from, etc.)
 Devolve apenas a fatia data[skip: skip+limit]
 
 Contrato da interface
-A AbstractEventoRepo ( app/repositories/evento.py ) agora declara list_partial, garantindo que qualquer implementação futura (SQLAlchemy, Elastic, Redis…) respeite a mesma assinatura.
+A AbstractEventRepo ( app/repositories/evento.py ) agora declara list_partial, garantindo que qualquer implementação futura (SQLAlchemy, Elastic, Redis…) respeite a mesma assinatura.
 
 Rotas
 
@@ -992,7 +993,7 @@ Cobertura total ≥ 80 %.
 
 Onde está cada parte
 Arquivo	Conteúdo relevante
-app/repositories/evento.py	interface AbstractEventoRepo com list_partial(**filters)
+app/repositories/evento.py	interface AbstractEventRepo com list_partial(**filters)
 app/repositories/evento_mem.py	primeiro adapter concreto: filtra e pagina em RAM
 app/api/v1/endpoints/eventos.py	rota /eventos usa o repo; rota /eventos/todos marcada deprecated=True
 tests/unit/test_eventos.py	cenários de paginação e filtros com objetos Pydantic

@@ -4,11 +4,11 @@ from structlog import get_logger
 from app.schemas.event_create import EventCreate, EventResponse
 # from app.schemas.weather_forecast import WeatherForecast
 # from app.schemas.local_info import LocalInfo
-from app.repositories.evento import AbstractEventoRepo
+from app.repositories.evento import AbstractEventRepo
 
 logger = get_logger().bind(module="evento_mem")
 
-class InMemoryEventoRepo(AbstractEventoRepo):
+class InMemoryEventoRepo(AbstractEventRepo):
     def __init__(self):
         self._db: dict[int, EventResponse] = {}
         self._id_counter = 1

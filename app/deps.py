@@ -11,7 +11,7 @@ from app.services.interfaces.local_info_protocol import AbstractLocalInfoService
 from app.services.mock_forecast_info import MockForecastService
 from app.services.interfaces.forecast_info_protocol import AbstractForecastService
 
-# from app.repositories.evento import AbstractEventoRepo
+# from app.repositories.evento import AbstractEventRepo
 
 # from functools import lru_cache
 from app.repositories.evento_mem import InMemoryEventoRepo
@@ -34,7 +34,7 @@ def provide_forecast_service() -> AbstractForecastService:
     logger.debug("Injetando serviço de forecast_info (mock)")
     return MockForecastService()
 
-# def provide_evento_repo() -> AbstractEventoRepo:
+# def provide_evento_repo() -> AbstractEventRepo:
 #     return InMemoryEventoRepo()
 
 # uma instância global

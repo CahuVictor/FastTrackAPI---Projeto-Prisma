@@ -1,9 +1,11 @@
 from fastapi import APIRouter, HTTPException, Depends, status
 from fastapi import Query
+from fastapi import Body
 from datetime import datetime, timezone
 from pydantic import ValidationError
 from collections.abc import Callable
 from structlog import get_logger
+import inspect, asyncio
 
 from app.schemas.event_create import EventCreate, EventResponse
 from app.schemas.local_info import LocalInfo
@@ -19,14 +21,14 @@ from app.services.interfaces.local_info_protocol import AbstractLocalInfoService
 from app.services.interfaces.forecast_info_protocol import AbstractForecastService
 from app.deps import provide_local_info_service, provide_forecast_service
 
-from app.repositories.evento import AbstractEventoRepo
+from app.repositories.evento import AbstractEventRepo
 from app.deps import provide_evento_repo
 
 
 auth_dep = Depends(get_current_user)
 _provide_local_info_service = Depends(provide_local_info_service)
 _provide_forecast_service = Depends(provide_forecast_service)
-_provide_evento_repo = Depends(provide_evento_repo)
+_provide_event_repo = Depends(provide_evento_repo)
 
 logger = get_logger().bind(module="eventos")
 
@@ -46,9 +48,9 @@ def require_roles(*allowed: str) -> Callable:
         return user
     return verifier
 
-def update_event(
-                 evento: EventResponse, 
-                 atualizacao: EventUpdate | LocalInfoUpdate | ForecastInfoUpdate, 
+def _update_event(
+                 event: EventResponse, 
+                 update: EventUpdate | LocalInfoUpdate | ForecastInfoUpdate, 
                  attr: str | None = None
 ):
     """
@@ -60,30 +62,30 @@ def update_event(
     try:
         if attr is None:
             # Atualiza os campos do evento principal
-            update_data = atualizacao.model_dump(exclude_unset=True)
+            update_data = update.model_dump(exclude_unset=True)
             for field, value in update_data.items():
-                setattr(evento, field, value)
+                setattr(event, field, value)
         else:
             # Atualiza um campo aninhado (ex: local_info, forecast_info)
-            objeto = getattr(evento, attr)
+            objeto = getattr(event, attr)
             dados_atualizados = objeto.model_dump() if objeto else {}
-            update_data = atualizacao.model_dump(exclude_unset=True)
+            update_data = update.model_dump(exclude_unset=True)
             dados_atualizados.update(update_data)
             # Descobre a classe do objeto aninhado
             field_cls = type(objeto) if objeto else None
             # Se não existir, pega o type pelo update (usando __annotations__ se quiser ser mais robusto)
-            if field_cls is None and hasattr(evento, '__annotations__'):
-                field_cls = evento.__annotations__.get(attr)
+            if field_cls is None and hasattr(event, '__annotations__'):
+                field_cls = event.__annotations__.get(attr)
             if field_cls:
-                setattr(evento, attr, field_cls(**dados_atualizados))
+                setattr(event, attr, field_cls(**dados_atualizados))
             else:
                 # fallback (não deveria acontecer em uso normal)
-                setattr(evento, attr, dados_atualizados)
+                setattr(event, attr, dados_atualizados)
     except ValidationError as ve:
         # Você pode fazer log, print, raise HTTPException, etc
         # Exemplo: lançar erro HTTP para o FastAPI capturar e retornar pro usuário
         raise HTTPException(status_code=422, detail=ve.errors())
-    return evento
+    return event
 
 @router.get(
     "/local_info",
@@ -106,11 +108,16 @@ async def obter_local_info(
     Cache: 24 h (86400 s)
     """
     logger.info("Consulta de local iniciada", location_name=location_name)
-    info = await service.get_by_name(location_name)
-    if not info:
+    
+    # result = await service.get_by_name(location_name)
+    result = service.get_by_name(location_name)
+    if inspect.iscoroutine(result):
+        result = await result
+        
+    if not result:
         logger.warning("Local não encontrado", location_name=location_name)
         raise HTTPException(status_code=404, detail="Local não encontrado")
-    return info
+    return result
 
 @router.get(
     "/forecast_info",
@@ -134,11 +141,11 @@ async def obter_forecast_info(
     Cache: 30 min (1800 s)
     """
     logger.info("Consulta de clima iniciada", city=city, date=date)
-    previsao = service.get_by_city_and_datetime(city, date)
-    if not previsao:
+    forecast_info = service.get_by_city_and_datetime(city, date)
+    if not forecast_info:
         logger.warning("Previsão não encontrada", city=city, date=date)
         raise HTTPException(status_code=404, detail="Previsão não encontrada")
-    return previsao
+    return forecast_info
 
 @router.get(
     "/eventos/todos",
@@ -153,16 +160,16 @@ async def obter_forecast_info(
         404: {"description": "Nenhum evento encontrado."}
     },
 )
-def listar_eventos_todos(repo: AbstractEventoRepo = _provide_evento_repo) -> list[EventResponse]:
+def list_events_all(repo: AbstractEventRepo = _provide_event_repo) -> list[EventResponse]:
     """
     Retorna todos os eventos cadastrados.
     """
     logger.info("Consulta de todos eventos iniciada - Rota obsoleta")
-    eventos = repo.list_all()
-    if not eventos:
+    events = repo.list_all()
+    if not events:
         logger.warning("Nenhum evento encontrado - Rota obsoleta")
         raise HTTPException(status_code=404, detail="Nenhum evento encontrado.")
-    return eventos
+    return events
 
 @router.get(
     "/eventos",
@@ -171,24 +178,24 @@ def listar_eventos_todos(repo: AbstractEventoRepo = _provide_evento_repo) -> lis
     response_model=list[EventResponse],
     dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
 )
-def listar_eventos(
+def list_events(
     skip: int = Query(0, ge=0, description="Quantos registros pular"),
     limit: int = Query(20, le=100, description="Tamanho da página"),
     city: str | None = Query(None, description="Filtrar por cidade"),
-    repo: AbstractEventoRepo = _provide_evento_repo,
+    repo: AbstractEventRepo = _provide_event_repo,
 ) -> list[EventResponse]:
     """
     Retorna uma fatia paginada dos eventos; opcionalmente filtra por cidade.
     """
     logger.info("Consulta de evento iniciada", skip=skip, limit=limit, city=city)
-    eventos = repo.list_partial(skip=skip, limit=limit, city=city)
-    if not eventos:
+    events = repo.list_partial(skip=skip, limit=limit, city=city)
+    if not events:
         logger.warning("Nenhum evento encontrado", skip=skip, limit=limit, city=city)
         raise HTTPException(404, "Nenhum evento encontrado")
-    return eventos
+    return events
 
 @router.get(
-    "/eventos/{evento_id}",
+    "/eventos/{event_id}",
     tags=["eventos"],
     summary="Obtém um evento pelo ID.",
     response_model=EventResponse,
@@ -198,22 +205,22 @@ def listar_eventos(
         404: {"description": "Evento não encontrado."}
     },
 )
-def obter_evento_por_id(
-                        evento_id: int, 
-                        repo: AbstractEventoRepo = _provide_evento_repo,
+def get_event_id(
+                        event_id: int, 
+                        repo: AbstractEventRepo = _provide_event_repo,
     ) -> EventResponse:
     """
     Busca um evento pelo seu identificador único.
     """
-    logger.info("Consulta de evento", evento_id=evento_id)
-    evento = repo.get(evento_id)
-    if evento is None:
-        logger.warning("Evento não encontrado", evento_id=evento_id)
+    logger.info("Consulta de evento", event_id=event_id)
+    event = repo.get(event_id)
+    if event is None:
+        logger.warning("Evento não encontrado", event_id=event_id)
         raise HTTPException(status_code=404, detail="Evento não encontrado")
-    evento.views += 1
-    logger.info("Atualizado os views", evento_id=evento_id, views=evento.views)
-    repo.update(evento_id, evento.model_dump(exclude_unset=True))
-    return EventResponse.model_validate(evento)
+    event.views += 1
+    logger.info("Atualizado os views", event_id=event_id, views=event.views)
+    repo.update(event_id, event.model_dump(exclude_unset=True))
+    return EventResponse.model_validate(event)
 
 @router.get(
     "/eventos/top/soon",
@@ -228,9 +235,9 @@ def obter_evento_por_id(
     
 )
 @cached_json("top-soon", ttl=10)  # snapshot ultra-curto (10 s)
-async def eventos_proximos(
+async def events_top_soon(
     limit: int = Query(10, ge=1, le=50, description="Quantos eventos retornar"),
-    repo: AbstractEventoRepo = _provide_evento_repo,
+    repo: AbstractEventRepo = _provide_event_repo,
 ) -> list[EventResponse]:
     """
     Ordena todos os eventos pelo `event_date` ascendente
@@ -239,11 +246,11 @@ async def eventos_proximos(
     logger.info("Consulta de eventos mais próximos iniciada", limit=limit)
     agora = datetime.now(tz=timezone.utc)
 
-    eventos = repo.list_all()                     # dict[int, Evento] # Corrigir para list_partial()
+    events = repo.list_all()                     # dict[int, Evento] # Corrigir para list_partial()
     proximos = (
         sorted(
-            # (ev for ev in eventos.values() if ev.event_date >= agora),
-            [ev for ev in eventos if ev.event_date >= agora],
+            # (ev for ev in events.values() if ev.event_date >= agora),
+            [ev for ev in events if ev.event_date >= agora],
             key=lambda ev: ev.event_date,
         )[:limit]
     )
@@ -254,7 +261,7 @@ async def eventos_proximos(
     return proximos
 
 @router.get(
-    "eventos/top/most-viewed",
+    "/eventos/top/most-viewed",
     tags=["eventos"],
     summary="N eventos mais vistos",
     response_model=list[EventResponse],
@@ -265,27 +272,27 @@ async def eventos_proximos(
     },
 )
 @cached_json("top-viewed", ttl=30)  # 30 s é suficiente p/ ranking
-async def eventos_mais_vistos(
+async def events_top_viewed(
     limit: int = Query(10, ge=1, le=50),
-    repo: AbstractEventoRepo = Depends(provide_evento_repo),
+    repo: AbstractEventRepo = Depends(provide_evento_repo),
 ) -> list[EventResponse]:
     """
     Retorna os *limit* eventos com maior contagem de `views`.
     Empate é resolvido pela data do evento (mais próximo primeiro).
     """
     logger.info("Consulta de eventos mais vistos iniciada", limit=limit)
-    eventos = repo.list_all()
-    mais_vistos = (
+    events = repo.list_all()
+    most_viewed = (
         sorted(
-            eventos,
+            events,
             key=lambda ev: (-ev.views, ev.event_date)  # mais views primeiro
         )[:limit]
     )
-    if not mais_vistos:
+    if not most_viewed:
         logger.warning("Nenhum evento encontrado na consulta de mais vistos", limit=limit)
         raise HTTPException(404, "Nenhum evento encontrado")
-    logger.info("Consulta de eventos mais vistos concluída", quantidade=len(mais_vistos))
-    return mais_vistos
+    logger.info("Consulta de eventos mais vistos concluída", quantidade=len(most_viewed))
+    return most_viewed
 
 @router.post(
     "/eventos",
@@ -299,26 +306,26 @@ async def eventos_mais_vistos(
         207: {"description": "Evento criado, mas sem previsão do tempo por falha ao acessar a API externa."} # 207 caso queria utilizar outro
     },
 )
-def criar_evento(
-    evento: EventCreate,
+def create_event(
+    event: EventCreate,
     service: AbstractForecastService = _provide_forecast_service,
-    repo: AbstractEventoRepo = _provide_evento_repo,
+    repo: AbstractEventRepo = _provide_event_repo,
 ) -> EventResponse:
     """
     Cria um evento e tenta buscar a previsão do tempo automaticamente para preenchimento do campo forecast_info.
     Se a previsão não puder ser obtida, o evento é criado normalmente, porém forecast_info fica vazio.
     """
-    logger.info("Recebida requisição para criar evento", title=evento.title, city=evento.city)
+    logger.info("Recebida requisição para criar evento", title=event.title, city=event.city)
     try:
-        forecast_info = service.get_by_city_and_datetime(evento.city, evento.event_date)
-    except Exception:
-        logger.error("Falha ao buscar previsão do tempo", city=evento.city, event_date=str(evento.event_date), error=str(e))
+        forecast_info = service.get_by_city_and_datetime(event.city, event.event_date)
+    except Exception as e:  
+        logger.error("Falha ao buscar previsão do tempo", city=event.city, event_date=str(event.event_date), error=str(e))
         forecast_info = None
     
-    evento_resp = repo.add(evento)
-    evento_resp.forecast_info = forecast_info
-    logger.info("Evento criado", event_id=evento_resp.id, title=evento.title)
-    return EventResponse.model_validate(evento_resp)
+    event_resp = repo.add(event)
+    event_resp.forecast_info = forecast_info
+    logger.info("Evento criado", event_id=event_resp.id, title=event.title)
+    return EventResponse.model_validate(event_resp)
 
 @router.post(
     "/eventos/lote",
@@ -332,35 +339,35 @@ def criar_evento(
         400: {"description": "Lista inválida enviada."}
     },
 )
-def adicionar_eventos_em_lote(
-    eventos: list[EventCreate],
+def add_events_batch(
+    events: list[EventCreate],
     service: AbstractForecastService = _provide_forecast_service,
-    repo: AbstractEventoRepo = _provide_evento_repo,
+    repo: AbstractEventRepo = _provide_event_repo,
 ) -> list[EventResponse]:
     """
     Cria múltiplos eventos de uma vez, atribuindo novos IDs para cada um.
     Retorna apenas os eventos recém adicionados.
     """
-    logger.info("Requisição para adicionar eventos em lote recebida", quantidade=len(eventos))
-    if not eventos:
+    logger.info("Requisição para adicionar eventos em lote recebida", quantidade=len(events))
+    if not events:
         logger.warning("Lista vazia enviada ao adicionar eventos em lote")
         raise HTTPException(status_code=400, detail="Lista inválida enviada.")
 
-    novos_eventos = []
-    for evento in eventos:
+    new_events = []
+    for event in events:
         try:
-            forecast_info = service.get_by_city_and_datetime(evento.city, evento.event_date)
-        except Exception:
-            logger.error("Falha ao buscar previsão do tempo para evento em lote", title=evento.title, city=evento.city, error=str(e))
+            forecast_info = service.get_by_city_and_datetime(event.city, event.event_date)
+        except Exception as e:  
+            logger.error("Falha ao buscar previsão do tempo para evento em lote", title=event.title, city=event.city, error=str(e))
             forecast_info = None
 
-        evento_resp = repo.add(evento)
-        evento_resp.forecast_info = forecast_info
-        novos_eventos.append(EventResponse.model_validate(evento_resp))
-        logger.info("Evento adicionado em lote", event_id=evento_resp.id, title=evento.title)
+        event_resp = repo.add(event)
+        event_resp.forecast_info = forecast_info
+        new_events.append(EventResponse.model_validate(event_resp))
+        logger.info("Evento adicionado em lote", event_id=event_resp.id, title=event.title)
 
-    logger.info("Eventos em lote adicionados com sucesso", total_adicionados=len(novos_eventos))
-    return novos_eventos
+    logger.info("Eventos em lote adicionados com sucesso", total_adicionados=len(new_events))
+    return new_events
 
 @router.put(
     "/eventos",
@@ -373,24 +380,24 @@ def adicionar_eventos_em_lote(
         400: {"description": "Lista inválida enviada."}
     },
 )
-def substituir_todos_os_eventos(
-    eventos_new: list[EventResponse],
-    repo: AbstractEventoRepo = _provide_evento_repo,
+def replace_all_events(
+    events_new: list[EventResponse],
+    repo: AbstractEventRepo = _provide_event_repo,
 ) -> list[EventResponse]:
     """
     Substitui completamente a lista de eventos registrados.
     """
-    logger.info("Requisição para substituir todos os eventos recebida", quantidade=len(eventos_new))
-    if not eventos_new:
+    logger.info("Requisição para substituir todos os eventos recebida", quantidade=len(events_new))
+    if not events_new:
         logger.warning("Lista vazia enviada ao substituir todos os eventos")
         raise HTTPException(status_code=400, detail="Lista inválida enviada.")
 
-    resultado = repo.replace_all(eventos_new)
+    resultado = repo.replace_all(events_new)
     logger.info("Todos os eventos foram substituídos com sucesso", total=len(resultado))
     return resultado
 
 @router.put(
-    "/eventos/{evento_id}",
+    "/eventos/{event_id}",
     tags=["eventos"],
     summary="Substitui os dados de um evento existente.",
     response_model=EventResponse,
@@ -400,22 +407,22 @@ def substituir_todos_os_eventos(
         404: {"description": "Evento não encontrado."}
     },
 )
-def substituir_evento_por_id(
-                            evento_id: int, 
-                            novo_evento: EventResponse,
-                            repo: AbstractEventoRepo = _provide_evento_repo,
+def replace_event_id(
+                            event_id: int, 
+                            new_event: EventResponse,
+                            repo: AbstractEventRepo = _provide_event_repo,
     ) -> EventResponse:
     """
     Substitui por completo os dados de um evento existente pelo ID.
     """
-    logger.info("Requisição para substituir evento por ID recebida", evento_id=evento_id)
-    if repo.get(evento_id) is None:
-        logger.warning("Tentativa de substituir evento não existente", evento_id=evento_id)
+    logger.info("Requisição para substituir evento por ID recebida", event_id=event_id)
+    if repo.get(event_id) is None:
+        logger.warning("Tentativa de substituir evento não existente", event_id=event_id)
         raise HTTPException(status_code=404, detail="Evento não encontrado.")
 
-    novo_evento.id = evento_id  # Garante que o ID informado será usado
-    resultado = repo.replace_by_id(evento_id, novo_evento)
-    logger.info("Evento substituído com sucesso", evento_id=evento_id)
+    new_event.id = event_id  # Garante que o ID informado será usado
+    resultado = repo.replace_by_id(event_id, new_event)
+    logger.info("Evento substituído com sucesso", event_id=event_id)
     return resultado
 
 @router.delete(
@@ -429,8 +436,8 @@ def substituir_evento_por_id(
         400: {"description": "Não foi possível remover os eventos."}
     },
 )
-def deletar_todos_os_eventos(
-                                repo: AbstractEventoRepo = _provide_evento_repo
+def delete_all_events(
+                                repo: AbstractEventRepo = _provide_event_repo
     ) -> dict[str, str]:
     """
     Apaga todos os eventos registrados.
@@ -445,7 +452,7 @@ def deletar_todos_os_eventos(
         raise HTTPException(status_code=400, detail="Não foi possível remover os eventos.")
 
 @router.delete(
-    "/eventos/{evento_id}",
+    "/eventos/{event_id}",
     tags=["eventos"],
     summary="Remove um evento específico pelo ID.",
     response_model=dict,
@@ -455,23 +462,23 @@ def deletar_todos_os_eventos(
         404: {"description": "Evento não encontrado."}
     },
 )
-def deletar_evento_por_id(
-                            evento_id: int,
-                            repo: AbstractEventoRepo = _provide_evento_repo,
+def delete_event_id(
+                            event_id: int,
+                            repo: AbstractEventRepo = _provide_event_repo,
     ) -> dict[str, str]:
     """
     Remove um evento pelo seu ID.
     """
-    logger.info("Requisição para deletar evento recebida", evento_id=evento_id)
-    sucesso = repo.delete_by_id(evento_id)
+    logger.info("Requisição para deletar evento recebida", event_id=event_id)
+    sucesso = repo.delete_by_id(event_id)
     if not sucesso:
-        logger.warning("Tentativa de deletar evento não encontrado", evento_id=evento_id)
+        logger.warning("Tentativa de deletar evento não encontrado", event_id=event_id)
         raise HTTPException(status_code=404, detail="Evento não encontrado.")
-    logger.info("Evento removido com sucesso", evento_id=evento_id)
-    return {"mensagem": f"Evento com ID {evento_id} removido com sucesso."}
+    logger.info("Evento removido com sucesso", event_id=event_id)
+    return {"mensagem": f"Evento com ID {event_id} removido com sucesso."}
 
 @router.patch(
-    "/eventos/{evento_id}",
+    "/eventos/{event_id}",
     tags=["eventos"],
     summary="Atualiza parcialmente as informações de um evento.",
     response_model=EventResponse,
@@ -479,33 +486,34 @@ def deletar_evento_por_id(
     responses={
         200: {"description": "Evento atualizado com sucesso."},
         400: {"description": "Nenhum campo válido para atualização."},
-        404: {"description": "Evento não encontrado."}
+        404: {"description": "Evento não encontrado."},
+        422: {"description": "Erro de validação dos dados de entrada."}
     },
 )
-def atualizar_evento(
-                    evento_id: int, 
-                    atualizacao: EventUpdate,
-                    repo: AbstractEventoRepo = _provide_evento_repo,
+def update_event(
+                    event_id: int, 
+                    update: EventUpdate,
+                    repo: AbstractEventRepo = _provide_event_repo,
     ) -> EventResponse:
     """
     Atualiza parcialmente os dados do evento informado pelo ID.
     Só os campos enviados serão alterados.
     """
-    logger.info("Requisição de atualização parcial recebida", evento_id=evento_id)
-    if not any(value is not None for value in atualizacao.model_dump().values()):
-        logger.warning("Nenhum campo válido para atualização enviado", evento_id=evento_id)
+    logger.info("Requisição de atualização parcial recebida", event_id=event_id)
+    if not any(value is not None for value in update.model_dump().values()):
+        logger.warning("Nenhum campo válido para atualização enviado", event_id=event_id)
         raise HTTPException(status_code=400, detail="Nenhum campo válido para atualização.")
 
     try:
-        result = repo.update(evento_id, atualizacao.model_dump(exclude_unset=True))
-        logger.info("Evento atualizado com sucesso", evento_id=evento_id)
+        result = repo.update(event_id, update.model_dump(exclude_unset=True))
+        logger.info("Evento atualizado com sucesso", event_id=event_id)
         return result
     except ValueError:
-        logger.warning("Tentativa de atualizar evento não encontrado", evento_id=evento_id)
+        logger.warning("Tentativa de atualizar evento não encontrado", event_id=event_id)
         raise HTTPException(status_code=404, detail="Evento não encontrado.")
 
 @router.patch(
-    "/eventos/{evento_id}/local_info",
+    "/eventos/{event_id}/local_info",
     tags=["eventos"],
     summary="Atualiza informações do local de um evento.",
     response_model=EventResponse,
@@ -515,26 +523,30 @@ def atualizar_evento(
         404: {"description": "Evento não encontrado."}
     },
 )
-def atualizar_local_info(
-                            evento_id: int, 
-                            atualizacao: LocalInfoUpdate,
-                            repo: AbstractEventoRepo = _provide_evento_repo,
+def update_local_info( #async?
+                            event_id: int, 
+                            update: LocalInfoUpdate | None = Body(None),
+                            repo: AbstractEventRepo = _provide_event_repo,
     ) -> EventResponse:
     """
     Atualiza o campo local_info de um evento específico.
     """
-    logger.info("Requisição para atualizar local_info recebida", evento_id=evento_id)
-    evento = repo.get(evento_id)
-    if evento is None:
-        logger.warning("Tentativa de atualizar local_info de evento não encontrado", evento_id=evento_id)
+    if update is None:                       # ← trata JSON null
+        logger.warning("Erro ao receber dados do Local")
+        raise HTTPException(422, "Erro ao receber dados do Local")
+    
+    logger.info("Requisição para atualizar local_info recebida", event_id=event_id)
+    event = repo.get(event_id)
+    if event is None:
+        logger.warning("Tentativa de atualizar local_info de evento não encontrado", event_id=event_id)
         raise HTTPException(status_code=404, detail="Evento não encontrado.")
 
-    update_event(evento, atualizacao, attr="local_info")
-    logger.info("Informações do local atualizadas com sucesso", evento_id=evento_id)
-    return repo.replace_by_id(evento_id, evento)
+    _update_event(event, update, attr="local_info")
+    logger.info("Informações do local atualizadas com sucesso", event_id=event_id)
+    return repo.replace_by_id(event_id, event)
 
 @router.patch(
-    "/eventos/{evento_id}/forecast_info",
+    "/eventos/{event_id}/forecast_info",
     tags=["eventos"],
     summary="Atualiza a previsão do tempo de um evento.",
     response_model=EventResponse,
@@ -545,28 +557,28 @@ def atualizar_local_info(
         502: {"description": "Erro ao obter previsão do tempo"}
     },
 )
-def atualizar_forecast_info(
-                            evento_id: int,
+def update_forecast_info(
+                            event_id: int,
                             service: AbstractForecastService = _provide_forecast_service,
-                            repo: AbstractEventoRepo = _provide_evento_repo,
+                            repo: AbstractEventRepo = _provide_event_repo,
 ) -> EventResponse:
     """
     Atualiza o campo forecast_info de um evento específico.
     """
-    logger.info("Requisição para atualizar forecast_info recebida", evento_id=evento_id)
-    evento = repo.get(evento_id)
-    if evento is None:
-        logger.warning("Tentativa de atualizar forecast_info de evento não encontrado", evento_id=evento_id)
+    logger.info("Requisição para atualizar forecast_info recebida", event_id=event_id)
+    event = repo.get(event_id)
+    if event is None:
+        logger.warning("Tentativa de atualizar forecast_info de evento não encontrado", event_id=event_id)
         raise HTTPException(status_code=404, detail="Evento não encontrado.")
 
     try:
-        forecast = service.get_by_city_and_datetime(evento.city, evento.event_date)
+        forecast = service.get_by_city_and_datetime(event.city, event.event_date)
         if forecast is not None:
-            atualizacao = ForecastInfoUpdate.model_validate(forecast.model_dump())
-    except Exception:
-        logger.error("Erro ao obter previsão do tempo", evento_id=evento_id, error=str(e))
+            update = ForecastInfoUpdate.model_validate(forecast.model_dump())
+    except Exception as e:  
+        logger.error("Erro ao obter previsão do tempo", event_id=event_id, error=str(e))
         raise HTTPException(status_code=502, detail="Erro ao obter previsão do tempo")
 
-    update_event(evento, atualizacao, attr="forecast_info")
-    logger.info("Forecast_info atualizado com sucesso", evento_id=evento_id)
-    return repo.replace_by_id(evento_id, evento)
+    _update_event(event, update, attr="forecast_info")
+    logger.info("Forecast_info atualizado com sucesso", event_id=event_id)
+    return repo.replace_by_id(event_id, event)

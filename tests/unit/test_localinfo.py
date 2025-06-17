@@ -24,11 +24,11 @@ def test_get_local_info_endpoint(client: TestClient, auth_header: dict[str, str]
     assert resp.json()["location_name"] == "auditorio central"
     assert "location_name" in resp.json()
 
-@pytest.mark.parametrize("evento", ["evento_valido_com_id"], indirect=True)
-def test_atualizar_local_info_tipo_invalido_unit(client: TestClient, auth_header: dict[str, str], evento: Literal['evento_valido_com_id']):
+@pytest.mark.parametrize("event", ["evento_valido_com_id"], indirect=True)
+def test_update_local_info_type_invalid_unit(client: TestClient, auth_header: dict[str, str], event: Literal['evento_valido_com_id']):
     evento_id = 300
-    evento["id"] = evento_id
-    client.put("/api/v1/eventos", json=[evento], headers=auth_header)
+    event["id"] = evento_id
+    client.put("/api/v1/eventos", json=[event], headers=auth_header)
     # with pytest.raises(HTTPException) as excinfo:
     #     # Passa um dict em vez de LocalInfoUpdate
     #     client.patch(f"/api/v1/eventos/300/local_info", json={"foo": "bar"}, headers=auth_header)
@@ -36,14 +36,18 @@ def test_atualizar_local_info_tipo_invalido_unit(client: TestClient, auth_header
     # assert excinfo.value.detail == "Tipo inválido para LocalInfoUpdate"
     resp = client.patch(f"/api/v1/eventos/{evento_id}/local_info", json={"foo": "bar"}, headers=auth_header)
     assert resp.status_code == 422 # 502 - FastAPI/Pydantic devolve 422 p/ corpo inválido
-    assert resp.json()["detail"] == "Erro ao receber dados do Local"
-    assert resp.json()["local_info"]["foo"] == "bar"
+    detail = resp.json()["detail"]
+    # deve vir a lista gerada pelo Pydantic/FastAPI
+    assert isinstance(detail, list)
+    assert any(err.get("type") == "extra_forbidden" for err in detail)
+    # assert resp.json()["detail"] == "Erro ao receber dados do Local"
+    # assert resp.json()["local_info"]["foo"] == "bar"
 
-@pytest.mark.parametrize("evento", ["evento_valido_com_id"], indirect=True)
-def test_atualizar_local_info_none_unit(client: TestClient, auth_header: dict[str, str], evento: Literal['evento_valido_com_id']):
+@pytest.mark.parametrize("event", ["evento_valido_com_id"], indirect=True)
+def test_update_local_info_none_unit(client: TestClient, auth_header: dict[str, str], event: Literal['evento_valido_com_id']):
     evento_id = 301
-    evento["id"] = evento_id
-    client.put("/api/v1/eventos", json=[evento], headers=auth_header)
+    event["id"] = evento_id
+    client.put("/api/v1/eventos", json=[event], headers=auth_header)
     # with pytest.raises(HTTPException) as excinfo:
     #     client.patch(f"/api/v1/eventos/301/local_info", json=None, headers=auth_header)
     # assert excinfo.value.status_code == 502
@@ -51,28 +55,31 @@ def test_atualizar_local_info_none_unit(client: TestClient, auth_header: dict[st
     resp = client.patch(f"/api/v1/eventos/{evento_id}/local_info", json=None, headers=auth_header)
     assert resp.status_code == 422 # 502 - FastAPI/Pydantic devolve 422 p/ corpo inválido
     assert resp.json()["detail"] == "Erro ao receber dados do Local"
+    # detail = resp.json()["detail"]
+    # assert isinstance(detail, list)
+    # assert detail[0]["msg"] == "Field required"         # ou qualquer validação que prefira
 
-@pytest.mark.parametrize("evento", ["evento_valido"], indirect=True)
-def test_atualizar_local_info(client: TestClient, auth_header: dict[str, str], evento: Literal['evento_valido']):
-    post_response = client.post("/api/v1/eventos", json=evento, headers=auth_header)
+@pytest.mark.parametrize("event", ["evento_valido"], indirect=True)
+def test_update_local_info(client: TestClient, auth_header: dict[str, str], event: Literal['evento_valido']):
+    post_response = client.post("/api/v1/eventos", json=event, headers=auth_header)
     evento_id = post_response.json()["id"]
-    atualizacao = {
+    update = {
         "capacity": 999,
         "manually_edited": True  # Obrigatório!
     }
-    response = client.patch(f"/api/v1/eventos/{evento_id}/local_info", json=atualizacao, headers=auth_header)
+    response = client.patch(f"/api/v1/eventos/{evento_id}/local_info", json=update, headers=auth_header)
     assert response.status_code == 200
     assert response.json()["local_info"]["capacity"] == 999
     assert response.json()["local_info"]["manually_edited"] is True
 
 # Testar PATCH /eventos/{id}/local_info para evento inexistente
-def test_atualizar_local_info_inexistente(client: TestClient, auth_header: dict[str, str]):
-    atualizacao = {"capacity": 100, "manually_edited": True}
-    response = client.patch("/api/v1/eventos/99999/local_info", json=atualizacao, headers=auth_header)
+def test_update_nonexistent_local_info(client: TestClient, auth_header: dict[str, str]):
+    update = {"capacity": 100, "manually_edited": True}
+    response = client.patch("/api/v1/eventos/99999/local_info", json=update, headers=auth_header)
     assert response.status_code == 404
 
 # Testa o serviço diretamente, sem endpoint
-def test_servico_mock_local_info_unitario():
+def test_service_mock_local_info_unit():
     service = MockLocalInfoService()
     info = service.get_by_name("auditório central")
     assert info is not None
@@ -112,7 +119,7 @@ def fake_local_info_service():
             return None  # ou qualquer comportamento desejado
     return FakeLocalInfo()
 
-def test_endpoint_com_dependencia_override(client: TestClient, auth_header: dict[str, str]):
+def test_endpoint_dependency_override(client: TestClient, auth_header: dict[str, str]):
     app.dependency_overrides[provide_local_info_service] = fake_local_info_service
     # agora qualquer chamada à rota vai usar esse fake em vez do padrão
     resp = client.get("/api/v1/local_info?location_name=fake", headers=auth_header)

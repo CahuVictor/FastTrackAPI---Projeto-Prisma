@@ -28,8 +28,8 @@ def test_obter_forecast_info_nao_encontrada(client, auth_header):
     assert resp.json()["detail"] == "Previsão não encontrada"
 
 # Simular erro na atualização de forecast_info (try/except de forecast)
-@pytest.mark.parametrize("evento", ["evento_valido"], indirect=True)
-def test_atualizar_forecast_info_com_erro(client, auth_header, evento):
+@pytest.mark.parametrize("event", ["evento_valido"], indirect=True)
+def test_update_forecast_info_error(client, auth_header, event):
     """
     Força erro no serviço de forecast para cobrir o branch de exceção.
     """
@@ -43,7 +43,7 @@ def test_atualizar_forecast_info_com_erro(client, auth_header, evento):
     app.dependency_overrides[provide_forecast_service] = fake_forecast_service
 
     # cria evento
-    post = client.post("/api/v1/eventos", json=evento, headers=auth_header)
+    post = client.post("/api/v1/eventos", json=event, headers=auth_header)
     assert post.status_code == 201
     evento_id = post.json()["id"]
 
@@ -52,7 +52,7 @@ def test_atualizar_forecast_info_com_erro(client, auth_header, evento):
     assert resp.status_code in (502, 404)
     assert resp.json()["detail"] == "Erro ao obter previsão do tempo"
     
-    post_resp = client.post("/api/v1/eventos", json=evento, headers=auth_header)
+    post_resp = client.post("/api/v1/eventos", json=event, headers=auth_header)
     assert post_resp.status_code == 201
     evento_id = post_resp.json()["id"]
     
@@ -69,9 +69,9 @@ def test_atualizar_forecast_info_com_erro(client, auth_header, evento):
     # limpa override
     app.dependency_overrides = {}
 
-@pytest.mark.parametrize("evento", ["evento_valido"], indirect=True)
-def test_atualizar_forecast_info(client, auth_header, evento):
-    post_resp = client.post("/api/v1/eventos", json=evento, headers=auth_header)
+@pytest.mark.parametrize("event", ["evento_valido"], indirect=True)
+def test_atualizar_forecast_info(client, auth_header, event):
+    post_resp = client.post("/api/v1/eventos", json=event, headers=auth_header)
     evento_id = post_resp.json()["id"]
     resp = client.patch(f"/api/v1/eventos/{evento_id}/forecast_info", headers=auth_header)
     assert resp.status_code == 200
@@ -82,8 +82,8 @@ def test_atualizar_forecast_info_inexistente(client, auth_header):
     resp = client.patch("/api/v1/eventos/99999/forecast_info", headers=auth_header)
     assert resp.status_code == 404
 
-@pytest.mark.parametrize("evento", ["evento_valido"], indirect=True)
-def test_criar_evento_forecast_exception(client, auth_header, evento):
+@pytest.mark.parametrize("event", ["evento_valido"], indirect=True)
+def test_criar_evento_forecast_exception(client, auth_header, event):
     def fake_forecast_service():
         class FakeService:
             def get_by_city_and_datetime(self, city, date):
@@ -91,7 +91,7 @@ def test_criar_evento_forecast_exception(client, auth_header, evento):
         return FakeService()
     app.dependency_overrides[provide_forecast_service] = fake_forecast_service
 
-    resp = client.post("/api/v1/eventos", json=evento, headers=auth_header)
+    resp = client.post("/api/v1/eventos", json=event, headers=auth_header)
     assert resp.status_code == 201
     result = resp.json()
     assert result["forecast_info"] is None
