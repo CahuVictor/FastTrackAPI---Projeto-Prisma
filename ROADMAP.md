@@ -14,24 +14,6 @@ Este documento descreve detalhadamente os próximos passos para o upgrade e apri
 
 ---
 
-## 6. Logs Estruturados
-
-**O que é:** Logs detalhados e fáceis de analisar.
-
-**Vantagens:**
-
-* Maior facilidade de debug.
-* Melhora a observabilidade da aplicação.
-
-**Implementação:**
-
-```python
-from loguru import logger
-
-logger.add("app.log", serialize=True)
-logger.info("Evento criado", event_id=123)
-```
-
 ---
 
 ## 7. Background Task para Previsão do Tempo

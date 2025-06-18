@@ -4,7 +4,7 @@ import pytest
 from app.main import app
 from app.deps import provide_forecast_service
 
-def test_obter_forecast_info(client, auth_header, dt_now_iso):
+def test_get_forecast_info(client, auth_header, dt_now_iso):
     resp = client.get("/api/v1/forecast_info",
         params={
             "city": "Recife",
@@ -15,7 +15,7 @@ def test_obter_forecast_info(client, auth_header, dt_now_iso):
     assert resp.status_code == 200
     assert "temperature" in resp.json()
 
-def test_obter_forecast_info_nao_encontrada(client, auth_header):
+def test_get_forecast_info_nao_encontrada(client, auth_header):
     resp = client.get(
         "/api/v1/forecast_info",
         params={

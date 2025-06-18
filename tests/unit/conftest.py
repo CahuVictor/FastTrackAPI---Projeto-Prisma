@@ -12,7 +12,7 @@ from app.main import app as fastapi_app   # FastAPI já criado em app.main
 from app.services.mock_local_info import MockLocalInfoService
 
 from app.repositories.evento_mem import InMemoryEventoRepo
-from app.deps import provide_evento_repo
+from app.deps import provide_event_repo
 
 from app.deps import provide_redis
 
@@ -255,7 +255,7 @@ def repo(app):
 @pytest.fixture(autouse=True)
 def _shared_repo(app):
     repo = InMemoryEventoRepo()
-    app.dependency_overrides[provide_evento_repo] = lambda: repo
+    app.dependency_overrides[provide_event_repo] = lambda: repo
     yield
     repo.delete_all()       # reseta entre testes
     

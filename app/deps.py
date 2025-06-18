@@ -34,7 +34,7 @@ def provide_forecast_service() -> AbstractForecastService:
     logger.debug("Injetando serviço de forecast_info (mock)")
     return MockForecastService()
 
-# def provide_evento_repo() -> AbstractEventRepo:
+# def provide_event_repo() -> AbstractEventRepo:
 #     return InMemoryEventoRepo()
 
 # uma instância global
@@ -42,7 +42,7 @@ _evento_repo_singleton = InMemoryEventoRepo()
 
 _redis_singleton: Redis | None = None     # conexão global reaproveitável
 
-def provide_evento_repo() -> InMemoryEventoRepo:
+def provide_event_repo() -> InMemoryEventoRepo:
     """
     Retorna sempre a mesma instância em memória para toda a aplicação/testes.
     """

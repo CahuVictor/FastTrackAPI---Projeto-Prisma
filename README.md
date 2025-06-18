@@ -3,7 +3,7 @@
 [![Coverage](https://codecov.io/gh/SEU_USUARIO/FastTrackAPI---Projeto-Prisma/branch/main/graph/badge.svg)](https://codecov.io/gh/SEU_USUARIO/FastTrackAPI---Projeto-Prisma)
 ---------- coverage: platform win32, python 3.12.6-final-0 -----------
 Name                                                Stmts   Miss  Cover   Missing
-TOTAL                                                 755     68    91%
+TOTAL                                                 772     71    91%
 
 Required test coverage of 80% reached. Total coverage: 82.36%
 
@@ -60,7 +60,7 @@ Desenvolver habilidades avançadas em desenvolvimento backend com Python utiliza
 - [ ] **Utilizar ferramentas e práticas de DevOps no fluxo de desenvolvimento**
   - [x] Utilizar Docker para empacotar a aplicação
   - [x] Orquestrar serviços com Docker Compose (app, banco, redis)
-  - [ ] Criar pipelines de CI com GitHub Actions (teste e lint automático)
+  - [x] Criar pipelines de CI com GitHub Actions (teste e lint automático)
   - [ ] Rodar migrations de banco em containers (ex: Alembic via Compose)
 
 - [x] **Gerenciar configurações de forma segura e flexível**
@@ -76,7 +76,7 @@ Desenvolver habilidades avançadas em desenvolvimento backend com Python utiliza
 
 - [ ] **Adicionar observabilidade e monitoramento à aplicação**
   - [x] Adicionar logs estruturados com `loguru` ou `structlog`
-  - [ ] Criar middlewares para registrar requisições/respostas
+  - [x] Criar middlewares para registrar requisições/respostas
   - [ ] Monitorar erros e alertas (integração futura com ferramentas externas)
 
 - [x] **Documentar a API e o projeto de forma clara e profissional**
@@ -87,7 +87,7 @@ Desenvolver habilidades avançadas em desenvolvimento backend com Python utiliza
 - [ ] **Aprofundar o uso de banco de dados com SQLAlchemy**
   - [ ] Criar modelos ORM com relacionamentos
   - [ ] Escrever queries mais avançadas (joins, agregações)
-  - [ ] Implementar filtros e paginação em endpoints
+  - [x] Implementar filtros e paginação em endpoints
   - [ ] Gerenciar migrações com Alembic
 
 - [x] **Trabalhar com versionamento de código no GitHub com boas práticas**
@@ -120,7 +120,11 @@ fasttrackapi-projeto-prisma/
 │   │   │   └── api_router.py   # Agrupa todos os endpoints da v1
 │   ├── core/                   # Configurações globais da aplicação
 │   │   ├── config.py           # Carrega variáveis de ambiente com Pydantic
+│   │   ├── contextvars.py      # 
+│   │   ├── logging_config.py   # 
 │   │   └── security.py         # Configurações relacionadas à segurança/autenticação
+│   ├── middleware/             # 
+│   │   └── logging_middleware.py # 
 │   ├── models/                 # Modelos do banco de dados (SQLAlchemy)
 │   ├── repositories/           # Funções de acesso ao banco de dados
 │   │   ├── evento_mem.py       # 

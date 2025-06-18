@@ -15,7 +15,7 @@ from app.main import app
 
 from app.schemas.event_create import EventCreate
 
-from app.deps import provide_evento_repo
+from app.deps import provide_event_repo
 # from app.api.v1.endpoints.eventos import atualizar_evento
 from app.repositories.evento_mem import InMemoryEventoRepo
 
@@ -54,7 +54,7 @@ def test_create_event_invalid(client: TestClient, auth_header: dict[str, str], e
     assert resp.status_code == 422
 
 @pytest.mark.parametrize("event", ["evento_valido"], indirect=True)
-def test_get_event_id_ok(
+def test_get_event_by_id_ok(
     client: TestClient, auth_header: dict[str, str], event
 ):
     resp = client.post("/api/v1/eventos", json=event, headers=auth_header)
@@ -67,7 +67,7 @@ def test_get_event_id_ok(
     assert body["id"] == ev_id
     assert body["views"] == 1  # contador é incrementado
 
-def test_get_event_id_404(client: TestClient, auth_header: dict[str, str]):
+def test_get_event_by_id_404(client: TestClient, auth_header: dict[str, str]):
     resp_get = client.get("/api/v1/eventos/9999", headers=auth_header)
     assert resp_get.status_code == 404
     assert resp_get.json()["detail"] == "Evento não encontrado"
@@ -93,7 +93,7 @@ def test_list_events_all_ok(client: TestClient, auth_header: dict[str, str], rep
 def test_list_events_all_clear(client: TestClient, auth_header: dict[str, str]):
     resp = client.get("/api/v1/eventos/todos", headers=auth_header)
     assert resp.status_code == 404
-    assert resp.json()["detail"] == "Nenhum evento encontrado."
+    assert resp.json()["detail"] == "Nenhum evento encontrado"
 
 # --------------------------------------------------------------------------- #
 # 3. /eventos/top/soon – sem futuros                                     #
@@ -113,7 +113,7 @@ def test_get_top_upcoming_events_without_future(client: TestClient, auth_header:
 
     resp = client.get("/api/v1/eventos/top/soon", headers=auth_header)
     assert resp.status_code == 404
-    assert resp.json()["detail"] == "Sem eventos futuros encontrados"
+    assert resp.json()["detail"] == "Nenhum evento futuro encontrado"
 
 # --------------------------------------------------------------------------- #
 # 4. /eventos/top/most-viewed – sem registros                           #
@@ -187,7 +187,7 @@ def test_update_event_type_invalid_unit(client: TestClient, auth_header: dict[st
     assert detail["type"] in {"missing", "model_attributes_type"}
     
 @pytest.mark.parametrize("event", ["evento_valido"], indirect=True)
-def test_replace_event_id(client: TestClient, auth_header: dict[str, str], event: Literal['evento_valido']):
+def test_replace_event_by_id(client: TestClient, auth_header: dict[str, str], event: Literal['evento_valido']):
     # 1) cria o evento original
     post = client.post("/api/v1/eventos", json=event, headers=auth_header)
     event_id = post.json()["id"]
@@ -226,7 +226,7 @@ def test_add_events_batch_ok(client: TestClient, auth_header: dict[str, str]):
 def test_add_events_batch_lista_vazia(client: TestClient, auth_header: dict[str, str]):
     resp = client.post("/api/v1/eventos/lote", json=[], headers=auth_header)
     assert resp.status_code == 400
-    assert resp.json()["detail"] == "Lista inválida enviada."
+    assert resp.json()["detail"] == "Lista vazia enviada"
 
 # --------------------------------------------------------------------------- #
 # 6. DELETE /eventos/{id}                                                  #
@@ -248,7 +248,7 @@ def test_delete_event_ok(client: TestClient, auth_header: dict[str, str], event)
 def test_delete_event_not_found(client: TestClient, auth_header: dict[str, str]):
     resp = client.delete("/api/v1/eventos/8888", headers=auth_header)
     assert resp.status_code == 404
-    assert resp.json()["detail"] == "Evento não encontrado."
+    assert resp.json()["detail"] == "Evento não encontrado"
 
 @pytest.mark.parametrize("event", ["evento_valido"], indirect=True)
 def test_delete_all_events(client: TestClient, auth_header: dict[str, str], event: Literal['evento_valido']):
@@ -313,7 +313,7 @@ def test_update_event_type_valid(client: TestClient, auth_header: dict[str, str]
     """PATCH deve aceitar EventUpdate válido e alterar apenas os campos enviados."""
     # --- 1. fixa o repositório (singleton em memória) ---
     repo_singleton = InMemoryEventoRepo()
-    app.dependency_overrides[provide_evento_repo] = lambda: repo_singleton
+    app.dependency_overrides[provide_event_repo] = lambda: repo_singleton
 
     try:
         # --- 2. cria um evento ---
@@ -336,7 +336,7 @@ def test_update_event_type_valid(client: TestClient, auth_header: dict[str, str]
         assert body["title"] == "Concerto De Jazz"
     finally:
         # limpa override para não interferir em outros testes
-        app.dependency_overrides.pop(provide_evento_repo, None)
+        app.dependency_overrides.pop(provide_event_repo, None)
 
 @pytest.mark.parametrize("n,skip,limit", [(30,0,10), (30,10,10), (5,0,10)])
 def test_pagination_works_correctly(client: TestClient, auth_header: dict[str, str], repo, n: Literal[30] | Literal[5], skip: Literal[0] | Literal[10], limit: Literal[10]):
