@@ -2,6 +2,7 @@
 import abc
 from app.schemas.event_create import EventCreate
 from app.schemas.event_create import EventResponse
+from app.schemas.weather_forecast import WeatherForecast
 
 class AbstractEventRepo(abc.ABC):
     @abc.abstractmethod
@@ -33,7 +34,7 @@ class AbstractEventRepo(abc.ABC):
         """."""
     
     @abc.abstractmethod
-    def add(self, evento: EventCreate) -> EventResponse:
+    def add(self, evento: EventCreate, forecast_info: WeatherForecast | None = None) -> EventResponse:
         """."""
     
     @abc.abstractmethod

@@ -14,7 +14,7 @@ from app.services.interfaces.forecast_info_protocol import AbstractForecastServi
 # from app.repositories.evento import AbstractEventRepo
 
 # from functools import lru_cache
-from app.repositories.evento_mem import InMemoryEventoRepo
+from app.repositories.evento_mem import InMemoryEventRepo
 
 from app.core.config import get_settings
 
@@ -35,14 +35,14 @@ def provide_forecast_service() -> AbstractForecastService:
     return MockForecastService()
 
 # def provide_event_repo() -> AbstractEventRepo:
-#     return InMemoryEventoRepo()
+#     return InMemoryEventRepo()
 
 # uma instância global
-_evento_repo_singleton = InMemoryEventoRepo()
+_evento_repo_singleton = InMemoryEventRepo()
 
 _redis_singleton: Redis | None = None     # conexão global reaproveitável
 
-def provide_event_repo() -> InMemoryEventoRepo:
+def provide_event_repo() -> InMemoryEventRepo:
     """
     Retorna sempre a mesma instância em memória para toda a aplicação/testes.
     """

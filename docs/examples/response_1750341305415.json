@@ -1,0 +1,2477 @@
+[
+  {
+    "title": "Evento 1",
+    "description": "Descrição Detalhada Do Evento 1.",
+    "event_date": "2025-07-02T10:00:00",
+    "city": "Olinda",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_1",
+      "capacity": 238,
+      "venue_type": "Salao",
+      "is_accessible": true,
+      "address": "Rua Exemplo 1, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 1,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 2",
+    "description": "Descrição Detalhada Do Evento 2.",
+    "event_date": "2025-07-03T10:00:00",
+    "city": "Jaboatão",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_2",
+      "capacity": 391,
+      "venue_type": "Auditorio",
+      "is_accessible": true,
+      "address": "Rua Exemplo 2, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 2,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 3",
+    "description": "Descrição Detalhada Do Evento 3.",
+    "event_date": "2025-07-04T10:00:00",
+    "city": "Jaboatão",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_3",
+      "capacity": 218,
+      "venue_type": "Salao",
+      "is_accessible": false,
+      "address": "Rua Exemplo 3, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 3,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 4",
+    "description": "Descrição Detalhada Do Evento 4.",
+    "event_date": "2025-07-05T10:00:00",
+    "city": "Petrolina",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_4",
+      "capacity": 59,
+      "venue_type": "Auditorio",
+      "is_accessible": true,
+      "address": "Rua Exemplo 4, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 4,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 5",
+    "description": "Descrição Detalhada Do Evento 5.",
+    "event_date": "2025-07-06T10:00:00",
+    "city": "Jaboatão",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_5",
+      "capacity": 462,
+      "venue_type": "Salao",
+      "is_accessible": true,
+      "address": "Rua Exemplo 5, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 5,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 6",
+    "description": "Descrição Detalhada Do Evento 6.",
+    "event_date": "2025-07-07T10:00:00",
+    "city": "Caruaru",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_6",
+      "capacity": 84,
+      "venue_type": "Auditorio",
+      "is_accessible": false,
+      "address": "Rua Exemplo 6, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 6,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 7",
+    "description": "Descrição Detalhada Do Evento 7.",
+    "event_date": "2025-07-08T10:00:00",
+    "city": "Recife",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_7",
+      "capacity": 67,
+      "venue_type": "Salao",
+      "is_accessible": true,
+      "address": "Rua Exemplo 7, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 7,
+    "forecast_info": {
+      "forecast_datetime": "2025-07-08T12:00:00",
+      "temperature": 33.5,
+      "weather_main": "Clouds",
+      "weather_desc": "Nuvens dispersas",
+      "humidity": 67,
+      "wind_speed": 4.5
+    },
+    "views": 0
+  },
+  {
+    "title": "Evento 8",
+    "description": "Descrição Detalhada Do Evento 8.",
+    "event_date": "2025-07-09T10:00:00",
+    "city": "Olinda",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_8",
+      "capacity": 149,
+      "venue_type": "Auditorio",
+      "is_accessible": true,
+      "address": "Rua Exemplo 8, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 8,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 9",
+    "description": "Descrição Detalhada Do Evento 9.",
+    "event_date": "2025-07-10T10:00:00",
+    "city": "Olinda",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_9",
+      "capacity": 120,
+      "venue_type": "Salao",
+      "is_accessible": false,
+      "address": "Rua Exemplo 9, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 9,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 10",
+    "description": "Descrição Detalhada Do Evento 10.",
+    "event_date": "2025-07-11T10:00:00",
+    "city": "Caruaru",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_0",
+      "capacity": 84,
+      "venue_type": "Auditorio",
+      "is_accessible": true,
+      "address": "Rua Exemplo 10, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 10,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 11",
+    "description": "Descrição Detalhada Do Evento 11.",
+    "event_date": "2025-07-12T10:00:00",
+    "city": "Caruaru",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_1",
+      "capacity": 159,
+      "venue_type": "Salao",
+      "is_accessible": true,
+      "address": "Rua Exemplo 11, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 11,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 12",
+    "description": "Descrição Detalhada Do Evento 12.",
+    "event_date": "2025-07-13T10:00:00",
+    "city": "Jaboatão",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_2",
+      "capacity": 325,
+      "venue_type": "Auditorio",
+      "is_accessible": false,
+      "address": "Rua Exemplo 12, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 12,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 13",
+    "description": "Descrição Detalhada Do Evento 13.",
+    "event_date": "2025-07-14T10:00:00",
+    "city": "Recife",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_3",
+      "capacity": 318,
+      "venue_type": "Salao",
+      "is_accessible": true,
+      "address": "Rua Exemplo 13, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 13,
+    "forecast_info": {
+      "forecast_datetime": "2025-07-14T12:00:00",
+      "temperature": 33.5,
+      "weather_main": "Clouds",
+      "weather_desc": "Nuvens dispersas",
+      "humidity": 67,
+      "wind_speed": 4.5
+    },
+    "views": 0
+  },
+  {
+    "title": "Evento 14",
+    "description": "Descrição Detalhada Do Evento 14.",
+    "event_date": "2025-07-15T10:00:00",
+    "city": "Olinda",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_4",
+      "capacity": 444,
+      "venue_type": "Auditorio",
+      "is_accessible": true,
+      "address": "Rua Exemplo 14, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 14,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 15",
+    "description": "Descrição Detalhada Do Evento 15.",
+    "event_date": "2025-07-16T10:00:00",
+    "city": "Recife",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_5",
+      "capacity": 211,
+      "venue_type": "Salao",
+      "is_accessible": false,
+      "address": "Rua Exemplo 15, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 15,
+    "forecast_info": {
+      "forecast_datetime": "2025-07-16T12:00:00",
+      "temperature": 33.5,
+      "weather_main": "Clouds",
+      "weather_desc": "Nuvens dispersas",
+      "humidity": 67,
+      "wind_speed": 4.5
+    },
+    "views": 0
+  },
+  {
+    "title": "Evento 16",
+    "description": "Descrição Detalhada Do Evento 16.",
+    "event_date": "2025-07-17T10:00:00",
+    "city": "Recife",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_6",
+      "capacity": 417,
+      "venue_type": "Auditorio",
+      "is_accessible": true,
+      "address": "Rua Exemplo 16, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 16,
+    "forecast_info": {
+      "forecast_datetime": "2025-07-17T12:00:00",
+      "temperature": 33.5,
+      "weather_main": "Clouds",
+      "weather_desc": "Nuvens dispersas",
+      "humidity": 67,
+      "wind_speed": 4.5
+    },
+    "views": 0
+  },
+  {
+    "title": "Evento 17",
+    "description": "Descrição Detalhada Do Evento 17.",
+    "event_date": "2025-07-18T10:00:00",
+    "city": "Petrolina",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_7",
+      "capacity": 395,
+      "venue_type": "Salao",
+      "is_accessible": true,
+      "address": "Rua Exemplo 17, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 17,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 18",
+    "description": "Descrição Detalhada Do Evento 18.",
+    "event_date": "2025-07-19T10:00:00",
+    "city": "Petrolina",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_8",
+      "capacity": 201,
+      "venue_type": "Auditorio",
+      "is_accessible": false,
+      "address": "Rua Exemplo 18, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 18,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 19",
+    "description": "Descrição Detalhada Do Evento 19.",
+    "event_date": "2025-07-20T10:00:00",
+    "city": "Petrolina",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_9",
+      "capacity": 403,
+      "venue_type": "Salao",
+      "is_accessible": true,
+      "address": "Rua Exemplo 19, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 19,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 20",
+    "description": "Descrição Detalhada Do Evento 20.",
+    "event_date": "2025-07-21T10:00:00",
+    "city": "Recife",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_0",
+      "capacity": 379,
+      "venue_type": "Auditorio",
+      "is_accessible": true,
+      "address": "Rua Exemplo 20, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 20,
+    "forecast_info": {
+      "forecast_datetime": "2025-07-21T12:00:00",
+      "temperature": 33.5,
+      "weather_main": "Clouds",
+      "weather_desc": "Nuvens dispersas",
+      "humidity": 67,
+      "wind_speed": 4.5
+    },
+    "views": 0
+  },
+  {
+    "title": "Evento 21",
+    "description": "Descrição Detalhada Do Evento 21.",
+    "event_date": "2025-07-22T10:00:00",
+    "city": "Olinda",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_1",
+      "capacity": 247,
+      "venue_type": "Salao",
+      "is_accessible": false,
+      "address": "Rua Exemplo 21, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 21,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 22",
+    "description": "Descrição Detalhada Do Evento 22.",
+    "event_date": "2025-07-23T10:00:00",
+    "city": "Jaboatão",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_2",
+      "capacity": 316,
+      "venue_type": "Auditorio",
+      "is_accessible": true,
+      "address": "Rua Exemplo 22, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 22,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 23",
+    "description": "Descrição Detalhada Do Evento 23.",
+    "event_date": "2025-07-24T10:00:00",
+    "city": "Jaboatão",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_3",
+      "capacity": 407,
+      "venue_type": "Salao",
+      "is_accessible": true,
+      "address": "Rua Exemplo 23, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 23,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 24",
+    "description": "Descrição Detalhada Do Evento 24.",
+    "event_date": "2025-07-25T10:00:00",
+    "city": "Jaboatão",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_4",
+      "capacity": 151,
+      "venue_type": "Auditorio",
+      "is_accessible": false,
+      "address": "Rua Exemplo 24, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 24,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 25",
+    "description": "Descrição Detalhada Do Evento 25.",
+    "event_date": "2025-07-26T10:00:00",
+    "city": "Recife",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_5",
+      "capacity": 169,
+      "venue_type": "Salao",
+      "is_accessible": true,
+      "address": "Rua Exemplo 25, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 25,
+    "forecast_info": {
+      "forecast_datetime": "2025-07-26T12:00:00",
+      "temperature": 33.5,
+      "weather_main": "Clouds",
+      "weather_desc": "Nuvens dispersas",
+      "humidity": 67,
+      "wind_speed": 4.5
+    },
+    "views": 0
+  },
+  {
+    "title": "Evento 26",
+    "description": "Descrição Detalhada Do Evento 26.",
+    "event_date": "2025-07-27T10:00:00",
+    "city": "Olinda",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_6",
+      "capacity": 197,
+      "venue_type": "Auditorio",
+      "is_accessible": true,
+      "address": "Rua Exemplo 26, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 26,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 27",
+    "description": "Descrição Detalhada Do Evento 27.",
+    "event_date": "2025-07-28T10:00:00",
+    "city": "Jaboatão",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_7",
+      "capacity": 487,
+      "venue_type": "Salao",
+      "is_accessible": false,
+      "address": "Rua Exemplo 27, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 27,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 28",
+    "description": "Descrição Detalhada Do Evento 28.",
+    "event_date": "2025-07-29T10:00:00",
+    "city": "Jaboatão",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_8",
+      "capacity": 105,
+      "venue_type": "Auditorio",
+      "is_accessible": true,
+      "address": "Rua Exemplo 28, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 28,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 29",
+    "description": "Descrição Detalhada Do Evento 29.",
+    "event_date": "2025-07-30T10:00:00",
+    "city": "Jaboatão",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_9",
+      "capacity": 172,
+      "venue_type": "Salao",
+      "is_accessible": true,
+      "address": "Rua Exemplo 29, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 29,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 30",
+    "description": "Descrição Detalhada Do Evento 30.",
+    "event_date": "2025-07-31T10:00:00",
+    "city": "Recife",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_0",
+      "capacity": 120,
+      "venue_type": "Auditorio",
+      "is_accessible": false,
+      "address": "Rua Exemplo 30, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 30,
+    "forecast_info": {
+      "forecast_datetime": "2025-07-31T12:00:00",
+      "temperature": 33.5,
+      "weather_main": "Clouds",
+      "weather_desc": "Nuvens dispersas",
+      "humidity": 67,
+      "wind_speed": 4.5
+    },
+    "views": 0
+  },
+  {
+    "title": "Evento 31",
+    "description": "Descrição Detalhada Do Evento 31.",
+    "event_date": "2025-08-01T10:00:00",
+    "city": "Jaboatão",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_1",
+      "capacity": 98,
+      "venue_type": "Salao",
+      "is_accessible": true,
+      "address": "Rua Exemplo 31, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 31,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 32",
+    "description": "Descrição Detalhada Do Evento 32.",
+    "event_date": "2025-08-02T10:00:00",
+    "city": "Petrolina",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_2",
+      "capacity": 343,
+      "venue_type": "Auditorio",
+      "is_accessible": true,
+      "address": "Rua Exemplo 32, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 32,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 33",
+    "description": "Descrição Detalhada Do Evento 33.",
+    "event_date": "2025-08-03T10:00:00",
+    "city": "Olinda",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_3",
+      "capacity": 450,
+      "venue_type": "Salao",
+      "is_accessible": false,
+      "address": "Rua Exemplo 33, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 33,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 34",
+    "description": "Descrição Detalhada Do Evento 34.",
+    "event_date": "2025-08-04T10:00:00",
+    "city": "Jaboatão",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_4",
+      "capacity": 115,
+      "venue_type": "Auditorio",
+      "is_accessible": true,
+      "address": "Rua Exemplo 34, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 34,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 35",
+    "description": "Descrição Detalhada Do Evento 35.",
+    "event_date": "2025-08-05T10:00:00",
+    "city": "Jaboatão",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_5",
+      "capacity": 54,
+      "venue_type": "Salao",
+      "is_accessible": true,
+      "address": "Rua Exemplo 35, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 35,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 36",
+    "description": "Descrição Detalhada Do Evento 36.",
+    "event_date": "2025-08-06T10:00:00",
+    "city": "Caruaru",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_6",
+      "capacity": 497,
+      "venue_type": "Auditorio",
+      "is_accessible": false,
+      "address": "Rua Exemplo 36, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 36,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 37",
+    "description": "Descrição Detalhada Do Evento 37.",
+    "event_date": "2025-08-07T10:00:00",
+    "city": "Recife",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_7",
+      "capacity": 54,
+      "venue_type": "Salao",
+      "is_accessible": true,
+      "address": "Rua Exemplo 37, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 37,
+    "forecast_info": {
+      "forecast_datetime": "2025-08-07T12:00:00",
+      "temperature": 33.5,
+      "weather_main": "Clouds",
+      "weather_desc": "Nuvens dispersas",
+      "humidity": 67,
+      "wind_speed": 4.5
+    },
+    "views": 0
+  },
+  {
+    "title": "Evento 38",
+    "description": "Descrição Detalhada Do Evento 38.",
+    "event_date": "2025-08-08T10:00:00",
+    "city": "Petrolina",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_8",
+      "capacity": 96,
+      "venue_type": "Auditorio",
+      "is_accessible": true,
+      "address": "Rua Exemplo 38, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 38,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 39",
+    "description": "Descrição Detalhada Do Evento 39.",
+    "event_date": "2025-08-09T10:00:00",
+    "city": "Petrolina",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_9",
+      "capacity": 468,
+      "venue_type": "Salao",
+      "is_accessible": false,
+      "address": "Rua Exemplo 39, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 39,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 40",
+    "description": "Descrição Detalhada Do Evento 40.",
+    "event_date": "2025-08-10T10:00:00",
+    "city": "Caruaru",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_0",
+      "capacity": 193,
+      "venue_type": "Auditorio",
+      "is_accessible": true,
+      "address": "Rua Exemplo 40, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 40,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 41",
+    "description": "Descrição Detalhada Do Evento 41.",
+    "event_date": "2025-08-11T10:00:00",
+    "city": "Caruaru",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_1",
+      "capacity": 258,
+      "venue_type": "Salao",
+      "is_accessible": true,
+      "address": "Rua Exemplo 41, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 41,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 42",
+    "description": "Descrição Detalhada Do Evento 42.",
+    "event_date": "2025-08-12T10:00:00",
+    "city": "Recife",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_2",
+      "capacity": 477,
+      "venue_type": "Auditorio",
+      "is_accessible": false,
+      "address": "Rua Exemplo 42, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 42,
+    "forecast_info": {
+      "forecast_datetime": "2025-08-12T12:00:00",
+      "temperature": 33.5,
+      "weather_main": "Clouds",
+      "weather_desc": "Nuvens dispersas",
+      "humidity": 67,
+      "wind_speed": 4.5
+    },
+    "views": 0
+  },
+  {
+    "title": "Evento 43",
+    "description": "Descrição Detalhada Do Evento 43.",
+    "event_date": "2025-08-13T10:00:00",
+    "city": "Caruaru",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_3",
+      "capacity": 218,
+      "venue_type": "Salao",
+      "is_accessible": true,
+      "address": "Rua Exemplo 43, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 43,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 44",
+    "description": "Descrição Detalhada Do Evento 44.",
+    "event_date": "2025-08-14T10:00:00",
+    "city": "Petrolina",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_4",
+      "capacity": 235,
+      "venue_type": "Auditorio",
+      "is_accessible": true,
+      "address": "Rua Exemplo 44, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 44,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 45",
+    "description": "Descrição Detalhada Do Evento 45.",
+    "event_date": "2025-08-15T10:00:00",
+    "city": "Caruaru",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_5",
+      "capacity": 95,
+      "venue_type": "Salao",
+      "is_accessible": false,
+      "address": "Rua Exemplo 45, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 45,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 46",
+    "description": "Descrição Detalhada Do Evento 46.",
+    "event_date": "2025-08-16T10:00:00",
+    "city": "Petrolina",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_6",
+      "capacity": 198,
+      "venue_type": "Auditorio",
+      "is_accessible": true,
+      "address": "Rua Exemplo 46, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 46,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 47",
+    "description": "Descrição Detalhada Do Evento 47.",
+    "event_date": "2025-08-17T10:00:00",
+    "city": "Recife",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_7",
+      "capacity": 249,
+      "venue_type": "Salao",
+      "is_accessible": true,
+      "address": "Rua Exemplo 47, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 47,
+    "forecast_info": {
+      "forecast_datetime": "2025-08-17T12:00:00",
+      "temperature": 33.5,
+      "weather_main": "Clouds",
+      "weather_desc": "Nuvens dispersas",
+      "humidity": 67,
+      "wind_speed": 4.5
+    },
+    "views": 0
+  },
+  {
+    "title": "Evento 48",
+    "description": "Descrição Detalhada Do Evento 48.",
+    "event_date": "2025-08-18T10:00:00",
+    "city": "Petrolina",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_8",
+      "capacity": 169,
+      "venue_type": "Auditorio",
+      "is_accessible": false,
+      "address": "Rua Exemplo 48, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 48,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 49",
+    "description": "Descrição Detalhada Do Evento 49.",
+    "event_date": "2025-08-19T10:00:00",
+    "city": "Recife",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_9",
+      "capacity": 453,
+      "venue_type": "Salao",
+      "is_accessible": true,
+      "address": "Rua Exemplo 49, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 49,
+    "forecast_info": {
+      "forecast_datetime": "2025-08-19T12:00:00",
+      "temperature": 33.5,
+      "weather_main": "Clouds",
+      "weather_desc": "Nuvens dispersas",
+      "humidity": 67,
+      "wind_speed": 4.5
+    },
+    "views": 0
+  },
+  {
+    "title": "Evento 50",
+    "description": "Descrição Detalhada Do Evento 50.",
+    "event_date": "2025-08-20T10:00:00",
+    "city": "Petrolina",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_0",
+      "capacity": 469,
+      "venue_type": "Auditorio",
+      "is_accessible": true,
+      "address": "Rua Exemplo 50, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 50,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 51",
+    "description": "Descrição Detalhada Do Evento 51.",
+    "event_date": "2025-08-21T10:00:00",
+    "city": "Recife",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_1",
+      "capacity": 433,
+      "venue_type": "Salao",
+      "is_accessible": false,
+      "address": "Rua Exemplo 51, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 51,
+    "forecast_info": {
+      "forecast_datetime": "2025-08-21T12:00:00",
+      "temperature": 33.5,
+      "weather_main": "Clouds",
+      "weather_desc": "Nuvens dispersas",
+      "humidity": 67,
+      "wind_speed": 4.5
+    },
+    "views": 0
+  },
+  {
+    "title": "Evento 52",
+    "description": "Descrição Detalhada Do Evento 52.",
+    "event_date": "2025-08-22T10:00:00",
+    "city": "Olinda",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_2",
+      "capacity": 151,
+      "venue_type": "Auditorio",
+      "is_accessible": true,
+      "address": "Rua Exemplo 52, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 52,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 53",
+    "description": "Descrição Detalhada Do Evento 53.",
+    "event_date": "2025-08-23T10:00:00",
+    "city": "Recife",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_3",
+      "capacity": 105,
+      "venue_type": "Salao",
+      "is_accessible": true,
+      "address": "Rua Exemplo 53, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 53,
+    "forecast_info": {
+      "forecast_datetime": "2025-08-23T12:00:00",
+      "temperature": 33.5,
+      "weather_main": "Clouds",
+      "weather_desc": "Nuvens dispersas",
+      "humidity": 67,
+      "wind_speed": 4.5
+    },
+    "views": 0
+  },
+  {
+    "title": "Evento 54",
+    "description": "Descrição Detalhada Do Evento 54.",
+    "event_date": "2025-08-24T10:00:00",
+    "city": "Caruaru",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_4",
+      "capacity": 148,
+      "venue_type": "Auditorio",
+      "is_accessible": false,
+      "address": "Rua Exemplo 54, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 54,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 55",
+    "description": "Descrição Detalhada Do Evento 55.",
+    "event_date": "2025-08-25T10:00:00",
+    "city": "Caruaru",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_5",
+      "capacity": 259,
+      "venue_type": "Salao",
+      "is_accessible": true,
+      "address": "Rua Exemplo 55, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 55,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 56",
+    "description": "Descrição Detalhada Do Evento 56.",
+    "event_date": "2025-08-26T10:00:00",
+    "city": "Jaboatão",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_6",
+      "capacity": 88,
+      "venue_type": "Auditorio",
+      "is_accessible": true,
+      "address": "Rua Exemplo 56, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 56,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 57",
+    "description": "Descrição Detalhada Do Evento 57.",
+    "event_date": "2025-08-27T10:00:00",
+    "city": "Petrolina",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_7",
+      "capacity": 118,
+      "venue_type": "Salao",
+      "is_accessible": false,
+      "address": "Rua Exemplo 57, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 57,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 58",
+    "description": "Descrição Detalhada Do Evento 58.",
+    "event_date": "2025-08-28T10:00:00",
+    "city": "Caruaru",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_8",
+      "capacity": 458,
+      "venue_type": "Auditorio",
+      "is_accessible": true,
+      "address": "Rua Exemplo 58, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 58,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 59",
+    "description": "Descrição Detalhada Do Evento 59.",
+    "event_date": "2025-08-29T10:00:00",
+    "city": "Olinda",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_9",
+      "capacity": 77,
+      "venue_type": "Salao",
+      "is_accessible": true,
+      "address": "Rua Exemplo 59, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 59,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 60",
+    "description": "Descrição Detalhada Do Evento 60.",
+    "event_date": "2025-08-30T10:00:00",
+    "city": "Recife",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_0",
+      "capacity": 217,
+      "venue_type": "Auditorio",
+      "is_accessible": false,
+      "address": "Rua Exemplo 60, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 60,
+    "forecast_info": {
+      "forecast_datetime": "2025-08-30T12:00:00",
+      "temperature": 33.5,
+      "weather_main": "Clouds",
+      "weather_desc": "Nuvens dispersas",
+      "humidity": 67,
+      "wind_speed": 4.5
+    },
+    "views": 0
+  },
+  {
+    "title": "Evento 61",
+    "description": "Descrição Detalhada Do Evento 61.",
+    "event_date": "2025-08-31T10:00:00",
+    "city": "Petrolina",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_1",
+      "capacity": 265,
+      "venue_type": "Salao",
+      "is_accessible": true,
+      "address": "Rua Exemplo 61, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 61,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 62",
+    "description": "Descrição Detalhada Do Evento 62.",
+    "event_date": "2025-09-01T10:00:00",
+    "city": "Recife",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_2",
+      "capacity": 234,
+      "venue_type": "Auditorio",
+      "is_accessible": true,
+      "address": "Rua Exemplo 62, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 62,
+    "forecast_info": {
+      "forecast_datetime": "2025-09-01T12:00:00",
+      "temperature": 33.5,
+      "weather_main": "Clouds",
+      "weather_desc": "Nuvens dispersas",
+      "humidity": 67,
+      "wind_speed": 4.5
+    },
+    "views": 0
+  },
+  {
+    "title": "Evento 63",
+    "description": "Descrição Detalhada Do Evento 63.",
+    "event_date": "2025-09-02T10:00:00",
+    "city": "Olinda",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_3",
+      "capacity": 245,
+      "venue_type": "Salao",
+      "is_accessible": false,
+      "address": "Rua Exemplo 63, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 63,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 64",
+    "description": "Descrição Detalhada Do Evento 64.",
+    "event_date": "2025-09-03T10:00:00",
+    "city": "Olinda",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_4",
+      "capacity": 313,
+      "venue_type": "Auditorio",
+      "is_accessible": true,
+      "address": "Rua Exemplo 64, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 64,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 65",
+    "description": "Descrição Detalhada Do Evento 65.",
+    "event_date": "2025-09-04T10:00:00",
+    "city": "Caruaru",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_5",
+      "capacity": 419,
+      "venue_type": "Salao",
+      "is_accessible": true,
+      "address": "Rua Exemplo 65, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 65,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 66",
+    "description": "Descrição Detalhada Do Evento 66.",
+    "event_date": "2025-09-05T10:00:00",
+    "city": "Petrolina",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_6",
+      "capacity": 115,
+      "venue_type": "Auditorio",
+      "is_accessible": false,
+      "address": "Rua Exemplo 66, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 66,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 67",
+    "description": "Descrição Detalhada Do Evento 67.",
+    "event_date": "2025-09-06T10:00:00",
+    "city": "Jaboatão",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_7",
+      "capacity": 275,
+      "venue_type": "Salao",
+      "is_accessible": true,
+      "address": "Rua Exemplo 67, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 67,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 68",
+    "description": "Descrição Detalhada Do Evento 68.",
+    "event_date": "2025-09-07T10:00:00",
+    "city": "Petrolina",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_8",
+      "capacity": 205,
+      "venue_type": "Auditorio",
+      "is_accessible": true,
+      "address": "Rua Exemplo 68, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 68,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 69",
+    "description": "Descrição Detalhada Do Evento 69.",
+    "event_date": "2025-09-08T10:00:00",
+    "city": "Petrolina",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_9",
+      "capacity": 256,
+      "venue_type": "Salao",
+      "is_accessible": false,
+      "address": "Rua Exemplo 69, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 69,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 70",
+    "description": "Descrição Detalhada Do Evento 70.",
+    "event_date": "2025-09-09T10:00:00",
+    "city": "Jaboatão",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_0",
+      "capacity": 164,
+      "venue_type": "Auditorio",
+      "is_accessible": true,
+      "address": "Rua Exemplo 70, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 70,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 71",
+    "description": "Descrição Detalhada Do Evento 71.",
+    "event_date": "2025-09-10T10:00:00",
+    "city": "Olinda",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_1",
+      "capacity": 270,
+      "venue_type": "Salao",
+      "is_accessible": true,
+      "address": "Rua Exemplo 71, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 71,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 72",
+    "description": "Descrição Detalhada Do Evento 72.",
+    "event_date": "2025-09-11T10:00:00",
+    "city": "Caruaru",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_2",
+      "capacity": 276,
+      "venue_type": "Auditorio",
+      "is_accessible": false,
+      "address": "Rua Exemplo 72, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 72,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 73",
+    "description": "Descrição Detalhada Do Evento 73.",
+    "event_date": "2025-09-12T10:00:00",
+    "city": "Recife",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_3",
+      "capacity": 430,
+      "venue_type": "Salao",
+      "is_accessible": true,
+      "address": "Rua Exemplo 73, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 73,
+    "forecast_info": {
+      "forecast_datetime": "2025-09-12T12:00:00",
+      "temperature": 33.5,
+      "weather_main": "Clouds",
+      "weather_desc": "Nuvens dispersas",
+      "humidity": 67,
+      "wind_speed": 4.5
+    },
+    "views": 0
+  },
+  {
+    "title": "Evento 74",
+    "description": "Descrição Detalhada Do Evento 74.",
+    "event_date": "2025-09-13T10:00:00",
+    "city": "Jaboatão",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_4",
+      "capacity": 196,
+      "venue_type": "Auditorio",
+      "is_accessible": true,
+      "address": "Rua Exemplo 74, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 74,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 75",
+    "description": "Descrição Detalhada Do Evento 75.",
+    "event_date": "2025-09-14T10:00:00",
+    "city": "Recife",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_5",
+      "capacity": 381,
+      "venue_type": "Salao",
+      "is_accessible": false,
+      "address": "Rua Exemplo 75, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 75,
+    "forecast_info": {
+      "forecast_datetime": "2025-09-14T12:00:00",
+      "temperature": 33.5,
+      "weather_main": "Clouds",
+      "weather_desc": "Nuvens dispersas",
+      "humidity": 67,
+      "wind_speed": 4.5
+    },
+    "views": 0
+  },
+  {
+    "title": "Evento 76",
+    "description": "Descrição Detalhada Do Evento 76.",
+    "event_date": "2025-09-15T10:00:00",
+    "city": "Olinda",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_6",
+      "capacity": 285,
+      "venue_type": "Auditorio",
+      "is_accessible": true,
+      "address": "Rua Exemplo 76, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 76,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 77",
+    "description": "Descrição Detalhada Do Evento 77.",
+    "event_date": "2025-09-16T10:00:00",
+    "city": "Recife",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_7",
+      "capacity": 325,
+      "venue_type": "Salao",
+      "is_accessible": true,
+      "address": "Rua Exemplo 77, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 77,
+    "forecast_info": {
+      "forecast_datetime": "2025-09-16T12:00:00",
+      "temperature": 33.5,
+      "weather_main": "Clouds",
+      "weather_desc": "Nuvens dispersas",
+      "humidity": 67,
+      "wind_speed": 4.5
+    },
+    "views": 0
+  },
+  {
+    "title": "Evento 78",
+    "description": "Descrição Detalhada Do Evento 78.",
+    "event_date": "2025-09-17T10:00:00",
+    "city": "Caruaru",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_8",
+      "capacity": 411,
+      "venue_type": "Auditorio",
+      "is_accessible": false,
+      "address": "Rua Exemplo 78, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 78,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 79",
+    "description": "Descrição Detalhada Do Evento 79.",
+    "event_date": "2025-09-18T10:00:00",
+    "city": "Recife",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_9",
+      "capacity": 447,
+      "venue_type": "Salao",
+      "is_accessible": true,
+      "address": "Rua Exemplo 79, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 79,
+    "forecast_info": {
+      "forecast_datetime": "2025-09-18T12:00:00",
+      "temperature": 33.5,
+      "weather_main": "Clouds",
+      "weather_desc": "Nuvens dispersas",
+      "humidity": 67,
+      "wind_speed": 4.5
+    },
+    "views": 0
+  },
+  {
+    "title": "Evento 80",
+    "description": "Descrição Detalhada Do Evento 80.",
+    "event_date": "2025-09-19T10:00:00",
+    "city": "Recife",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_0",
+      "capacity": 308,
+      "venue_type": "Auditorio",
+      "is_accessible": true,
+      "address": "Rua Exemplo 80, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 80,
+    "forecast_info": {
+      "forecast_datetime": "2025-09-19T12:00:00",
+      "temperature": 33.5,
+      "weather_main": "Clouds",
+      "weather_desc": "Nuvens dispersas",
+      "humidity": 67,
+      "wind_speed": 4.5
+    },
+    "views": 0
+  },
+  {
+    "title": "Evento 81",
+    "description": "Descrição Detalhada Do Evento 81.",
+    "event_date": "2025-09-20T10:00:00",
+    "city": "Caruaru",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_1",
+      "capacity": 314,
+      "venue_type": "Salao",
+      "is_accessible": false,
+      "address": "Rua Exemplo 81, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 81,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 82",
+    "description": "Descrição Detalhada Do Evento 82.",
+    "event_date": "2025-09-21T10:00:00",
+    "city": "Petrolina",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_2",
+      "capacity": 455,
+      "venue_type": "Auditorio",
+      "is_accessible": true,
+      "address": "Rua Exemplo 82, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 82,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 83",
+    "description": "Descrição Detalhada Do Evento 83.",
+    "event_date": "2025-09-22T10:00:00",
+    "city": "Jaboatão",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_3",
+      "capacity": 296,
+      "venue_type": "Salao",
+      "is_accessible": true,
+      "address": "Rua Exemplo 83, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 83,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 84",
+    "description": "Descrição Detalhada Do Evento 84.",
+    "event_date": "2025-09-23T10:00:00",
+    "city": "Caruaru",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_4",
+      "capacity": 79,
+      "venue_type": "Auditorio",
+      "is_accessible": false,
+      "address": "Rua Exemplo 84, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 84,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 85",
+    "description": "Descrição Detalhada Do Evento 85.",
+    "event_date": "2025-09-24T10:00:00",
+    "city": "Olinda",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_5",
+      "capacity": 118,
+      "venue_type": "Salao",
+      "is_accessible": true,
+      "address": "Rua Exemplo 85, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 85,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 86",
+    "description": "Descrição Detalhada Do Evento 86.",
+    "event_date": "2025-09-25T10:00:00",
+    "city": "Jaboatão",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_6",
+      "capacity": 417,
+      "venue_type": "Auditorio",
+      "is_accessible": true,
+      "address": "Rua Exemplo 86, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 86,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 87",
+    "description": "Descrição Detalhada Do Evento 87.",
+    "event_date": "2025-09-26T10:00:00",
+    "city": "Recife",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_7",
+      "capacity": 320,
+      "venue_type": "Salao",
+      "is_accessible": false,
+      "address": "Rua Exemplo 87, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 87,
+    "forecast_info": {
+      "forecast_datetime": "2025-09-26T12:00:00",
+      "temperature": 33.5,
+      "weather_main": "Clouds",
+      "weather_desc": "Nuvens dispersas",
+      "humidity": 67,
+      "wind_speed": 4.5
+    },
+    "views": 0
+  },
+  {
+    "title": "Evento 88",
+    "description": "Descrição Detalhada Do Evento 88.",
+    "event_date": "2025-09-27T10:00:00",
+    "city": "Jaboatão",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_8",
+      "capacity": 435,
+      "venue_type": "Auditorio",
+      "is_accessible": true,
+      "address": "Rua Exemplo 88, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 88,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 89",
+    "description": "Descrição Detalhada Do Evento 89.",
+    "event_date": "2025-09-28T10:00:00",
+    "city": "Recife",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_9",
+      "capacity": 494,
+      "venue_type": "Salao",
+      "is_accessible": true,
+      "address": "Rua Exemplo 89, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 89,
+    "forecast_info": {
+      "forecast_datetime": "2025-09-28T12:00:00",
+      "temperature": 33.5,
+      "weather_main": "Clouds",
+      "weather_desc": "Nuvens dispersas",
+      "humidity": 67,
+      "wind_speed": 4.5
+    },
+    "views": 0
+  },
+  {
+    "title": "Evento 90",
+    "description": "Descrição Detalhada Do Evento 90.",
+    "event_date": "2025-09-29T10:00:00",
+    "city": "Petrolina",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_0",
+      "capacity": 172,
+      "venue_type": "Auditorio",
+      "is_accessible": false,
+      "address": "Rua Exemplo 90, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 90,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 91",
+    "description": "Descrição Detalhada Do Evento 91.",
+    "event_date": "2025-09-30T10:00:00",
+    "city": "Jaboatão",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_1",
+      "capacity": 343,
+      "venue_type": "Salao",
+      "is_accessible": true,
+      "address": "Rua Exemplo 91, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 91,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 92",
+    "description": "Descrição Detalhada Do Evento 92.",
+    "event_date": "2025-10-01T10:00:00",
+    "city": "Recife",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_2",
+      "capacity": 390,
+      "venue_type": "Auditorio",
+      "is_accessible": true,
+      "address": "Rua Exemplo 92, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 92,
+    "forecast_info": {
+      "forecast_datetime": "2025-10-01T12:00:00",
+      "temperature": 33.5,
+      "weather_main": "Clouds",
+      "weather_desc": "Nuvens dispersas",
+      "humidity": 67,
+      "wind_speed": 4.5
+    },
+    "views": 0
+  },
+  {
+    "title": "Evento 93",
+    "description": "Descrição Detalhada Do Evento 93.",
+    "event_date": "2025-10-02T10:00:00",
+    "city": "Jaboatão",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_3",
+      "capacity": 290,
+      "venue_type": "Salao",
+      "is_accessible": false,
+      "address": "Rua Exemplo 93, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 93,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 94",
+    "description": "Descrição Detalhada Do Evento 94.",
+    "event_date": "2025-10-03T10:00:00",
+    "city": "Recife",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_4",
+      "capacity": 112,
+      "venue_type": "Auditorio",
+      "is_accessible": true,
+      "address": "Rua Exemplo 94, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 94,
+    "forecast_info": {
+      "forecast_datetime": "2025-10-03T12:00:00",
+      "temperature": 33.5,
+      "weather_main": "Clouds",
+      "weather_desc": "Nuvens dispersas",
+      "humidity": 67,
+      "wind_speed": 4.5
+    },
+    "views": 0
+  },
+  {
+    "title": "Evento 95",
+    "description": "Descrição Detalhada Do Evento 95.",
+    "event_date": "2025-10-04T10:00:00",
+    "city": "Recife",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_5",
+      "capacity": 51,
+      "venue_type": "Salao",
+      "is_accessible": true,
+      "address": "Rua Exemplo 95, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 95,
+    "forecast_info": {
+      "forecast_datetime": "2025-10-04T12:00:00",
+      "temperature": 33.5,
+      "weather_main": "Clouds",
+      "weather_desc": "Nuvens dispersas",
+      "humidity": 67,
+      "wind_speed": 4.5
+    },
+    "views": 0
+  },
+  {
+    "title": "Evento 96",
+    "description": "Descrição Detalhada Do Evento 96.",
+    "event_date": "2025-10-05T10:00:00",
+    "city": "Olinda",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_6",
+      "capacity": 342,
+      "venue_type": "Auditorio",
+      "is_accessible": false,
+      "address": "Rua Exemplo 96, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 96,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 97",
+    "description": "Descrição Detalhada Do Evento 97.",
+    "event_date": "2025-10-06T10:00:00",
+    "city": "Olinda",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_7",
+      "capacity": 58,
+      "venue_type": "Salao",
+      "is_accessible": true,
+      "address": "Rua Exemplo 97, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 97,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 98",
+    "description": "Descrição Detalhada Do Evento 98.",
+    "event_date": "2025-10-07T10:00:00",
+    "city": "Caruaru",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_8",
+      "capacity": 112,
+      "venue_type": "Auditorio",
+      "is_accessible": true,
+      "address": "Rua Exemplo 98, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 98,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 99",
+    "description": "Descrição Detalhada Do Evento 99.",
+    "event_date": "2025-10-08T10:00:00",
+    "city": "Jaboatão",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_9",
+      "capacity": 174,
+      "venue_type": "Salao",
+      "is_accessible": false,
+      "address": "Rua Exemplo 99, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 99,
+    "forecast_info": null,
+    "views": 0
+  },
+  {
+    "title": "Evento 100",
+    "description": "Descrição Detalhada Do Evento 100.",
+    "event_date": "2025-10-09T10:00:00",
+    "city": "Olinda",
+    "participants": [
+      "Alice",
+      "Bob",
+      "Carol"
+    ],
+    "local_info": {
+      "location_name": "local_0",
+      "capacity": 203,
+      "venue_type": "Auditorio",
+      "is_accessible": true,
+      "address": "Rua Exemplo 100, Cidade",
+      "past_events": [],
+      "manually_edited": false
+    },
+    "id": 100,
+    "forecast_info": null,
+    "views": 0
+  }
+]

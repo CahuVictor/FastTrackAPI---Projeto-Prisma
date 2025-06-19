@@ -4,6 +4,7 @@ from datetime import datetime
 # from fastapi import HTTPException
 from fastapi.testclient import TestClient
 import fakeredis
+import asyncio
 
 # from app.main import app
 from app.main import app as fastapi_app   # FastAPI já criado em app.main
@@ -11,7 +12,7 @@ from app.main import app as fastapi_app   # FastAPI já criado em app.main
 # from app.schemas.local_info import LocalInfo
 from app.services.mock_local_info import MockLocalInfoService
 
-from app.repositories.evento_mem import InMemoryEventoRepo
+from app.repositories.evento_mem import InMemoryEventRepo
 from app.deps import provide_event_repo
 
 from app.deps import provide_redis
@@ -254,7 +255,7 @@ def repo(app):
 
 @pytest.fixture(autouse=True)
 def _shared_repo(app):
-    repo = InMemoryEventoRepo()
+    repo = InMemoryEventRepo()
     app.dependency_overrides[provide_event_repo] = lambda: repo
     yield
     repo.delete_all()       # reseta entre testes
@@ -271,3 +272,37 @@ def fake_redis(monkeypatch):
         lambda: r
     )
     yield r
+
+@pytest.fixture(autouse=True)
+def patch_create_task(monkeypatch):
+    """
+    Substitui `asyncio.create_task` por uma versão segura para
+    handlers síncronos executados dentro do ThreadPool do FastAPI.
+
+    ── Como funciona ──────────────────────────────────────────────
+    • Se já existe um event-loop ativo, delega normalmente.
+    • Caso contrário (thread do ThreadPool), cria um loop local,
+      roda o coroutine até o fim e devolve um DummyTask.
+    """
+
+    def _safe_create_task(coro, *args, **kwargs):             # noqa: D401
+        try:
+            loop = asyncio.get_running_loop()
+            return loop.create_task(coro, *args, **kwargs)
+        except RuntimeError:
+            # estamos numa thread sem loop – roda o coroutine “inline”
+            _loop = asyncio.new_event_loop()
+            try:
+                _loop.run_until_complete(coro)
+            finally:
+                _loop.close()
+
+            class _DummyTask:          # objeto mínimo para quem, porventura,
+                def cancel(self):      # tente chamar .cancel() no retorno
+                    pass
+            return _DummyTask()
+
+    # monkeypatch.patch("asyncio.create_task", _safe_create_task)
+    # substitui a função no próprio módulo asyncio
+    monkeypatch.setattr(asyncio, "create_task", _safe_create_task, raising=True)
+    yield

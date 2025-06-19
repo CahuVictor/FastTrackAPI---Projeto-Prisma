@@ -1,10 +1,13 @@
-from fastapi import APIRouter, Depends
-from fastapi import Query
-from fastapi import Body
+from fastapi import APIRouter, Depends, Query, Body, UploadFile, File
+from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
 from datetime import datetime, timezone
 from structlog import get_logger
+from io import StringIO
 import inspect
-# import asyncio
+import csv
+import asyncio
+import json
 
 from app.schemas.event_create import EventCreate, EventResponse
 from app.schemas.local_info import LocalInfo
@@ -21,6 +24,14 @@ from app.services.interfaces.local_info_protocol import AbstractLocalInfoService
 from app.services.interfaces.forecast_info_protocol import AbstractForecastService
 from app.repositories.evento import AbstractEventRepo
 from app.deps import provide_local_info_service, provide_forecast_service, provide_event_repo
+
+# WebSocket Notificacoes
+from app.websockets.ws_events import (
+    notify_upload_progress, notify_upload_error, notify_upload_end,
+    notify_event_created, notify_replace_started, notify_replace_done,
+    notify_event_viewed_update, notify_top_viewed_update
+)
+from app.websockets.ws_dashboard import notify_user_count
 
 # auth_dep = Depends(get_current_user)
 _provide_local_info_service = Depends(provide_local_info_service)
@@ -123,6 +134,25 @@ def list_events_all(repo: AbstractEventRepo = _provide_event_repo) -> list[Event
     return events
 
 @router.get(
+    "/eventos/download",
+    tags=["eventos"],
+    summary="Download de todos os eventos registrados.",
+    response_model=list[EventResponse],
+    dependencies=[Depends(require_roles("admin", "editor"))],
+    responses={
+        200: {"description": "Lista de eventos retornada com sucesso."},
+        404: {"description": "Nenhum evento encontrado."}
+    },
+)
+@router.get("/eventos/download", tags=["eventos"])
+def download_eventos(repo: AbstractEventRepo = _provide_event_repo):
+    eventos = repo.list_all()
+    # return JSONResponse(content=[e.model_dump() for e in eventos])
+    # jsonable_encoder converte datetime → ISO-8601 string
+    payload = jsonable_encoder(eventos)         # <<< aqui
+    return JSONResponse(content=payload)
+
+@router.get(
     "/eventos",
     tags=["eventos"],
     summary="Lista eventos com filtros e paginação",
@@ -172,6 +202,9 @@ def get_event_by_id(
     event.views += 1
     logger.info("Atualizado os views", event_id=event_id, views=event.views)
     repo.update(event_id, event.model_dump(exclude_unset=True))
+    
+    asyncio.create_task(notify_event_viewed_update(event_id, event.views))
+    
     return EventResponse.model_validate(event)
 
 @router.get(
@@ -249,6 +282,9 @@ async def get_events_top_viewed(
         key_fn=lambda ev: (-ev.views, ev.event_date),  # most viewed first
         limit=limit
     )
+    
+    asyncio.create_task(notify_top_viewed_update([e.title for e in most_viewed]))
+    
     if not most_viewed:
         raise_http(logger.warning, 404, "Nenhum evento encontrado", limit=limit)
     logger.info("Consulta de eventos mais vistos concluída", quantidade=len(most_viewed))
@@ -282,9 +318,13 @@ def post_create_event(
         logger.error("Falha ao buscar previsão do tempo", city=event.city, event_date=str(event.event_date), error=str(e))
         forecast_info = None
     
-    event_resp = repo.add(event)
-    event_resp.forecast_info = forecast_info
+    # Passa forecast_info direto na chamada do add
+    event_resp = repo.add(event, forecast_info=forecast_info)
+    
+    asyncio.create_task(notify_event_created(event.title))
+    asyncio.create_task(notify_user_count())
     logger.info("Evento criado", event_id=event_resp.id, title=event.title, city=event.city, event_date=event.event_date)
+    
     return EventResponse.model_validate(event_resp)
 
 @router.post(
@@ -299,7 +339,7 @@ def post_create_event(
         400: {"description": "Lista inválida enviada."}
     },
 )
-def post_events_batch(
+async def post_events_batch(
     events: list[EventCreate],
     service: AbstractForecastService = _provide_forecast_service,
     repo: AbstractEventRepo = _provide_event_repo,
@@ -320,13 +360,88 @@ def post_events_batch(
             logger.error("Falha ao buscar previsão do tempo", city=event.city, date=event.event_date, error=str(e))
             forecast_info = None
 
-        event_resp = repo.add(event)
-        event_resp.forecast_info = forecast_info
+        # Passa forecast_info direto na chamada do add
+        event_resp = repo.add(event, forecast_info=forecast_info)
+
+        # TODO VERIFICAR COM JOÃO SE É UMA BOA PRÁTICA
         new_events.append(EventResponse.model_validate(event_resp))
+        
+        await notify_upload_progress(event.title)
         logger.info("Evento adicionado em lote", event_id=event_resp.id, title=event.title, city=event.city, date=event.event_date)
 
     logger.info("Eventos em lote adicionados com sucesso", total_adicionados=len(new_events))
+    await notify_upload_end(len(new_events))
+    await notify_user_count()
+    
     return new_events
+
+@router.post(
+    "/eventos/upload",
+    tags=["eventos"],
+    summary="Adiciona uma lista de novos eventos a partir de um arquivo CSV, atribuindo novos IDs.",
+    # response_model=list[EventResponse],
+    response_model=dict,
+    status_code=201,
+    dependencies=[Depends(require_roles("admin"))],
+    responses={
+        201: {"description": "Eventos adicionados com sucesso."},
+        400: {"description": "Lista inválida enviada."}
+    },
+)
+async def upload_csv(
+    file: UploadFile = File(...),
+    service: AbstractForecastService = _provide_forecast_service,
+    repo: AbstractEventRepo = _provide_event_repo,
+):
+    """
+    Permite o envio de um arquivo CSV com eventos e adiciona ao repositório.
+    """
+    content = await file.read()
+    decoded = content.decode("utf-8")
+    reader = csv.DictReader(StringIO(decoded))
+
+    new_events: list[EventResponse] = []
+    total = 0
+    # for row in reader:
+    for idx, row in enumerate(reader, start=1):
+        try:
+            event = EventCreate(
+                title=row["title"],
+                description=row["description"],
+                event_date=row["event_date"],
+                city=row["city"],
+                participants=row["participants"].split(";"),
+                # local_info=LocalInfo(**eval(row["local_info"]))
+                local_info=LocalInfo(**json.loads(row["local_info"]))  # 👈 mais seguro
+            )
+            
+            forecast_info = service.get_by_city_and_datetime(event.city, event.event_date)
+            
+            # Passa forecast_info direto na chamada do add
+            event_resp = repo.add(event, forecast_info=forecast_info)
+            
+            # TODO VERIFICAR COM JOÃO SE É UMA BOA PRÁTICA
+            new_events.append(EventResponse.model_validate(event_resp))
+            
+            total += 1
+            
+            await notify_upload_progress(event.title)
+            # await manager.broadcast(f"✅ Evento '{evento.title}' adicionado")
+        except Exception as e:
+            # registra no console + WebSocket
+            logger.exception("Erro na linha %s do CSV: %s", idx, e)
+            await notify_upload_error(str(e))
+            # await manager.broadcast(f"❌ Erro no evento: {str(e)}")
+    
+    # await manager.broadcast(f"🏁 Upload finalizado: {total} eventos adicionados")
+    await notify_upload_end(len(new_events))
+    await notify_user_count()
+    
+    if not new_events:
+        raise_http(logger.warning, 400, "Nenhum evento válido foi importado")
+    
+    # return new_events
+    return {"status": "finalizado", "total": total}
 
 @router.put(
     "/eventos",
@@ -350,9 +465,15 @@ def put_events(
     if not events_new:
         raise_http(logger.warning, 400, "Lista vazia enviada")
 
-    resultado = repo.replace_all(events_new)
-    logger.info("Todos os eventos foram substituídos com sucesso", total=len(resultado))
-    return resultado
+    asyncio.create_task(notify_replace_started())
+    
+    result = repo.replace_all(events_new)
+    
+    asyncio.create_task(notify_replace_done())
+    asyncio.create_task(notify_user_count())
+    logger.info("Todos os eventos foram substituídos com sucesso", total=len(result))
+    
+    return result
 
 @router.put(
     "/eventos/{event_id}",

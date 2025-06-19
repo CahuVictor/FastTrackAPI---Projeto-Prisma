@@ -17,7 +17,7 @@ from app.schemas.event_create import EventCreate
 
 from app.deps import provide_event_repo
 # from app.api.v1.endpoints.eventos import atualizar_evento
-from app.repositories.evento_mem import InMemoryEventoRepo
+from app.repositories.evento_mem import InMemoryEventRepo
 
 # --------------------------------------------------------------------------- #
 # 1. GET /eventos/{id}
@@ -312,7 +312,7 @@ def test_update_event_type_invalid(client: TestClient, auth_header: dict[str, st
 def test_update_event_type_valid(client: TestClient, auth_header: dict[str, str], event: Literal['evento_valido']):
     """PATCH deve aceitar EventUpdate válido e alterar apenas os campos enviados."""
     # --- 1. fixa o repositório (singleton em memória) ---
-    repo_singleton = InMemoryEventoRepo()
+    repo_singleton = InMemoryEventRepo()
     app.dependency_overrides[provide_event_repo] = lambda: repo_singleton
 
     try:

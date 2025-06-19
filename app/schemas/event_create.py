@@ -1,11 +1,10 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Annotated
 from typing import Any
 from datetime import datetime
+
 from app.schemas.weather_forecast import WeatherForecast
 from app.schemas.local_info import LocalInfo
-
-from pydantic import field_validator
 
 class EventCreate(BaseModel):
     @field_validator("title", "description", mode="before")
