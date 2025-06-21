@@ -55,27 +55,6 @@ Este documento descreve detalhadamente os próximos passos para o upgrade e apri
 
 ---
 
-## 8. Upload/Download de Arquivos & WebSockets (Opcional)
-
-**O que é:** Permite interação em tempo real e troca de arquivos com o servidor.
-
-**Vantagens:**
-
-* Melhor experiência interativa.
-* Facilita upload de arquivos para processamento.
-
-**Implementação (Exemplo - Upload de eventos via planilha):**
-
-```python
-from fastapi import UploadFile, File
-
-@app.post("/upload")
-async def upload_file(file: UploadFile = File(...)):
-    content = await file.read()
-    # Processar conteúdo da planilha
-    return {"filename": file.filename}
-```
-
 ---
 
 ## 9. Hardening de Segurança
@@ -390,7 +369,6 @@ Checklist rápido: cada arquivo deve responder “qual única responsabilidade e
 
 ## 14. Pontos adicionais pendentes
 
-* Considerar implementação futura de WebSockets, dependendo da demanda.
 * Aprimorar continuamente o gerenciamento de ambientes com práticas mais avançadas.
 
 ---

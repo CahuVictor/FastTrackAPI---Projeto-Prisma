@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     
     # ──────────────────────────── campos ────────────────────────────
     environment: str | None = Field("dev", validation_alias="ENVIRONMENT")   # fallback → "dev"
-    db_url: str = Field("sqlite:///dev.db", validation_alias="DB_URL")       # obrigatório
+    db_url: str = Field("postgresql://prisma:prisma123@localhost:5432/prisma_db", validation_alias="DB_URL")       # obrigatório
     redis_url: str = Field("redis://localhost:6379/0", validation_alias="REDIS_URL")
     
     auth_secret_key: str = Field("dummy-secret", validation_alias="AUTH_SECRET_KEY")

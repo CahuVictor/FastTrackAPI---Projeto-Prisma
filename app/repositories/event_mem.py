@@ -1,12 +1,12 @@
-# app/repositories/evento_mem.py
+# app/repositories/event_mem.py
 from structlog import get_logger
 
 from app.schemas.event_create import EventCreate, EventResponse
 from app.schemas.weather_forecast import WeatherForecast
 
-from app.repositories.evento import AbstractEventRepo
+from app.repositories.event import AbstractEventRepo
 
-logger = get_logger().bind(module="evento_mem")
+logger = get_logger().bind(module="event_mem")
 
 class InMemoryEventRepo(AbstractEventRepo):
     def __init__(self):

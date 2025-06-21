@@ -2,40 +2,53 @@
 version: "3.9"
 
 services:
-  backend:
-    build: .
-    volumes:
-      - .:/app
-    ports:
-      - "8000:8000"
-    # Sempre lemos o .env "base" + o específico
-    env_file:
-      - .env
-      - .env.${ENV:-dev}
-    command: >
-      sh -c "uvicorn app.main:app --host 0.0.0.0 --port 8000"
-    depends_on:
-      - db
-      - redis
+  # backend:
+  #   build: .
+  #   volumes:
+  #     - .:/app
+  #   ports:
+  #     - "8000:8000"
+  #   # Sempre lemos o .env "base" + o específico
+  #   env_file:
+  #     - .env
+  #     - .env.${ENV:-dev}
+  #   command: >
+  #     sh -c "uvicorn app.main:app --host 0.0.0.0 --port 8000"
+  #   depends_on:
+  #     - db
+  #     - redis
 
   db:
-    image: postgres:14
+    image: postgres:16-alpine
+    container_name: prisma-db
     restart: always
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: prisma
+      POSTGRES_USER: prisma
+      POSTGRES_PASSWORD: prisma123
+      POSTGRES_DB: prisma_db
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - prisma_db_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
 
-  redis:
-    image: redis:7-alpine
+  # redis:
+  #   image: redis:7-alpine
+  #   restart: unless-stopped
+  #   ports:
+  #     - "6379:6379"           # opcional em dev
+  #   command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: prisma-pgadmin
     restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "admin@prisma.com"
+      PGADMIN_DEFAULT_PASSWORD: "admin123"
     ports:
-      - "6379:6379"           # opcional em dev
-    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+      - "5050:80"
+    depends_on:
+      - db
 
 volumes:
-  postgres_data:
+  prisma_db_data:

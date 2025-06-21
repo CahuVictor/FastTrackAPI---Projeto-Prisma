@@ -12,7 +12,7 @@ from app.main import app as fastapi_app   # FastAPI já criado em app.main
 # from app.schemas.local_info import LocalInfo
 from app.services.mock_local_info import MockLocalInfoService
 
-from app.repositories.evento_mem import InMemoryEventRepo
+from app.repositories.event_mem import InMemoryEventRepo
 from app.deps import provide_event_repo
 
 from app.deps import provide_redis
@@ -91,7 +91,7 @@ def event(request):
                 "venue_type": "Auditorio",
                 "is_accessible": True,
                 "address": "Rua Exemplo, 123",
-                "past_events": ["Feira 2023", "Hackathon"],
+                # "past_events": ["Feira 2023", "Hackathon"],
                 "manually_edited": False
             }
         }
@@ -109,7 +109,7 @@ def event(request):
                 "venue_type": "Auditorio",
                 "is_accessible": True,
                 "address": "Rua Exemplo, 123",
-                "past_events": ["Feira 2023", "Hackathon"],
+                # "past_events": ["Feira 2023", "Hackathon"],
                 "manually_edited": False
             }
         }
@@ -127,7 +127,7 @@ def event(request):
                 "venue_type": "Auditorio",
                 "is_accessible": True,
                 "address": "Rua Exemplo, 123",
-                "past_events": ["Feira 2023", "Hackathon"],
+                # "past_events": ["Feira 2023", "Hackathon"],
                 "manually_edited": False
             },
             "forecast_info": {
@@ -153,7 +153,7 @@ def event(request):
                     "venue_type": "Auditorio",
                     "is_accessible": True,
                     "address": "Rua Principal, 1",
-                    "past_events": ["Feira 2023"],
+                    # "past_events": ["Feira 2023"],
                     "manually_edited": False
                 }
             },
@@ -169,7 +169,7 @@ def event(request):
                     "venue_type": "Salao",
                     "is_accessible": False,
                     "address": "Rua Secundária, 2",
-                    "past_events": [],
+                    # "past_events": [],
                     "manually_edited": False
                 }
             }
@@ -194,7 +194,7 @@ def localinfo(request):
             "venue_type": "Auditorio",
             "is_accessible": True,
             "address": "Rua X, 1",
-            "past_events": ["Evento 2021"],
+            # "past_events": ["Evento 2021"],
             "manually_edited": False
         }
     elif request.param == "localinfo_type_error":
@@ -204,29 +204,29 @@ def localinfo(request):
             "venue_type": "Auditorio",
             "is_accessible": True,
             "address": "Rua X, 1",
-            "past_events": ["Evento 2021"],
+            # "past_events": ["Evento 2021"],
             "manually_edited": False
         }
-    elif request.param == "localinfo_past_events_type_error":
-        return {
-            "location_name": "local",
-            "capacity": 10,
-            "venue_type": "Auditorio",
-            "is_accessible": True,
-            "address": "Rua X, 1",
-            "past_events": "não é lista",  # Deve ser lista
-            "manually_edited": False
-        }
-    elif request.param == "localinfo_past_events_value_error":
-        return {
-            "location_name": "local",
-            "capacity": 10,
-            "venue_type": "Auditorio",
-            "is_accessible": True,
-            "address": "Rua X, 1",
-            "past_events": [123],  # Deve ser lista de strings
-            "manually_edited": False
-        }
+    # elif request.param == "localinfo_past_events_type_error":
+    #     return {
+    #         "location_name": "local",
+    #         "capacity": 10,
+    #         "venue_type": "Auditorio",
+    #         "is_accessible": True,
+    #         "address": "Rua X, 1",
+    #         "past_events": "não é lista",  # Deve ser lista
+    #         "manually_edited": False
+    #     }
+    # elif request.param == "localinfo_past_events_value_error":
+    #     return {
+    #         "location_name": "local",
+    #         "capacity": 10,
+    #         "venue_type": "Auditorio",
+    #         "is_accessible": True,
+    #         "address": "Rua X, 1",
+    #         "past_events": [123],  # Deve ser lista de strings
+    #         "manually_edited": False
+    #     }
     else:
         raise ValueError(f"Fixture de evento desconhecida: {request.param}")
 

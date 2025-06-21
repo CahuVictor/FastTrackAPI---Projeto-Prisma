@@ -17,7 +17,7 @@ from app.schemas.event_create import EventCreate
 
 from app.deps import provide_event_repo
 # from app.api.v1.endpoints.eventos import atualizar_evento
-from app.repositories.evento_mem import InMemoryEventRepo
+from app.repositories.event_mem import InMemoryEventRepo
 
 # --------------------------------------------------------------------------- #
 # 1. GET /eventos/{id}

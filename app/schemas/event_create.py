@@ -1,3 +1,4 @@
+# app/schemas/event_create.py
 from pydantic import BaseModel, Field, field_validator
 from typing import Annotated
 from typing import Any
@@ -16,8 +17,9 @@ class EventCreate(BaseModel):
     description: Annotated[str, Field(description="Descrição detalhada", json_schema_extra={"example": "Evento com oficinas, palestras e música."})]
     event_date: Annotated[datetime, Field(description="Data e hora do evento", json_schema_extra={"example": "2025-06-12T19:00:00"})]
     city: Annotated[str, Field(description="Cidade onde o evento ocorrerá", json_schema_extra={"example": "Recife"})]
-    participants: Annotated[list[str], Field(description="Lista de participantes", json_schema_extra={"example": ["Alice", "Bob", "Carol"]})]
-    local_info: LocalInfo               # local_info: LocalInfo | None = None # obsoleto Optional[dict]
+    participants: Annotated[list[str], Field(description="Lista de participantes", json_schema_extra={"example": ["Alice", "Bob", "Carol"]}, default_factory=list)]
+    # local_info: LocalInfo               # local_info: LocalInfo | None = None # obsoleto Optional[dict]
+    local_info: LocalInfo | None = None
     
     # ----------------------------------------------
     #  Permite EventCreate(...) nos testes unitários
@@ -38,7 +40,7 @@ def _make_default_local_info() -> LocalInfo:
         venue_type=None,
         is_accessible=False,
         address=None,
-        past_events=[],
+        # past_events=[],
         manually_edited=False,
     )
 

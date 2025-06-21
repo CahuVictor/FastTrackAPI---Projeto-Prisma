@@ -1,6 +1,12 @@
 # app/deps.py
 from redis.asyncio import Redis
 from structlog import get_logger
+from sqlalchemy.orm import Session
+from fastapi import Depends
+
+from app.db.session import get_db
+from app.repositories.event_orm_db import SQLEventRepo
+from app.repositories.event import AbstractEventRepo
 
 from app.services.interfaces.user_protocol import AbstractUserRepo
 from app.services.mock_users import MockUserRepo
@@ -11,10 +17,10 @@ from app.services.interfaces.local_info_protocol import AbstractLocalInfoService
 from app.services.mock_forecast_info import MockForecastService
 from app.services.interfaces.forecast_info_protocol import AbstractForecastService
 
-# from app.repositories.evento import AbstractEventRepo
+# from app.repositories.event import AbstractEventRepo
 
 # from functools import lru_cache
-from app.repositories.evento_mem import InMemoryEventRepo
+from app.repositories.event_mem import InMemoryEventRepo
 
 from app.core.config import get_settings
 
@@ -38,16 +44,20 @@ def provide_forecast_service() -> AbstractForecastService:
 #     return InMemoryEventRepo()
 
 # uma instância global
-_evento_repo_singleton = InMemoryEventRepo()
+# _evento_repo_singleton = InMemoryEventRepo()
 
 _redis_singleton: Redis | None = None     # conexão global reaproveitável
 
-def provide_event_repo() -> InMemoryEventRepo:
-    """
-    Retorna sempre a mesma instância em memória para toda a aplicação/testes.
-    """
-    logger.debug("Injetando repositório de eventos (singleton)")
-    return _evento_repo_singleton
+# def provide_event_repo() -> InMemoryEventRepo:
+#     """
+#     Retorna sempre a mesma instância em memória para toda a aplicação/testes.
+#     """
+#     logger.debug("Injetando repositório de eventos (singleton)")
+#     return _evento_repo_singleton
+
+def provide_event_repo(db: Session = Depends(get_db)) -> AbstractEventRepo:
+    logger.debug("Injetando repositório de eventos (SQLAlchemy)")
+    return SQLEventRepo(db)
 
 async def provide_redis() -> Redis:
     global _redis_singleton

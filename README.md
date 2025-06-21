@@ -85,10 +85,10 @@ Desenvolver habilidades avançadas em desenvolvimento backend com Python utiliza
   - [x] Manter um `README.md` atualizado e bem estruturado
 
 - [ ] **Aprofundar o uso de banco de dados com SQLAlchemy**
-  - [ ] Criar modelos ORM com relacionamentos
+  - [x] Criar modelos ORM com relacionamentos
   - [ ] Escrever queries mais avançadas (joins, agregações)
   - [x] Implementar filtros e paginação em endpoints
-  - [ ] Gerenciar migrações com Alembic
+  - [x] Gerenciar migrações com Alembic
 
 - [x] **Trabalhar com versionamento de código no GitHub com boas práticas**
   - [x] Utilizar branches e pull requests para organizar o fluxo de trabalho
@@ -128,7 +128,7 @@ fasttrackapi-projeto-prisma/
 │   │   └── logging_middleware.py # 
 │   ├── models/                 # Modelos do banco de dados (SQLAlchemy)
 │   ├── repositories/           # Funções de acesso ao banco de dados
-│   │   ├── evento_mem.py       # 
+│   │   ├── event_mem.py       # 
 │   │   └── evento.py           # 
 │   ├── schemas/                # Modelos de entrada/saída (Pydantic)
 │   │   ├── event_create.py     # 
@@ -888,7 +888,7 @@ Copiar
 ### Como funciona
 
 1. **Repositório em memória**  
-   `app/repositories/evento_mem.py` ganhou o método  
+   `app/repositories/event_mem.py` ganhou o método  
    ```python
    def list_partial(self, *, skip: int = 0, limit: int = 20, **filters)
 Constrói uma lista a partir do dicionário interno
@@ -931,7 +931,7 @@ Cursor Pagination: manter skip/limit para retro-compatibilidade e aceitar um cur
 
 Arquivo	O que mudou
 app/repositories/evento.py	nova list_partial na interface
-app/repositories/evento_mem.py	implementação da função + refactor interno
+app/repositories/event_mem.py	implementação da função + refactor interno
 app/api/v1/endpoints/eventos.py	rota /eventos usa list_partial; rota /eventos/todos removida
 tests/unit/test_eventos.py	usa modelos Pydantic e cobre paginação/filtros
 
@@ -955,7 +955,7 @@ Editar
 ### Visão de alto nível  
 
 1. **Repositório em memória**  
-   `app/repositories/evento_mem.py` implementa  
+   `app/repositories/event_mem.py` implementa  
    ```python
    def list_partial(self, *, skip: int = 0, limit: int = 20, **filters)
 Converte o dicionário interno em lista.
@@ -1005,7 +1005,7 @@ Cobertura total ≥ 80 %.
 Onde está cada parte
 Arquivo	Conteúdo relevante
 app/repositories/evento.py	interface AbstractEventRepo com list_partial(**filters)
-app/repositories/evento_mem.py	primeiro adapter concreto: filtra e pagina em RAM
+app/repositories/event_mem.py	primeiro adapter concreto: filtra e pagina em RAM
 app/api/v1/endpoints/eventos.py	rota /eventos usa o repo; rota /eventos/todos marcada deprecated=True
 tests/unit/test_eventos.py	cenários de paginação e filtros com objetos Pydantic
 
@@ -1504,7 +1504,7 @@ app/core/logging_config.py	Configuração do structlog (formato JSON, timestamp,
 app/core/contextvars.py	Define a variável request_user para guardar o usuário da requisição
 app/services/auth_service.py	Define o request_user após autenticação via token
 app/middleware/logging_middleware.py	Middleware que registra cada requisição HTTP, incluindo usuário
-Diversos mock_*.py, evento_mem.py, deps.py	Logs internos de operações simuladas e repositórios
+Diversos mock_*.py, event_mem.py, deps.py	Logs internos de operações simuladas e repositórios
 
 🧩 Exemplo de log gerado
 json
@@ -1697,3 +1697,51 @@ test_atualizar_forecast_info
 
 Dessa forma, os testes foram corrigidos sem nenhuma alteração funcional ou estrutural no código da aplicação, preservando o comportamento original do sistema e garantindo testes estáveis e confiáveis.
 
+migrations
+
+2. Recrie a migração corretamente
+Como a migração anterior não criou a tabela events, você precisa apagar essa versão e gerar outra:
+
+bash
+Copiar
+Editar
+# 1. Apague o migration antigo (ou renomeie para backup)
+rm migrations/versions/*.py  # cuidado: isso remove TODAS as versões de migração
+
+# 2. Gere nova migração com os modelos agora corretamente importados
+alembic revision --autogenerate -m "create tables"
+
+# 3. Aplique a nova migração
+alembic upgrade head
+
+Esse erro aconteceu porque você deletou ou removeu os arquivos da pasta migrations/versions/, mas o banco de dados ainda está com o controle interno apontando para a versão 'e69fdb78a658'.
+
+✅ Como resolver isso corretamente
+📌 Objetivo:
+Resetar o histórico de migrações para sincronizar o banco com a nova estrutura de arquivos.
+
+✅ Etapas para resolver:
+1. Apague a tabela de controle de migração (alembic_version)
+Essa tabela fica no seu banco de dados e guarda qual versão está atualmente aplicada. Execute no seu banco (via psql, DBeaver, pgAdmin, ou terminal):
+
+sql
+Copiar
+Editar
+DROP TABLE alembic_version;
+Isso permite que o Alembic recrie o controle corretamente com a nova versão.
+
+2. Crie uma nova migração do zero
+Com os modelos devidamente importados no migrations/env.py, rode:
+
+bash
+Copiar
+Editar
+alembic revision --autogenerate -m "create all tables"
+Isso vai gerar um novo arquivo de migração em migrations/versions/.
+
+3. Aplique essa nova migração ao banco
+bash
+Copiar
+Editar
+alembic upgrade head
+Se tudo estiver correto, agora a tabela events e as outras (local_infos, forecast_infos) serão criadas.

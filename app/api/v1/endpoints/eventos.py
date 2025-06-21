@@ -22,7 +22,7 @@ from app.utils.security import require_roles
 
 from app.services.interfaces.local_info_protocol import AbstractLocalInfoService
 from app.services.interfaces.forecast_info_protocol import AbstractForecastService
-from app.repositories.evento import AbstractEventRepo
+from app.repositories.event import AbstractEventRepo
 from app.deps import provide_local_info_service, provide_forecast_service, provide_event_repo
 
 # WebSocket Notificacoes
@@ -185,7 +185,7 @@ def list_events(
         404: {"description": "Evento não encontrado."}
     },
 )
-def get_event_by_id(
+async def get_event_by_id(
                         event_id: int, 
                         repo: AbstractEventRepo = _provide_event_repo,
     ) -> EventResponse:
@@ -201,8 +201,12 @@ def get_event_by_id(
     
     event.views += 1
     logger.info("Atualizado os views", event_id=event_id, views=event.views)
-    repo.update(event_id, event.model_dump(exclude_unset=True))
     
+    # Atualiza apenas o campo de visualizações
+    # repo.update(event_id, event.model_dump(exclude_unset=True))
+    repo.update(event_id, {"views": event.views})
+    
+    # Notifica via WebSocket
     asyncio.create_task(notify_event_viewed_update(event_id, event.views))
     
     return EventResponse.model_validate(event)
@@ -229,7 +233,8 @@ async def get_events_top_soon(
     e devolve os *limit* mais próximos da data/hora atual.
     """
     logger.info("Consulta de eventos mais próximos iniciada", limit=limit)
-    now = datetime.now(tz=timezone.utc)
+    # now = datetime.now(tz=timezone.utc)  # retorna um datetime offset-aware (com fuso horário)
+    now = datetime.utcnow()              # retorna um datetime naive (sem fuso horário)
 
     events = repo.list_all()                     # dict[int, Evento] # Corrigir para list_partial()
     # soons = (
@@ -283,6 +288,7 @@ async def get_events_top_viewed(
         limit=limit
     )
     
+    # Notifica via WebSocket
     asyncio.create_task(notify_top_viewed_update([e.title for e in most_viewed]))
     
     if not most_viewed:
@@ -302,7 +308,7 @@ async def get_events_top_viewed(
         207: {"description": "Evento criado, mas sem previsão do tempo por falha ao acessar a API externa."} # 207 caso queria utilizar outro
     },
 )
-def post_create_event(
+async def post_create_event(
     event: EventCreate,
     service: AbstractForecastService = _provide_forecast_service,
     repo: AbstractEventRepo = _provide_event_repo,
@@ -321,11 +327,13 @@ def post_create_event(
     # Passa forecast_info direto na chamada do add
     event_resp = repo.add(event, forecast_info=forecast_info)
     
+    # Notifica via WebSocket
     asyncio.create_task(notify_event_created(event.title))
     asyncio.create_task(notify_user_count())
     logger.info("Evento criado", event_id=event_resp.id, title=event.title, city=event.city, event_date=event.event_date)
     
-    return EventResponse.model_validate(event_resp)
+    # return EventResponse.model_validate(event_resp)
+    return EventResponse.model_validate(event_resp, from_attributes=True)
 
 @router.post(
     "/eventos/lote",
@@ -465,10 +473,12 @@ def put_events(
     if not events_new:
         raise_http(logger.warning, 400, "Lista vazia enviada")
 
+    # Notifica via WebSocket
     asyncio.create_task(notify_replace_started())
     
     result = repo.replace_all(events_new)
     
+    # Notifica via WebSocket
     asyncio.create_task(notify_replace_done())
     asyncio.create_task(notify_user_count())
     logger.info("Todos os eventos foram substituídos com sucesso", total=len(result))
