@@ -2,7 +2,7 @@
 version: "3.9"
 
 services:
-  # backend:
+  # api_prisma:
   #   build: .
   #   volumes:
   #     - .:/app
@@ -14,9 +14,12 @@ services:
   #     - .env.${ENV:-dev}
   #   command: >
   #     sh -c "uvicorn app.main:app --host 0.0.0.0 --port 8000"
+  #   # command: uvicorn app.main:app --host 0.0.0.0 --port 8000
   #   depends_on:
   #     - db
-  #     - redis
+  #     - redis                  # ← espera o Redis ficar “healthy”
+  #   networks:
+  #     - backend
 
   db:
     image: postgres:16-alpine
@@ -27,16 +30,32 @@ services:
       POSTGRES_PASSWORD: prisma123
       POSTGRES_DB: prisma_db
     volumes:
-      - prisma_db_data:/var/lib/postgresql/data
+      - ./postgres-data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+  #   networks:
+  #     - backend
 
-  # redis:
-  #   image: redis:7-alpine
-  #   restart: unless-stopped
-  #   ports:
-  #     - "6379:6379"           # opcional em dev
-  #   command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: >
+      redis-server
+      --save 60 1             # snapshot a cada 60 s / 1 mudança
+      --loglevel warning
+  #  command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+  #  networks:
+  #     - backend
+    ports:
+      - "6379:6379"           # opcional em dev
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+  #   # opcional: volume se quiser persistir
+  #   # volumes:
+  #   #   - redis_data:/data
 
   pgadmin:
     image: dpage/pgadmin4
@@ -49,6 +68,11 @@ services:
       - "5050:80"
     depends_on:
       - db
+  #   networks:
+  #     - backend
+
+# networks:
+#   backend:
 
 volumes:
   prisma_db_data:

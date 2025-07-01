@@ -53,6 +53,7 @@ def cached_json(prefix: str, ttl: int = 60):
                 logger.debug("Valor armazenado no cache", prefix=prefix, key=key, ttl=ttl)
                 return result
             
+            # 🔽 2) Qualquer problema ⇒ segue sem cache ----------------
             except Exception as e:
                 logger.warning("Erro ao acessar o cache Redis", prefix=prefix, key=key, error=str(e))
                 return await func(*args, **kwargs)

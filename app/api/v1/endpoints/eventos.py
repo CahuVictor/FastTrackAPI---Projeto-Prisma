@@ -1,3 +1,4 @@
+# api/v1/endpoints/eventos.py
 from fastapi import APIRouter, Depends, Query, Body, UploadFile, File
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder

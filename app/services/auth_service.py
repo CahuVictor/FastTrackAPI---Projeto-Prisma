@@ -1,3 +1,4 @@
+# app/services/auth_service.py
 from fastapi import HTTPException, status, Depends
 from jose import JWTError, jwt
 from fastapi.security import OAuth2PasswordBearer
