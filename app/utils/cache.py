@@ -16,11 +16,9 @@ logger = get_logger().bind(module="cache")
 
 T = TypeVar("T")
 
-# def _make_key(prefix: str, args: tuple, kwargs: dict) -> str:
-#     """Gera uma chave determinística e curta."""
-#     return prefix + ":" + str(hash((args, tuple(sorted(kwargs.items())))))
-
 def _make_key(prefix: str, bound_args: dict) -> str:
+    """Gera uma chave determinística e curta."""
+    """Evita tipos não determinísticos na key."""
     SAFE_TYPES = (str, int, float, bool, type(None))
     clean = {k: v for k, v in bound_args.items() if isinstance(v, SAFE_TYPES)}
     return prefix + ":" + str(hash(tuple(sorted(clean.items()))))
@@ -32,21 +30,12 @@ def cached_json(prefix: str, ttl: int = 60):
         sig = inspect.signature(func)
 
         @functools.wraps(func)
-        async def wrapper(
-            *args,
-            redis: Redis = Depends(provide_redis),   # ⬅ FastAPI resolve em runtime
-            **kwargs,
-        ):
+        async def wrapper(*args, **kwargs, ):
             # 🔑  pega (ou reaproveita) a conexão Redis
             redis_client: Redis = await provide_redis()
             
-            # # Se ainda for objeto Depends, quer dizer que estamos fora do FastAPI
-            # if isinstance(redis, Depends):           # ← 👈 novo
-            #     return await func(*args, **kwargs)
-            
             bound = sig.bind_partial(*args, **kwargs)
             bound.apply_defaults()
-            # key = _make_key(prefix, bound.args, bound.kwargs)
             key = _make_key(prefix, bound.arguments)
 
             try:

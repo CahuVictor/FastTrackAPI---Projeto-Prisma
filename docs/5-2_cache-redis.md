@@ -138,32 +138,112 @@ Cada função é decorada com `@cached_json(<prefix>, ttl=<segundos>)`, implemen
 
 ---
 
-## ✅ Benefícios
+## 🧩 Injeção do Redis no Decorator: Duas Abordagens
+A função cached_json pode obter a conexão Redis de duas formas distintas, com implicações diferentes dependendo do contexto em que o decorator é usado (FastAPI ou fora dele).
 
-* **Redução drástica na latência:** Requisições comuns passam a ser respondidas em milissegundos.
-* **Menor carga em serviços externos:** Reduz a frequência de chamadas custosas a APIs externas.
-* **Escalabilidade facilitada:** Redis pode ser facilmente substituído por serviços gerenciados como AWS ElastiCache sem alteração no código.
-* **Alta disponibilidade:** Caso o Redis falhe, o sistema continua funcionando normalmente, apenas ignorando o cache.
+### 1. Injeção como parâmetro com Depends
+
+```python
+async def wrapper(
+    *args,
+    redis: Redis = Depends(provide_redis),  # ⬅️ FastAPI resolve automaticamente
+    **kwargs,
+):
+```
+
+Essa abordagem aproveita o sistema de injeção de dependências do FastAPI, que detecta o `Depends(provide_redis)` e injeta automaticamente a instância de Redis quando a rota é chamada dentro do ciclo de requisição HTTP.
+
+**Vantagens:**
+
+* Integração nativa com FastAPI.
+* Reutiliza a conexão do contexto da requisição.
+* Permite usar o Redis como argumento explícito para controle mais fino.
+
+**Problema:**
+
+Se o decorator `@cached_json` for utilizado fora de uma rota FastAPI (ex: testes unitários, chamada interna), o `Depends(...)` não será resolvido e a variável `redis` conterá o próprio objeto `Depends(...)`, e não a instância Redis.
+
+Isso causa erro na linha `await redis.get(...)`.
+
+#### ✅ Solução: verificar se o Redis é realmente um cliente
+
+```python
+if isinstance(redis, Depends):
+    return await func(*args, **kwargs)  # fallback sem cache
+```
+
+Esse teste garante que estamos dentro do ciclo FastAPI. Se estivermos fora, o decorator simplesmente executa a função original sem tentar usar o cache. Isso evita falhas em testes ou jobs assíncronos que não estão dentro do contexto HTTP.
 
 ---
 
-## 🗃️ Configuração do Redis
+### 2. Obter o Redis diretamente dentro da função
 
-A variável `REDIS_URL` no `.env` define a URL de conexão, permitindo trocar de ambiente facilmente:
-
-```ini
-# .env (desenvolvimento local)
-REDIS_URL=redis://localhost:6379/0
-
-# .env.prod (ambiente com container)
-REDIS_URL=redis://redis:6379/0
+```python
+redis_client: Redis = await provide_redis()
 ```
+
+Essa abordagem ignora o sistema de `Depends` e chama diretamente a função `provide_redis()`.
+
+**Vantagens:**
+
+* Funciona sempre, independentemente do contexto (FastAPI ou não).
+* Evita a verificação com isinstance.
+
+**Limitação:**
+
+* Não aproveita o mecanismo de ciclo de vida do FastAPI (por exemplo, Depends poderia ser modificado para usar escopos ou middlewares especiais no futuro).
+* Torna a injeção menos explícita.
+
+---
+
+### 🧠 Conclusão
+
+| Estratégia                 | Vantagem                   | Quando usar                |
+| -------------------------- | -------------------------- | -------------------------- |
+| `redis: Redis = Depends(...)` | Integra com FastAPI        | Rota HTTP, onde decorator será chamado via API |
+| `await provide_redis()` direto | Funciona em qualquer contexto | Jobs assíncronos, testes unitários, código fora da API |
+
+Se quiser manter o código seguro e genérico, pode usar ambas as formas combinadas:
+
+```python
+async def wrapper(
+    *args,
+    redis: Redis = Depends(provide_redis),
+    **kwargs,
+):
+    if isinstance(redis, Depends):
+        redis = await provide_redis()  # fallback fora do FastAPI
+```
+
+Isso cobre todos os casos: dentro da FastAPI ou fora dela.
 
 ---
 
 ## ☑️ Checar Função de Geração de Key
 
-A função de geração de chave utilizava todos os argumentos, incluindo objetos não serializáveis como repositórios, sessions, etc. Isso fazia com que o `hash()` resultasse em valores diferentes para chamadas idênticas.
+A função de geração de chave não pode utilizar todos os argumentos, é necessário excluir objetos não serializáveis como repositórios, sessions, etc. Isso faria com que o `hash()` resultasse em valores diferentes para chamadas idênticas.
+
+Quando a função que gera a key está incluindo objetos mutáveis/únicos (por ex. o repositório repo,
+Session, etc.) nos args/kwargs.
+
+```python
+def _make_key(prefix: str, args: tuple, kwargs: dict) -> str:
+    return prefix + ":" + str(hash((args, tuple(sorted(kwargs.items())))))
+
+def cached_json(prefix: str, ttl: int = 60):
+    def decorator(func: Callable[..., Awaitable[T]]):
+        ...
+        async def wrapper(*args, **kwargs,):
+            redis_client: Redis = await provide_redis()    
+            bound = sig.bind_partial(*args, **kwargs)
+            bound.apply_defaults()
+            key = _make_key(prefix, bound.args, bound.kwargs)
+```
+
+Cada vez que FastAPI injeta repo, ele é uma nova instância
+(<SQLEventRepo object at 0x...>).
+
+O hash() desses objetos muda → a chave muda → MISS sempre.
 
 ### ✅ Solução
 
@@ -218,6 +298,29 @@ return json.loads(raw)
 ```
 
 Evita erros como `ResponseValidationError` por strings onde o FastAPI espera dicionários.
+
+---
+
+## ✅ Benefícios
+
+* **Redução drástica na latência:** Requisições comuns passam a ser respondidas em milissegundos.
+* **Menor carga em serviços externos:** Reduz a frequência de chamadas custosas a APIs externas.
+* **Escalabilidade facilitada:** Redis pode ser facilmente substituído por serviços gerenciados como AWS ElastiCache sem alteração no código.
+* **Alta disponibilidade:** Caso o Redis falhe, o sistema continua funcionando normalmente, apenas ignorando o cache.
+
+---
+
+## 🗃️ Configuração do Redis
+
+A variável `REDIS_URL` no `.env` define a URL de conexão, permitindo trocar de ambiente facilmente:
+
+```ini
+# .env (desenvolvimento local)
+REDIS_URL=redis://localhost:6379/0
+
+# .env.prod (ambiente com container)
+REDIS_URL=redis://redis:6379/0
+```
 
 ---
 
@@ -430,143 +533,6 @@ Redis é sempre um processo separado (nunca uma thread Python).
 1. Implemente `provide_memcached()` ou similar
 2. Altere `cached_json` para usar outro client
 3. Não é necessário alterar nenhum endpoint
-
----
-
----
-
----
-
-## Checar função de gerar a key
-
-O motivo clássico - e o seu código confirma - é que a função que gera a key
-está incluindo objetos mutáveis/únicos (por ex. o repositório repo,
-Session, etc.) nos args/kwargs.
-
-python
-Copiar
-Editar
-key = prefix + ":" + str(hash((args, tuple(sorted(kwargs.items())))))
-Cada vez que FastAPI injeta repo, ele é uma nova instância
-(<SQLEventRepo object at 0x...>).
-
-O hash() desses objetos muda → a chave muda → MISS sempre.
-
-1 — Verifique no log
-Adicione, só para depurar, o valor da chave:
-
-python
-Copiar
-Editar
-logger.debug("Cache key", prefix=prefix, key=key)
-Você verá algo como:
-
-python-repl
-Copiar
-Editar
-... key=top-soon:123456789
-... key=top-soon:-987654321   # outra chamada → outra key
-2 — Corrija a função de geração de chave
-Abordagem simples: ignore parâmetros não cacheáveis
-python
-Copiar
-Editar
-def _make_key(prefix: str, bound_args: dict) -> str:
-    SAFE_TYPES = (str, int, float, bool, type(None))
-    clean = {k: v for k, v in bound_args.items() if isinstance(v, SAFE_TYPES)}
-    return prefix + ":" + str(hash(tuple(sorted(clean.items()))))
-E no wrapper:
-
-python
-Copiar
-Editar
-bound = sig.bind_partial(*args, **kwargs)
-bound.apply_defaults()
-key = _make_key(prefix, bound.arguments)
-Não entram repo, service, request, nem qualquer objeto não
-serializável.
-
-Abordagem parametrizável
-Se quiser algo mais explícito:
-
-python
-Copiar
-Editar
-def cached_json(prefix: str, ttl: int = 60, include: set[str] | None = None):
-    ...
-        key_args = {k: v for k, v in bound.arguments.items()
-                    if (include and k in include) or
-                       (include is None and isinstance(v, SAFE_TYPES))}
-        key = _make_key(prefix, key_args)
-Então no endpoint:
-
-python
-Copiar
-Editar
-@cached_json("top-soon", ttl=10, include={"limit"})
-
-💡 O que ocorreu
-Primeira requisição – cache miss
-
-FastAPI devolve uma lista de objetos Pydantic (EventResponse).
-
-No decorator você faz
-
-python
-Copiar
-Editar
-json.dumps(result, default=str)
-Como EventResponse não é JSON-serializável, o default=str converte
-cada objeto em string (a representação title='Evento 1' ...).
-
-Segunda requisição – cache hit
-
-Você lê o valor, faz json.loads(...) → volta uma lista de strings.
-
-FastAPI tenta validar contra response_model=list[EventResponse]
-→ vê string, não dicionário → levanta 10 erros “Input should be a valid
-dictionary …”.
-
-🛠️ Correção
-Armazene no Redis um payload já serializado via
-fastapi.encoders.jsonable_encoder, que transforma Pydantic, datetime,
-Enum etc. em tipos puros JSON (dict, list, str, int).
-
-python
-Copiar
-Editar
-from fastapi.encoders import jsonable_encoder
-
-...
-
-serializable = jsonable_encoder(result)
-await redis_client.setex(key, ttl, json.dumps(serializable))
-return serializable      # devolve dict/list; FastAPI validará OK
-E no cache hit basta:
-
-python
-Copiar
-Editar
-cached = json.loads(raw)
-return cached            # FastAPI monta de volta o EventResponse
-Patch completo (trecho do wrapper)
-python
-Copiar
-Editar
-try:
-    if (raw := await redis_client.get(key)):
-        logger.info("Cache hit", prefix=prefix, key=key)
-        return json.loads(raw)
-
-    logger.debug("Cache miss", prefix=prefix, key=key)
-    result: T = await func(*args, **kwargs)
-
-    serializable = jsonable_encoder(result)
-    await redis_client.setex(key, ttl, json.dumps(serializable))
-    logger.debug("Valor armazenado no cache", prefix=prefix, key=key, ttl=ttl)
-    return serializable
-Importante: remova default=str do json.dumps; ele “amassa” objetos
-em string e perde estrutura.
 
 ---
 
