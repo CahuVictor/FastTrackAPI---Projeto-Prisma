@@ -1,31 +1,18 @@
-# Em construção
-# 🚀 Cache com Redis para Melhor Desempenho
+# 🚀 Cache Redis para Melhor Desempenho
 
-Este documento descreve como o projeto FastTrackAPI utiliza o Redis para melhorar significativamente o desempenho das requisições HTTP, reduzindo latência e carga sobre serviços externos e bancos de dados. Utilizamos o padrão **cache-aside** (também conhecido como lazy loading), que verifica o cache antes de consultar serviços externos ou realizar operações custosas.
+Este documento explica como o projeto **FastTrackAPI** utiliza o Redis para melhorar o desempenho e reduzir a latência de algumas requisições HTTP, com detalhes sobre implementação, funcionamento local e em container, testes e boas práticas.
 
 ---
 
 ## 🔄 Visão Geral
 
-| Aspecto             | Sem cache                             | Com Redis (cache-aside)                                                           |
-| ------------------- | ------------------------------------- | --------------------------------------------------------------------------------- |
-| Fluxo da requisição | FastAPI → Serviço → Banco/API externa | FastAPI → **Redis GET** → HIT ✔ (retorno rápido) / MISS ✖ → Serviço → Redis SETEX |
-| Latência média      | 400ms a 2s (dependendo da origem)     | 1ms a 5ms após primeiro MISS                                                      |
-| Carga externa       | 100% das requisições                  | 1 requisição por TTL                                                              |
+Utilizamos o padrão **cache-aside (lazy loading)**: o sistema tenta obter o resultado do Redis antes de consultar serviços externos ou realizar cálculos custosos. Se o valor não estiver no cache (MISS), ele é computado, armazenado no Redis e retornado.
 
-|                                |  Sem cache                                                  |  Com Redis (cache‑aside)                                                                                                |
-| ------------------------------ | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Fluxo de requisição            | FastAPI → Service → API externa ou consulta lenta → Cliente | FastAPI → **Redis GET** → *HIT*? ✔ devolve em ◉ ms / *MISS* ✖ → Service → API externa → **Redis SETEX** (TTL) → Cliente |
-| Latência média                 |  100–800 ms                                                 |  ≈1–5 ms após o primeiro acesso                                                                                         |
-| Carga no backend/API terceiros | 100 % das requisições                                       | 1 requisição a cada *TTL*                                                                                               |
-
-**Estratégia:** usamos o padrão *cache‑aside* (comumente chamado read‑through): a própria aplicação consulta o cache antes de executar a operação cara e grava o resultado quando não encontra a chave.
-
-|               |  Sem cache                                      |  Com Redis (cache‑aside)                                                                                            |
-| ------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| Fluxo         | FastAPI → Service → API externa/banco → Cliente | FastAPI → **Redis GET** → *HIT*? ✔ devolve em 1‑5 ms / *MISS* ✖ → Service → API externa → **Redis SETEX** → Cliente |
-| Latência      | 400 ms – 2 s (dependendo da origem)             | 1 ‑ 5 ms após primeiro MISS                                                                                         |
-| Carga externa | 100 % das requests                              | ≃ 1 request por TTL                                                                                                 |
+| Fluxo da requisição        | Sem cache                          | Com cache Redis (cache-aside)                                          |
+| -------------------------- | ---------------------------------- | ---------------------------------------------------------------------- |
+| Execução                   | FastAPI → Serviço → DB/API externa | FastAPI → **Redis GET** → HIT ✔ (retorno rápido) / MISS ✖ → Serviço → Redis SETEX → Cliente |
+| Latência média             | 400ms - 2s                         | 1ms - 5ms (após primeiro MISS)                                         |
+| Carga externa              | 100% das requisições               | 1 requisição por TTL                                                   |
 
 > **Estratégia**: *cache‑aside* (também chamado *lazy loading*) – apenas grava no Redis depois de consultar a fonte correta.
 
@@ -33,20 +20,23 @@ Este documento descreve como o projeto FastTrackAPI utiliza o Redis para melhora
 
 ## ⚙️ Implementação no Código
 
-|  Camada                |  Arquivo / Elemento                                                                                                     |  Descrição                                                                                              |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| **Provider**           | `app/deps.py → provide_redis()`                                                                                         | Cria  **uma única** instância `Redis.from_url(..)`  e a reaproveita em todo o app                       |
-| **Decorator genérico** | `app/utils/cache.py → cached_json()`                                                                                    | Função assíncrona que gera chave, consulta Redis (`GET`), serializa JSON (`SETEX`) e devolve resultado  |
-| **Aplicação real**     | `app/api/v1/endpoints/local_info.py` <br>`app/api/v1/endpoints/forecast_info.py` <br>`app/api/v1/endpoints/eventos.py`  | Endpoints decorados com `@cached_json("prefix", ttl)`                                                   |
-| **Configuração**       | `.env / config.py → REDIS_URL`                                                                                          | Permite apontar para Redis local, Docker, ou nuvem                                                      |
+| Camada                 | Arquivo / Elemento                              | Descrição                                                                                              |
+| ---------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| **Provider**           | `app/deps.py → provide_redis()`                 | Cria **uma única** instância `Redis.from_url(..)` e a reaproveita em todo o app                        |
+| **Decorator genérico** | `app/utils/cache.py → cached_json()`            | Função assíncrona que gera chave, consulta Redis (`GET`), serializa JSON (`SETEX`) e devolve resultado |
+| **Aplicação real**     | `app/api/v1/endpoints/eventos.py`, entre outros | Endpoints decorados com `@cached_json("prefix", ttl)`                                                  |
+| **Configuração**       | `.env / config.py → REDIS_URL`                  | Permite apontar para Redis local, Docker, ou nuvem  
 
 ### Decorador Genérico
 
-Utilizamos um decorador genérico, `cached_json`, que automatiza todo o processo:
+Utilizamos o decorador `cached_json` que automatiza o uso do cache Redis com as seguintes etapas:
 
-* Gera uma chave única para cada requisição.
-* Verifica se o resultado já existe no cache (Redis GET).
-* Caso contrário (MISS), chama o serviço original, armazena o resultado (Redis SETEX) e retorna ao cliente.
+1. Geração de chave única com base nos parâmetros da requisição.
+2. Verificação no Redis via `GET`.
+3. Se não encontrar (MISS), executa a função original e armazena o resultado com `SETEX`.
+4. Retorna o valor ao cliente.
+
+Internamente, usamos `jsonable_encoder()` para garantir que o valor armazenado seja serializável e compatível com `response_model`.
 
 Exemplo no código:
 
@@ -59,7 +49,66 @@ async def obter_local_info(location_name: str, service: AbstractLocalInfoService
     return info
 ```
 
-### 4.2 Onde o cache está sendo usado no código
+#### Correção de serialização
+
+A serialização usa agora `jsonable_encoder` para transformar objetos Pydantic e tipos não-serializáveis:
+
+```python
+from fastapi.encoders import jsonable_encoder
+
+serializable = jsonable_encoder(result)
+await redis.setex(key, ttl, json.dumps(serializable))
+```
+
+E a leitura usa:
+
+```python
+cached = json.loads(raw)
+return cached
+```
+
+##### 🔄 Patch atual do decorador `cached_json`
+
+```python
+try:
+    if (raw := await redis.get(key)):
+        logger.info("Cache hit", key=key)
+        return json.loads(raw)
+
+    logger.debug("Cache miss", key=key)
+    result = await func(*args, **kwargs)
+    serializable = jsonable_encoder(result)
+    await redis.setex(key, ttl, json.dumps(serializable))
+    return serializable
+except Exception as e:
+    logger.warning("Erro ao acessar o cache Redis", error=str(e))
+    return await func(*args, **kwargs)
+```
+
+Removemos `default=str`, que convertia objetos em string literal e causava `ResponseValidationError` ao retornar do cache.
+
+#### Geração de chave determinística
+
+Ignoramos objetos como `repo`, `request`, `Session`, etc., ao construir a chave:
+
+```python
+SAFE_TYPES = (str, int, float, bool, type(None))
+clean = {k: v for k, v in bound_args.items() if isinstance(v, SAFE_TYPES)}
+key = prefix + ":" + str(hash(tuple(sorted(clean.items()))))
+```
+
+Evita que instâncias injetadas pelo FastAPI causem cache miss constante.
+
+---
+
+## 📍 Onde o Cache é Usado
+
+| Endpoint                              | Prefixo / TTL      | Motivo                                           |
+| ------------------------------------- | ------------------ | ------------------------------------------------ |
+| `GET /api/v1/local_info`              | `local-info` / 24h | Geocodificação raramente muda                    |
+| `GET /api/v1/forecast_info`           | `forecast` / 30min | API de clima é custosa e não muda rápido         |
+| `GET /api/v1/eventos/top/soon`        | `top-soon` / 10s   | Ranking é volátil, mas leitura rápida é valiosa  |
+| `GET /api/v1/eventos/top/most-viewed` | `top-viewed` / 30s | Muda apenas com `views++`; ideal para cache leve |
 
 | Endpoint                              | Prefixo / TTL           | Motivo do cache                                                                               | Local do código                                        |
 | ------------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
@@ -74,30 +123,18 @@ Cada função é decorada com `@cached_json(<prefix>, ttl=<segundos>)`, implemen
 2. Faz `await redis.get(key)` → **HIT** devolve JSON;
 3. **MISS** executa a função real, serializa e grava `SETEX key ttl value`.
 
-### 4.3 Por que *não* aplicamos cache em todas as rotas?
-
-| Razão                       | Explicação                                                                                                                  | Exemplo no projeto                                                                      |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| **Não idempotente**         | Rotas `POST`, `PUT`, `PATCH`, `DELETE` alteram estado. Cachear pode devolver versão desatualizada ou atrapalhar validações. | `POST /api/v1/eventos` cria evento; *não cacheamos*.                                    |
-| **Alta cardinalidade**      | Muitas combinações de query‑params criam milhões de chaves ("key‑explosion").                                               | `GET /api/v1/eventos?skip&limit&city` – cada página e cidade seria uma chave diferente. |
-| **Dados voláteis**          | Conteúdo muda mais rápido que um TTL razoável, tornando o cache inútil.                                                     | Se tivéssemos um endpoint "/metricas/tempo‑real" não faria sentido cachear.             |
-| **Segurança e privacidade** | Respostas personalizadas por usuário não devem ser compartilhadas entre sessões anônimas.                                   | Rotas de autenticação e perfis de usuário ficam fora do cache.                          |
-
-> **Regra prática**: cache apenas `GET`s idempotentes, requisitados com alta frequência **e** cujo custo de geração é maior que 1‑2 ms. Mantenha o restante simples para evitar inconsistências.
-
 ---
 
-## 🗃️ Configuração do Redis
+## ⚠️ Quando Não Usar Cache
 
-A URL do Redis é configurada via variável de ambiente, permitindo flexibilidade entre ambientes:
+| Razão                  | Justificativa                                                                    |
+| ---------------------- | -------------------------------------------------------------------------------- |
+| **Não idempotente**    | `POST`, `PUT`, `DELETE` alteram estado e não devem ser cacheados.                |
+| **Alta cardinalidade** | Muitos parâmetros geram muitas combinações de chave (explosão de cache).         |
+| **Dados voláteis**     | Quando o dado muda mais rápido do que o TTL possível.                            |
+| **Privacidade**        | Respostas específicas por usuário não devem ser compartilhadas em cache anônimo. |
 
-```ini
-# .env
-REDIS_URL=redis://localhost:6379/0
-
-# .env.prod
-REDIS_URL=redis://redis:6379/0
-```
+> Regra prática: cache apenas `GET`s idempotentes com acesso frequente e custo computacional alto.
 
 ---
 
@@ -110,116 +147,227 @@ REDIS_URL=redis://redis:6379/0
 
 ---
 
-## 4.5 Onde alterar caso troque Redis por outro cache
+## 🗃️ Configuração do Redis
 
-1. Implemente novo provider (`provide_memcached`, por ex.) no mesmo formato.
-2. Altere `cached_json` para usar esse provider.
-3. Nenhuma rota precisa ser tocada – o decorator cuida de tudo.
+A variável `REDIS_URL` no `.env` define a URL de conexão, permitindo trocar de ambiente facilmente:
+
+```ini
+# .env (desenvolvimento local)
+REDIS_URL=redis://localhost:6379/0
+
+# .env.prod (ambiente com container)
+REDIS_URL=redis://redis:6379/0
+```
 
 ---
 
-**TL;DR:** adicionamos Redis para reduzir latência e carga sobre APIs externas com um decorator plug‑and‑play; a própria estrutura permite testar HIT/MISS, TTL e resiliência sem rodar Redis de verdade.
+## ☑️ Checar Função de Geração de Key
+
+A função de geração de chave utilizava todos os argumentos, incluindo objetos não serializáveis como repositórios, sessions, etc. Isso fazia com que o `hash()` resultasse em valores diferentes para chamadas idênticas.
+
+### ✅ Solução
+
+**Evite tipos não determinísticos na key:**
+
+```python
+def _make_key(prefix: str, bound_args: dict) -> str:
+    SAFE_TYPES = (str, int, float, bool, type(None))
+    clean = {k: v for k, v in bound_args.items() if isinstance(v, SAFE_TYPES)}
+    return prefix + ":" + str(hash(tuple(sorted(clean.items()))))
+```
+
+Use no wrapper:
+
+```python
+bound = sig.bind_partial(*args, **kwargs)
+bound.apply_defaults()
+key = _make_key(prefix, bound.arguments)
+```
+
+### Versão parametrizável (include)
+
+```python
+def cached_json(prefix: str, ttl: int = 60, include: set[str] | None = None):
+    ...
+        key_args = {k: v for k, v in bound.arguments.items()
+                    if (include and k in include) or
+                       (include is None and isinstance(v, SAFE_TYPES))}
+        key = _make_key(prefix, key_args)
+```
+
+No endpoint:
+
+```python
+@cached_json("top-soon", ttl=10, include={"limit"})
+```
+
+### Serialização correta do resultado
+
+Em vez de usar `json.dumps(result, default=str)`, serialize com:
+
+```python
+from fastapi.encoders import jsonable_encoder
+serializable = jsonable_encoder(result)
+await redis.setex(key, ttl, json.dumps(serializable))
+```
+
+No cache hit:
+
+```python
+return json.loads(raw)
+```
+
+Evita erros como `ResponseValidationError` por strings onde o FastAPI espera dicionários.
+
+---
+
+## 🔪 Instalação (Desenvolvimento Local com Windows)
+
+### 1. Instalação via Chocolatey
+
+```powershell
+choco install redis-64 -y
+```
+
+Esse comando instala o Memurai Developer (Redis compatível com Windows) e registra um serviço do Windows.
+
+### 2. Controlar o serviço Redis (Memurai)
+
+```powershell
+Get-Service Memurai          # verificar status
+Start-Service Memurai        # iniciar
+Stop-Service Memurai         # parar
+Set-Service Memurai -StartupType Automatic
+```
+
+### 2.1 Controlar o serviço Redis (Redis)
+
+```powershell
+Get-Service Redis            # verificar status
+Start-Service Redis          # iniciar
+Stop-Service  Redis          # parar
+Set-Service   Redis -StartupType Automatic  # (ou Manual, Disabled…)
+```
+
+### 3. Executar manualmente (sem serviço)
+
+```powershell
+"C:\Program Files\Memurai\memurai.exe" --port 6379
+```
+
+Mantém a janela aberta ou use NSSM para rodar em background.
+
+### 4. Testar se o Redis responde
+
+```powershell
+"C:\Program Files\Memurai\redis-cli.exe" -p 6379 ping
+# deve responder: PONG
+```
+
+### 5. Verificar porta (opcional)
+
+```powershell
+netstat -ano | findstr ":6379"
+```
+
+### 6. Verificação no .env
+
+```ini
+REDIS_URL=redis://localhost:6379/0
+```
+
+Suba a API normalmente e verifique os logs:
+
+* Primeira requisição: `MISS`
+* Segunda requisição: `HIT`
+
+### 7. Erros
+
+#### Liberar locks quebrados
+```powershell
+# pare qualquer tarefa Chocolatey em background
+Stop-Process -Name "choco*" -Force -ErrorAction SilentlyContinue
+```
+
+#### remova lock e pasta corrompida
+```powershell
+Remove-Item -Force -Recurse "C:\ProgramData\chocolatey\lib\9daa46124c4f3ddfd7a43a5d893196d2767a7cf7" -ErrorAction SilentlyContinue
+Remove-Item -Force -Recurse "C:\ProgramData\chocolatey\lib-bad" -ErrorAction SilentlyContinue
+(Se o primeiro caminho não existir mais, ignore o erro.)
+```
 
 ---
 
 ## 🧪 Testes com Cache
 
-Testes essenciais que podem ser realizados:
+| Caso de Teste        | Objetivo                                                      | Ferramenta sugerida             |
+| -------------------- | ------------------------------------------------------------- | ------------------------------- |
+| **HIT vs MISS**      | Verificar se a resposta vem do cache após primeira requisição | `fakeredis`, `pytest`           |
+| **Expiração de TTL** | Confirmar renovação após TTL                                  | `time.sleep`, `freezegun`       |
+| **Chaves únicas**    | Garantir que chaves são determinísticas                       | `redis.keys()`                  |
+| **Falha do Redis**   | Verificar fallback se Redis estiver indisponível              | Mock/patch de `provide_redis()` |
 
-* **HIT vs MISS:** Garantir que a segunda requisição retorna imediatamente do cache.
-* **Expiração de TTL:** Confirmar que após o tempo configurado, o cache expira e busca novamente.
-* **Falha de Redis:** O sistema não deve falhar; apenas opera sem cache.
-
-|  Caso de teste                   |  Objetivo                                                                           |  Ferramentas sugeridas                               |
-| -------------------------------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| **Cache HIT vs MISS**            | Garantir que a primeira requisição (MISS) chama o service/DB e a segunda (HIT) não  | `fakeredis` + pytest → verificar contadores / spies  |
-| **TTL expira**                   | Após `ttl` segundos, o decorator deve buscar dados novamente                        | `freezegun` ou `time.sleep` curto                    |
-| **Chave única**                  | Requisições com parâmetros diferentes devem gerar chaves diferentes                 | Asset `redis.keys()` contém os hashes esperados      |
-| **Fallback se Redis fora do ar** | A aplicação não pode quebrar: decorator executa função original                     | Mock `provide_redis` para levantar `ConnectionError` |
-
->  **Observação:** nenhum teste precisa de Redis real; use `fakeredis.FakeRedis` e faça override de `provide_redis`.
-
-Exemplo de teste com `fakeredis`:
+Exemplo:
 
 ```python
-async def test_cache_hit(client, fake_redis):
-    resp1 = await client.get("/api/v1/local_info?location_name=recife")
-    assert resp1.status_code == 200
+from fastapi.encoders import jsonable_encoder
 
-    resp2 = await client.get("/api/v1/local_info?location_name=recife")
-    assert resp2.json() == resp1.json()
+@cached_json("top-soon", ttl=10, include={"limit"})
+async def eventos_proximos(limit: int = 5):
+    ...
 ```
 
-1. **HIT × MISS** — invoque o endpoint duas vezes; a segunda deve ser mais rápida e não acionar o service.
-2. **TTL** — após expirar, a próxima chamada volta a ser MISS.
-3. **Key uniqueness** — parâmetros diferentes geram chaves diferentes e não se sobrepõem.
-4. **Fallback se Redis cair** — simule `ConnectionError` (monkeypatch em `provide_redis`) e verifique que o endpoint ainda responde, só que sem cache.
-5. **Isolamento em testes** — use `fakeredis` via override de `provide_redis` para evitar side‑effects.
-
-```python
-# exemplo de teste HIT/MISS com fakeredis
-async def test_cache_hit(client, fake_redis):
-    resp1 = await client.get("/api/v1/local_info?location_name=recife")
-    assert resp1.status_code == 200
-
-    # segunda chamada deve vir do cache
-    resp2 = await client.get("/api/v1/local_info?location_name=recife")
-    assert resp2.json() == resp1.json()
-    # opcional: use fake_redis.get(key) para confirmar presença do valor
-```
+> Use `fakeredis.FakeRedis()` em testes para isolar dependência externa.
 
 ---
 
 ## 🔧 Boas Práticas
 
-* Utilize cache apenas em rotas idempotentes (`GET`) e com resultados relativamente estáticos.
-* Configure TTL apropriado para cada tipo de dado (exemplo: previsão do tempo em 30 minutos, geocodificação em 24 horas).
-* Garanta que as chaves sejam determinísticas e únicas por parâmetros para evitar colisões e inconsistências.
-
-\* **TTL adequado** → previsão do tempo 30 min; geocodificação 24 h; rankings de eventos 5–30 s.
-\* **Chave determinística** → `prefix` + `hash(args, kwargs)` – minimiza colisões e simplifica invalidar.
-\* **Fallback gracioso** → Se Redis cair, o decorator só ignora o cache.
-\* **Serialização única** → Sempre JSON string (`default=str`) para uniformidade.
+* Cache apenas rotas `GET` e com resultados relativamente estáticos.
+* TTLs adaptados à natureza do dado (ex: 30s para ranking, 24h para dados estáticos).
+* Sempre use `jsonable_encoder` antes de serializar com `json.dumps`.
+* Gere chaves com base apenas em args simples
+* Permita fallback (try/except no acesso Redis)
 
 ---
 
-📦 Onde o Redis “vive” – antes × depois
-Cenário	Onde está o binário redis-server?	Como o FastAPI se conecta?	Como é iniciado/parado?
-Antes (dev local)	Instalado na máquina host via brew, apt, choco…	tcp://localhost:6379
-(loopback da própria máquina)	redis-server rodava como processo separado/serviço do SO (systemd, serviço do Windows) – você mesmo ligava/desligava.
-Depois (Docker Compose)	Dentro de um container chamado redis (imagem redis:7-alpine)	tcp://redis:6379
-(nome-DNS do serviço na rede Docker)	docker compose up cria outro processo isolado no container; down remove. Uptime, logs e rede gerenciados pelo Docker.
+## 🧱 Redis: Funcionamento Local vs Container
 
-Em ambos os casos o Redis é sempre um servidor próprio, 100 % fora
-do processo Python. Não é “outra thread” do FastAPI – é um executável C que
-escuta numa porta TCP.
+### Por que Redis é externo?
 
-1. Como era o fluxo “sem container”
-bash
-Copiar
-Editar
-┌───────────┐ 1) requer /local_info
+O Redis é **um serviço separado**, não é parte do código Python. A aplicação apenas se conecta a ele por meio da biblioteca `redis.asyncio`.
+
+Colocar o Redis dentro da própria API faria com que ele morresse e reiniciasse a cada deploy, além de perder os dados. Por isso, ele roda como processo separado ou container.
+
+### 📦 Onde o Redis "vive"
+
+| Cenário        | Binário redis-server       | Conexão FastAPI        | Iniciado via                   |
+| -------------- | -------------------------- | ---------------------- | ------------------------------ |
+| Dev Local      | Instalado via choco/brew   | `tcp://localhost:6379` | Serviço do sistema ou terminal |
+| Docker Compose | Container `redis:7-alpine` | `tcp://redis:6379`     | `docker compose up`            |
+
+Ambos os casos: o Redis é **um servidor real**, escutando em uma porta TCP. Não é uma thread nem subprocesso da API.
+
+### 1. Fluxo sem container
+
+```bash
+┌───────────┐ 1) requisição
 │ Navegador │──────────────►
 └───────────┘               │
-                            │     2) chama decorator
+                            │     2) FastAPI usa cache
             ┌───────────────┴────────────┐
-            │    FastAPI  (processo)     │
+            │    FastAPI (processo)      │
             └─────────────────┬──────────┘
-                              │ 3) socket TCP 127.0.0.1:6379
+                              │ 3) socket TCP para 127.0.0.1:6379
                               ▼
                        ┌──────────────┐
-                       │ redis-server │  (processo do host, fora do docker)
+                       │ redis-server │ (serviço no host)
                        └──────────────┘
-Instalação manual – brew install redis
+```
 
-Iniciado em background (brew services start redis)
+### 2. Fluxo com Docker Compose
 
-FastAPI resolve localhost, abre um socket, fala RESP.
-
-2. Como ficou “com Docker Compose”
-markdown
-Copiar
-Editar
+```
                            (rede Docker: backend)
 ┌───────────┐                       ▲
 │ Navegador │──► 0.0.0.0:8000 ──────┘
@@ -232,57 +380,194 @@ Editar
     │  api service   │──────▶│  redis service  │
     │ (fastapi:8000) │ TCP   │ (redis:6379)    │
     └────────────────┘       └─────────────────┘
-Imagem oficial – redis:7-alpine
+```
 
-Declarado em docker-compose.yml.
+* O Docker cria uma rede bridge e atribui hostnames.
+* A URL redis\://redis:6379/0 aponta para o serviço Redis.
+* Compose permite configurar restart, volumes e logs.
 
-O Docker cria uma bridge network (backend).
+### 3. O que não mudou
 
-Cada serviço recebe um hostname – aqui api e redis.
+| Componente               | Antes (host)           | Depois (container) |
+| ------------------------ | ---------------------- | ------------------ |
+| Cliente Redis            | `redis.asyncio`        | igual              |
+| Função `provide_redis()` | REDIS\_URL (localhost) | REDIS\_URL (redis) |
+| Decorator/cache          | `@cached_json`         | igual              |
+| Código das rotas         | nada a mudar           | nada a mudar       |
 
-O FastAPI acessa redis:6379 (DNS interno).
+### 4. Vantagens do container
 
-Logs, restart-policy, snapshot-volume podem ser configurados no YAML.
+* ✅ Reprodutibilidade: stack sobe com `docker compose up`.
+* ✅ Isolamento: Redis não polui o sistema operacional.
+* ✅ Orquestração: `depends_on`, healthcheck etc.
+* ✅ Escalabilidade: fácil migrar para Redis gerenciado (ElastiCache etc.).
 
-3. O que não mudou
-Componente	Antes	Depois
-Biblioteca cliente	redis.asyncio	igual
-Função provide_redis()	lê REDIS_URL	igual (agora redis://redis:6379/0)
-Decorators/cache	@cached_json	idêntico
-Código das rotas	nada a tocar	nada a tocar
+### 5. Pergunta frequente
 
-Ou seja: só deslocamos o servidor do “host” para “container”, trocando
-localhost por redis na URL – o restante continua transparente.
+**“O Redis está em outro processo?”**
 
-4. Por que containerizar é melhor
-Reprodutibilidade – qualquer máquina com Docker sobe a stack
-completa; não há “funciona-na-minha-máquina”.
-
-Isolamento – libs do Redis não “poluem” o host; porta 6379 não
-fica escancarada para todo o PC se você não quiser.
-
-Orquestração – depends_on garante que o backend só inicie após
-o Redis passar no healthcheck (redis-cli ping).
-
-Escalabilidade – em produção você pode ter múltiplos containers
-FastAPI todos usando o mesmo Redis, ou migrar para ElastiCache sem
-alterar o Compose da API.
-
-5. Pergunta frequente
-“Então o Redis está em outro processo, mas dentro da mesma VM/PC?”
-Sim. Container = processo isolado com FS próprio, mas usa o mesmo kernel
-do host. Para a aplicação isso parece “um servidor remoto” acessível por IP
-privado.
-
-TL;DR
-Sempre foi um serviço separado; nunca uma thread Python.
-
-No dev antigo, rodava como daemon do sistema → localhost.
-
-Agora roda num container Redis → hostname redis dentro da rede Docker.
-
-Código Python unchanged; apenas REDIS_URL aponta para o novo host.
+> Sim. Seja local ou container, o Redis sempre roda em processo separado da API. FastAPI se conecta via TCP (localhost ou rede Docker).
 
 ---
 
-[⬅️ Voltar para o início](../README.md)
+✅ **TL;DR**: O Redis é um cache externo, operado fora da API. No desenvolvimento, pode rodar localmente como serviço do sistema. Em produção, containerizado, com o mesmo cliente e sem alterar o código. A chave para funcionar é ajustar corretamente a variável `REDIS_URL`.
+
+---
+
+## 🤖 Redis: Local vs Container
+
+| Cenário            | Executável Redis                 | URL usada                  | Inicialização                      |
+| ------------------ | -------------------------------- | -------------------------- | ---------------------------------- |
+| **Antes** (local)  | `redis-server` no host (Memurai) | `redis://localhost:6379/0` | Manual via `Start-Service Memurai` |
+| **Agora** (Docker) | container `redis:7-alpine`       | `redis://redis:6379/0`     | `docker-compose up`                |
+
+Redis é sempre um processo separado (nunca uma thread Python).
+
+---
+
+## ⚙️ Trocar Redis por outro cache
+
+1. Implemente `provide_memcached()` ou similar
+2. Altere `cached_json` para usar outro client
+3. Não é necessário alterar nenhum endpoint
+
+---
+
+---
+
+---
+
+## Checar função de gerar a key
+
+O motivo clássico - e o seu código confirma - é que a função que gera a key
+está incluindo objetos mutáveis/únicos (por ex. o repositório repo,
+Session, etc.) nos args/kwargs.
+
+python
+Copiar
+Editar
+key = prefix + ":" + str(hash((args, tuple(sorted(kwargs.items())))))
+Cada vez que FastAPI injeta repo, ele é uma nova instância
+(<SQLEventRepo object at 0x...>).
+
+O hash() desses objetos muda → a chave muda → MISS sempre.
+
+1 — Verifique no log
+Adicione, só para depurar, o valor da chave:
+
+python
+Copiar
+Editar
+logger.debug("Cache key", prefix=prefix, key=key)
+Você verá algo como:
+
+python-repl
+Copiar
+Editar
+... key=top-soon:123456789
+... key=top-soon:-987654321   # outra chamada → outra key
+2 — Corrija a função de geração de chave
+Abordagem simples: ignore parâmetros não cacheáveis
+python
+Copiar
+Editar
+def _make_key(prefix: str, bound_args: dict) -> str:
+    SAFE_TYPES = (str, int, float, bool, type(None))
+    clean = {k: v for k, v in bound_args.items() if isinstance(v, SAFE_TYPES)}
+    return prefix + ":" + str(hash(tuple(sorted(clean.items()))))
+E no wrapper:
+
+python
+Copiar
+Editar
+bound = sig.bind_partial(*args, **kwargs)
+bound.apply_defaults()
+key = _make_key(prefix, bound.arguments)
+Não entram repo, service, request, nem qualquer objeto não
+serializável.
+
+Abordagem parametrizável
+Se quiser algo mais explícito:
+
+python
+Copiar
+Editar
+def cached_json(prefix: str, ttl: int = 60, include: set[str] | None = None):
+    ...
+        key_args = {k: v for k, v in bound.arguments.items()
+                    if (include and k in include) or
+                       (include is None and isinstance(v, SAFE_TYPES))}
+        key = _make_key(prefix, key_args)
+Então no endpoint:
+
+python
+Copiar
+Editar
+@cached_json("top-soon", ttl=10, include={"limit"})
+
+💡 O que ocorreu
+Primeira requisição – cache miss
+
+FastAPI devolve uma lista de objetos Pydantic (EventResponse).
+
+No decorator você faz
+
+python
+Copiar
+Editar
+json.dumps(result, default=str)
+Como EventResponse não é JSON-serializável, o default=str converte
+cada objeto em string (a representação title='Evento 1' ...).
+
+Segunda requisição – cache hit
+
+Você lê o valor, faz json.loads(...) → volta uma lista de strings.
+
+FastAPI tenta validar contra response_model=list[EventResponse]
+→ vê string, não dicionário → levanta 10 erros “Input should be a valid
+dictionary …”.
+
+🛠️ Correção
+Armazene no Redis um payload já serializado via
+fastapi.encoders.jsonable_encoder, que transforma Pydantic, datetime,
+Enum etc. em tipos puros JSON (dict, list, str, int).
+
+python
+Copiar
+Editar
+from fastapi.encoders import jsonable_encoder
+
+...
+
+serializable = jsonable_encoder(result)
+await redis_client.setex(key, ttl, json.dumps(serializable))
+return serializable      # devolve dict/list; FastAPI validará OK
+E no cache hit basta:
+
+python
+Copiar
+Editar
+cached = json.loads(raw)
+return cached            # FastAPI monta de volta o EventResponse
+Patch completo (trecho do wrapper)
+python
+Copiar
+Editar
+try:
+    if (raw := await redis_client.get(key)):
+        logger.info("Cache hit", prefix=prefix, key=key)
+        return json.loads(raw)
+
+    logger.debug("Cache miss", prefix=prefix, key=key)
+    result: T = await func(*args, **kwargs)
+
+    serializable = jsonable_encoder(result)
+    await redis_client.setex(key, ttl, json.dumps(serializable))
+    logger.debug("Valor armazenado no cache", prefix=prefix, key=key, ttl=ttl)
+    return serializable
+Importante: remova default=str do json.dumps; ele “amassa” objetos
+em string e perde estrutura.
+
+---
+
+[⬅️ Voltar para o README](../README.md)
