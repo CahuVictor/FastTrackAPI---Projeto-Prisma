@@ -1,191 +1,169 @@
-# Em construção
 # ▶️ Executar Localmente
 
-Este guia descreve como rodar o projeto **FastTrackAPI** no ambiente local para fins de desenvolvimento e testes.
+Este guia apresenta diferentes formas de rodar o projeto **FastTrackAPI — Projeto Prisma** no ambiente local, de acordo com o nível de complexidade e os serviços necessários.
 
 ---
 
 ## 🧱 Pré-requisitos
 
-Antes de iniciar, verifique se você possui os seguintes itens instalados:
+Antes de começar, certifique-se de ter:
 
-* Python 3.12+
-* [Poetry](https://python-poetry.org/)
-* Docker e Docker Compose (opcional, mas recomendado para dependências como Redis)
-* Git
+- Python 3.12+
+- [Poetry](https://python-poetry.org/)
+- Docker + Docker Compose (recomendado para rodar Redis e banco em container)
+- Git
+- Redis local (para cenários mais simples)
 
 ---
 
-## 🚀 Etapas para execução
+## ⚙️ Cenário 1 – Execução com dados em memória (`ENVIRONMENT=test.inmemory`)
 
-### 1. Clone o repositório
-
-```bash
-git clone https://github.com/seu-usuario/FastTrackAPI.git
-cd FastTrackAPI
-```
-
-### 2. Instale as dependências com Poetry
+Ideal para testes rápidos e desenvolvimento inicial. Apenas o Redis precisa estar disponível localmente.
 
 ```bash
+# Clone o repositório
+git clone https://github.com/seu-usuario/FastTrackAPI---Projeto-Prisma.git
+cd FastTrackAPI---Projeto-Prisma
+
+# Instale dependências
 poetry install
-```
 
-### 3. Ative o ambiente virtual do Poetry
-
-```bash
+# Ative o ambiente do poetry
 poetry shell
+
+# Certifique-se de que o Redis está rodando localmente na porta padrão
+# Ex: redis-server (ou via Docker)
+
+# Execute a aplicação no Windows
+# Defina a variável de ambiente temporária
+$env:ENVIRONMENT = "test.inmemory"
+uvicorn app.main:app --reload
+
+# Execute a aplicação no Linux/macOS
+ENVIRONMENT=test.inmemory uvicorn app.main:app --reload
 ```
 
-### 4. Rode a aplicação FastAPI
+Acesse:
+- [http://localhost:8000/docs](http://localhost:8000/docs)
+- [http://localhost:8000/redoc](http://localhost:8000/redoc)
+
+---
+
+## ⚙️ Cenário 2 – Execução com banco de dados em container (`ENVIRONMENT=dev`)
+
+Neste modo, os dados são persistidos em um container de banco. Ideal para testar persistência e queries reais.
 
 ```bash
+# Suba os containers (Banco)
+docker-compose up -d db
+
+# Instale dependências e ative ambiente
+poetry install
+poetry shell
+
+# Execute a API localmente
 uvicorn app.main:app --reload
 ```
 
-O servidor será iniciado em [http://localhost:8000](http://localhost:8000)
+---
+
+## ⚙️ Cenário 3 – Execução com banco + Redis via containers (`ENVIRONMENT=dev`)
+
+Ideal para testar toda a stack com banco de dados e cache local, mantendo a aplicação principal fora do Docker.
+
+```bash
+# Suba banco e Redis via Docker
+docker-compose up -d db redis
+
+# Execute a aplicação localmente com poetry
+poetry install
+poetry shell
+
+# Execute a API localmente
+uvicorn app.main:app --reload
+```
 
 ---
 
-## 🐋 Executando com Docker
+## ⚙️ Cenário 4 – Todos os serviços em container (`ENVIRONMENT=prod` ou `dev`)
 
-### 1. Suba os containers
+Aqui, toda a aplicação roda em containers. Ideal para simular um ambiente de produção.
 
 ```bash
+# Atualizar o ENV para prod ou dev
+
+# Suba tudo via Docker
 docker-compose up --build
 ```
 
-### 2. Acesse o app
+Acesse:
+- API: [http://localhost:8000](http://localhost:8000)
+- Swagger: [http://localhost:8000/docs](http://localhost:8000/docs)
 
-* API: [http://localhost:8000](http://localhost:8000)
-* Documentação Swagger: [http://localhost:8000/docs](http://localhost:8000/docs)
+---
+
+## 🌍 Cenário futuro – Integração com API externa de localização e clima
+
+Os serviços já estão definidos por contrato (`Protocol`) e podem ser ativados em produção ou desenvolvimento com backends reais.
+
+### Como usar
+
+- **Para Local Info**:
+  - Configure `LOCAL_INFO_API_URL` no `.env`
+- **Para Previsão do Tempo**:
+  - Configure `FORECAST_API_URL` no `.env`
+- Substitua os serviços mocks por implementações reais em `deps.py`.
 
 ---
 
 ## 📦 Rodando os testes
-
-### Testes com cobertura:
+## ✅ Execução de Testes
 
 ```bash
-poetry run pytest --cov=app --cov-report=html
+ENVIRONMENT=test poetry run pytest --cov=app --cov-report=html
 ```
 
-Abra o arquivo `htmlcov/index.html` no navegador para visualizar a cobertura.
+- Visualize em: `htmlcov/index.html`
+
+---
+
+## 🔐 Acesso com autenticação
+
+A autenticação utiliza JWT. Para obter um token:
+
+1. Faça login via `/auth/login` com usuário e senha.
+2. Use o token no header:  
+   `Authorization: Bearer SEU_TOKEN`
+
+**Usuários de teste disponíveis:**
+
+| Usuário | Senha      | Papel   |
+|--------|------------|---------|
+| alice  | secret123  | admin   |
+| bob    | builder123 | editor  |
+| carol  | pass123    | viewer  |
 
 ---
 
 ## 🧪 Variáveis de Ambiente
 
-Você pode definir variáveis no arquivo `.env` ou diretamente no terminal:
+Você pode definir variáveis no `.env`, `.env.dev`, `.env.test`, `.env.test.inmemory` ou `.env.prod`. Exemplo:
 
 ```env
-APP_ENV=development
-REDIS_URL=redis://localhost:6379
-SECRET_KEY=uma_chave_secreta
+ENVIRONMENT=dev
+REDIS_URL=redis://localhost:6379/0
+DB_URL=sqlite:///dev.db
+AUTH_SECRET_KEY=uma_chave_secreta
 ```
 
 ---
 
-## 🧰 Endpoints úceis
+## 🔗 Endpoints Úteis
 
-* `/docs` – Interface interativa Swagger UI
-* `/redoc` – Interface alternativa da documentação
-* `/health` – Verifica se a API está no ar
-* WebSocket: `/ws/eventos/progresso` – Recebe atualizações em tempo real
-
----
-
-## 🤪 Como executar localmente
-
-### Pré-requisitos
-- Python 3.12+
-- [Poetry](https://python-poetry.org/docs/)
-
-### Instalação e execução
-
-```bash
-# Clone o repositório
-https://github.com/seu-usuario/FastTrackAPI---Projeto-Prisma.git
-cd FastTrackAPI---Projeto-Prisma
-
-# Instale as dependências
-poetry install
-
-# (opcional) Ative o shell do poetry
-poetry self add poetry-plugin-shell  # somente na primeira vez
-poetry shell
-
-# Execute a aplicação
-uvicorn app.main:app --reload
-```
-
-✅ Passo a passo para testar localmente
-1. 📦 Ative o ambiente virtual (ou use o poetry se estiver configurado)
-Se estiver usando venv:
-
-poetry install
-
-Habilitar o plugin de shell antigo
-Se você quiser voltar a usar o poetry shell, rode isso uma única vez:
-
-poetry self add poetry-plugin-shell
-
-Depois você poderá usar normalmente:
-
-poetry shell
-
-2. 📥 Instale o FastAPI e o Uvicorn (se ainda não tiver)
-
-
-pip install fastapi uvicorn
-
-3. ▶️ Execute o servidor
-A partir da pasta raiz do projeto (onde está o diretório app/), rode:
-
-uvicorn app.main:app --reload
-
-Isso diz: “inicie a aplicação FastAPI localizada em app/main.py, dentro do objeto app”
-
-4. 🌐 Acesse a documentação da API
-
-Após rodar o comando, acesse:
-
-http://localhost:8000/docs → Swagger UI (interativo)
-
-http://localhost:8000/redoc → ReDoc (documentação formal)
-
-Você pode instalar a lib diretamente com o Poetry   como uma dependência de desenvolvimento (ideal para testes). Ex com o httpx
-
-poetry add --dev httpx
-
-### Acesse a API
-- Swagger UI: [http://localhost:8000/docs](http://localhost:8000/docs)
-- Redoc: [http://localhost:8000/redoc](http://localhost:8000/redoc)
-
-Passo a passo simples
-
-Clone o projeto:
-
-git clone https://github.com/SEU_USUARIO/FastTrackAPI---Projeto-Prisma.git
-cd FastTrackAPI---Projeto-Prisma
-
-Instale as dependências:
-
-poetry install
-
-Inicie o servidor local em ambiente de desenvolvimento:
-
-uvicorn app.main:app --reload
-
-Acesse a documentação interativa:
-
-http://localhost:8000/docs
-
-Execução de testes:
-
-ENV=test pytest -q
-
-Com estas instruções detalhadas, você já pode começar a trabalhar no FastTrackAPI – Projeto Prisma, praticando desenvolvimento backend com qualidade profissional!
+- `/docs` – Interface interativa Swagger UI  
+- `/redoc` – Documentação alternativa  
+- `/health` – Verifica se a API está online  
+- `/ws/eventos/progresso` – WebSocket para progresso em tempo real
 
 ---
 

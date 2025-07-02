@@ -18,7 +18,6 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-        os: [ubuntu-latest]
         python-version: ['3.10', '3.11', '3.12']
 
     runs-on: ${{ matrix.os }}
@@ -71,7 +70,7 @@ jobs:
       # 8️⃣   (Bandit)
       - name: Bandit (security)
         run: poetry run bandit -q -r app -lll
-        continue-on-error: true
+        continue-on-error: true     # ⚠️ não para o job
 
       # 6️⃣  Testes com fail-fast e cobertura ≥ 85 % -> testes vêm depois dos linters
       - name: Run Pytest
@@ -81,7 +80,7 @@ jobs:
                             --cov-report=term-missing \
                             --cov-report=html \
                             --cov-fail-under=80
-        continue-on-error: true
+        continue-on-error: true     # ⚠️ não para o job
 
       # 7️⃣ (Opcional) Envia cobertura
       - name: Upload coverage to Codecov

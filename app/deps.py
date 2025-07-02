@@ -17,11 +17,6 @@ from app.services.interfaces.local_info_protocol import AbstractLocalInfoService
 from app.services.mock_forecast_info import MockForecastService
 from app.services.interfaces.forecast_info_protocol import AbstractForecastService
 
-# from app.repositories.event import AbstractEventRepo
-
-# from functools import lru_cache
-from app.repositories.event_mem import InMemoryEventRepo
-
 from app.core.config import get_settings
 
 logger = get_logger().bind(module="deps")
@@ -40,22 +35,16 @@ def provide_forecast_service() -> AbstractForecastService:
     logger.debug("Injetando serviço de forecast_info (mock)")
     return MockForecastService()
 
-# def provide_event_repo() -> AbstractEventRepo:
-#     return InMemoryEventRepo()
-
-# uma instância global
-# _evento_repo_singleton = InMemoryEventRepo()
-
 _redis_singleton: Redis | None = None     # conexão global reaproveitável
 
-# def provide_event_repo() -> InMemoryEventRepo:
-#     """
-#     Retorna sempre a mesma instância em memória para toda a aplicação/testes.
-#     """
-#     logger.debug("Injetando repositório de eventos (singleton)")
-#     return _evento_repo_singleton
-
 def provide_event_repo(db: Session = Depends(get_db)) -> AbstractEventRepo:
+    """
+    Retorna o repositório de eventos.
+    """
+    if _settings.environment == "test.inmemory":
+        from app.deps_singletons import get_in_memory_event_repo
+        logger.debug("Injetando instância global de repositório em memória (via singleton manual)")
+        return get_in_memory_event_repo()
     logger.debug("Injetando repositório de eventos (SQLAlchemy)")
     return SQLEventRepo(db)
 

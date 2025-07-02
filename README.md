@@ -33,6 +33,7 @@ Este repositório faz parte de uma mentoria prática em desenvolvimento backend 
   * [Pipeline de CI/CD](docs/6-2_pipeline-ci.md)
 * [Roadmap e Próximos Passos](docs/7_roadmap.md)
 * [Como Executar Localmente](docs/8_executar-localmente.md)
+* [Benchmark](docs/10_benchmark_documentacao.md)
 * [Referências](docs/9_referencias.md)
 
 ---

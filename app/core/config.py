@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     #     env_file = ".env"
     # No Pydantic v2 a configuração do .env é feita via model_config em vez de class Config
     model_config = SettingsConfigDict(                 # ⬅️  substitui class Config
-        env_file=(".env", ".env.prod", ".env.test"),
+        env_file=(".env", ".env.prod", ".env.test", ".env.test.inmemory"),
         env_file_encoding="utf-8",
         extra="forbid",               # var estranha? app aborta.
         case_sensitive=False,
