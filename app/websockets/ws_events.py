@@ -37,7 +37,7 @@ async def notify_replace_done():
 
 # ───────────────────────── ranking / dashboard ──────────────────────────
 
-async def notify_top_viewed_update(titles: List[str]) -> None:
+async def notify_top_viewed_update(titles: list[str]) -> None:
     """Envia a lista atual de eventos mais vistos (títulos) para todos."""
     joined = ", ".join(titles)
     await manager.broadcast(f"📈 Top eventos mais vistos: {joined}")

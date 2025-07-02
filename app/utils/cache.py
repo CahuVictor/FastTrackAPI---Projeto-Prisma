@@ -6,7 +6,6 @@ from typing import TypeVar
 
 from collections.abc import Callable, Awaitable
 from redis.asyncio import Redis
-from fastapi import Depends
 from fastapi.encoders import jsonable_encoder
 from structlog import get_logger
 

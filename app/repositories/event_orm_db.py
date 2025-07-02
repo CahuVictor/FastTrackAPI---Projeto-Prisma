@@ -194,5 +194,5 @@ def _clean_update_data(data: dict) -> dict:
         if k not in {"id", "local_info_id", "forecast_info_id"}
     }
     # Segurança: impede atualização de campos protegidos
-        # for field in ["id", "local_info_id", "forecast_info_id"]:
-        #     data.pop(field, None)
+    # for field in ["id", "local_info_id", "forecast_info_id"]:
+    #     data.pop(field, None)

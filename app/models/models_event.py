@@ -1,12 +1,9 @@
 # app/models/models_event.py
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import relationship
 
 from app.db.base import Base
-
-from app.models.models_local_info import LocalInfo
-from app.models.models_forecast_info import ForecastInfo
 
 class Event(Base):
     __tablename__ = 'events'

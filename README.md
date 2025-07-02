@@ -3,7 +3,7 @@
 [![Coverage](https://codecov.io/gh/SEU_USUARIO/FastTrackAPI---Projeto-Prisma/branch/main/graph/badge.svg)](https://codecov.io/gh/SEU_USUARIO/FastTrackAPI---Projeto-Prisma)
 ---------- coverage: platform win32, python 3.12.6-final-0 -----------
 Name                                                Stmts   Miss  Cover   Missing
-TOTAL                                                 863    107    88%
+TOTAL                                                1016    192    81%
 
 Required test coverage of 80% reached. Total coverage: 82.36%
 

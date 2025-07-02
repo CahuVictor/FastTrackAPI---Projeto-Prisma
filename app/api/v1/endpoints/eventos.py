@@ -234,8 +234,8 @@ async def get_events_top_soon(
     e devolve os *limit* mais próximos da data/hora atual.
     """
     logger.info("Consulta de eventos mais próximos iniciada", limit=limit)
-    # now = datetime.now(tz=timezone.utc)  # retorna um datetime offset-aware (com fuso horário)
-    now = datetime.utcnow()              # retorna um datetime naive (sem fuso horário)
+    now = datetime.now(timezone.utc)  # ✅ aware
+    # now = datetime.utcnow()              # retorna um datetime naive (sem fuso horário)
 
     events = repo.list_all()                     # dict[int, Evento] # Corrigir para list_partial()
     # soons = (

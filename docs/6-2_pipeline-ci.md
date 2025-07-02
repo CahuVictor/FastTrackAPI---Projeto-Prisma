@@ -1,13 +1,20 @@
-# Em construção
-# ⚙️ Pipeline de Integração Contínua (CI)
+# ⚙️ Continuous Integration (CI) Pipeline – *FastTrackAPI*
 
-O projeto **FastTrackAPI** utiliza uma pipeline de integração contínua (CI) para garantir qualidade, rastreabilidade e segurança em cada mudança submetida ao repositório.
+O **FastTrackAPI** adota uma *pipeline* de Integração Contínua (CI) baseada em **GitHub Actions** para garantir qualidade, rastreabilidade e segurança a cada *push* ou *pull request*.
 
 ---
 
-## 📁 Estrutura da Pipeline
+## 📁 Visão geral da pipeline
 
-A pipeline está dividida em etapas executadas automaticamente em cada `push` ou `pull request` para o repositório principal:
+| Etapa                                 | Ferramenta              | Propósito                                              |
+| ------------------------------------- | ----------------------- | ------------------------------------------------------ |
+| **1. Lint & Formatting**              | **Ruff (+ PyUpgrade)**  | PEP‑8, ordenação de imports, remoção de sintaxe legada |
+| **2. Type‑checking**                  | **MyPy**                | Coerência estática dos `type hints`                    |
+| **3. Security Scan**                  | **Bandit**              | Busca por CWEs ( `eval`, `md5`, *shell =True* … )      |
+| **4. Testes & Cobertura**             | **Pytest + pytest‑cov** | Testes unitários/integrados com *coverage ≥ 80 %*      |
+| **5. Upload de cobertura** (não implementado) | **Codecov**             | Badge e *diff* de cobertura nos PRs                    |
+
+> **Fail‑fast**: a matriz (SO × Python) para assim que encontra a 1ª falha, economizando minutos de execução.
 
 ### 1. ✅ **Verificação de Sintaxe e Formatação**
 
@@ -30,549 +37,199 @@ A pipeline está dividida em etapas executadas automaticamente em cada `push` ou
 
 ---
 
-## 📊 Exemplo de Configuração GitHub Actions
-
-```yaml
-name: CI
-
-on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.12'
-      - name: Instalar dependências
-        run: |
-          pip install poetry
-          poetry install
-      - name: Rodar testes
-        run: poetry run pytest --cov=app
-      - name: Verificação de tipo
-        run: poetry run mypy app/
-      - name: Análise de segurança
-        run: poetry run bandit -r app/
-```
-
----
-
-## 🔧 Extensões Futuras
-
-* Deploy automático para ambientes de staging/homologação.
-* Geração automática de documentação.
-* Publicação de imagens Docker e versionamento.
-
----
-
-## 🚀 Benefícios
-
-* Detecção precoce de erros.
-* Redução de falhas em produção.
-* Feedback rápido para desenvolvedores.
-* Cultura de qualidade e segurança.
-
----
-
-O projeto pode utilizar GitHub Actions para rodar testes automaticamente a cada push ou pull request.
-
-Crie um arquivo `.github/workflows/tests.yml` com o conteúdo:
-
-```yaml
-name: Testes e Cobertura
-
-on: [push, pull_request]
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout do repositório
-        uses: actions/checkout@v3
-
-      - name: Instalar Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.12
-
-      - name: Instalar Poetry
-        run: |
-          pip install poetry
-          poetry install
-
-      - name: Rodar testes com cobertura
-        run: |
-          poetry run pytest --cov=app --cov-report=xml --cov-report=term
-
-      - name: Enviar para Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          files: ./coverage.xml
-          fail_ci_if_error: true
-```
-
-Certifique-se de criar uma conta no [https://codecov.io](https://codecov.io) e conectar com seu repositório GitHub para ativar o badge corretamente.
-
-Rodar testes localmente igual ao CI
-# 1ª vez
-  poetry install --with dev --no-interaction
-# sempre que for commitar
-  poetry run pytest --cov=app --cov-report=term-missing
-
-Adicione a dependência no grupo dev para rodar localmente:
-  poetry add --group dev ruff
-
-# pyproject.toml
-[tool.ruff]
-line-length = 100               # segue no nível raiz (formatação)
-
-[tool.ruff.lint]                # ⬅️ tudo abaixo diz respeito ao *linter*
-select = ["E", "F", "I", "UP", "D"]   # incluí "D" para docstrings
-ignore = ["F401"]                     # exemplo: allow unused import
-extend-ignore = ["D203", "D213"]      # (explico no ponto 2)
-preview = true                        # já usa as regras “next-gen”
-
-# Regras diferentes para testes
-[tool.ruff.per-file-ignores]
-"tests/**/*" = ["D", "E501"]         # sem docstring + sem limite de linha
-
-# Exemplo de exclusão de diretório
-[tool.ruff.exclude]
-extend = ["migrations", "scripts"]
-
-2 ⚠️ Conflito D203 × D211 e D212 × D213
-Esses são regras de docstring da família pydocstyle:
-
-Código	Regra resumida	Incompatível com
-D203	“Precisa de uma linha em branco antes de cada class docstring”	D211
-D211	“Não pode haver linha em branco antes da docstring”	D203
-D212	Para docstring multilinha, o resumo deve iniciar na primeira linha	D213
-D213	Para docstring multilinha, o resumo deve iniciar na segunda linha	D212
-
-Rode Ruff + Pytest com os mesmos flags:
-  poetry run ruff check .
-  pyupgrade --py312-plus --exit-zero-even-if-changed $(git ls-files '*.py')
-  poetry run mypy app
-  poetry run bandit -q -r app -lll
-  poetry run pytest -x --cov=app --cov-report=xml --cov-report=html --cov-fail-under=80
-    poetry run pytest tests/unit/test_localinfo.py --cov=app --cov-fail-under=80
-    poetry run pytest --cov=app --cov-report=xml --cov-report=html --cov-fail-under=80
-
-Seguindo esses passos, você terá um pipeline que:
-  Corrige estilo e ordena imports (Ruff)
-  Alerta para sintaxe obsoleta (PyUpgrade)
-  Garante tipagem correta (MyPy)
-  Aponta falhas de segurança (Bandit)
-  Executa testes com cobertura mínima definida
-
-Se você quiser simular o workflow localmente, use o act (opcional):
-  brew install act            # ou choco install act no Windows
-  act push --job test
-
-Anotações no PR: quando um action devolve logs no formato GitHub Diagnostic Format, o GitHub cria inline comments na aba Files changed.
-  ruff check --output-format=github
-
-Erros “fixáveis” (marcados com [*]):
-  poetry run ruff check --fix .
-
-Erros não auto-corrigíveis:
-
-F821 timezone → faltou importar ou definir timezone.
-
-F811 redefinition → tem duas funções/fixtures com o mesmo nome; renomeie ou remova duplicata.
-
-F601 key 201 repeated → você tem {201: ..., 201: ...} na mesma dict.
-
-Undefined name EventCreate nos testes → adicione from app.schemas.event_create import EventCreate.
-
-.
-
 1️⃣ MyPy – verificador de type hints
-  ✨ O que é
-  Analisa os type hints do Python (def foo(x: int) -> str:) e compara com o fluxo real do código.
 
-  Encontra incongruências de tipos antes de você rodar o programa.
-
-  ⚙️ Como adicionar
-    poetry add --group dev mypy
-
-.
+Analisa os type hints do Python (def foo(x: int) -> str:) e compara com o fluxo real do código. Encontra incongruências de tipos antes de você rodar o programa.
 
 2️⃣ Bandit – linter de segurança
-  ✨ O que é
-  Avalia source Python em busca de “Common Weaknesses” (CWE):
-  ‣ uso de eval, ‣ chaves criptográficas hard-coded, ‣ subprocess sem shell=False, ‣ hashlib.md5, etc.
 
-  ⚙️ Como adicionar
-    poetry add --group dev bandit
+Avalia source Python em busca de “Common Weaknesses” (CWE): ‣ uso de eval, ‣ chaves criptográficas hard-coded, ‣ subprocess sem shell=False, ‣ hashlib.md5, etc.
 
-.
 
 3️⃣ PyUpgrade – modernizador de sintaxe
-  ✨ O que é
-  Reescreve automaticamente trechos antigos para a versão Python que você escolher. Exemplos:
 
-  list(x for x in y) → [x for x in y]
+Reescreve automaticamente trechos antigos para a versão Python que você escolher.
 
-  from typing import List + List[int] → list[int] (Py 3.9+)
-
-  Remove six, converte super(Class, self) → super()
-
-  ⚙️ Como adicionar
-    poetry add --group dev pyupgrade
-  Uso local
-    pyupgrade --py312-plus $(git ls-files '*.py')
-
-CodeQL e DependaBoot onhold por enquanto
 4️⃣ CodeQL – análise de vulnerabilidade mantida pelo GitHub
-✨ O que é
+
 Compila seu projeto para um grafo semântico e executa consultas (“queries”) que detectam padrões inseguros, SQL-Injection, Path-Traversal etc.
 É a solução oficial de Code Scanning do GitHub Advanced Security (grátis em repositórios públicos).
 
 5️⃣ Dependabot (Security Spotlight)
-✨ O que é
+
 Serviço do GitHub que cria Pull Requests automáticos quando sai versão nova (ou patch de segurança) de dependências.
 
-Pipeline de Integração Contínua (CI)
+--
 
-Este repositório possui um GitHub Actions workflow (.github/workflows/ci.yml) que automatiza verificações de qualidade toda vez que o código muda. O pipeline protege a main, encurta o ciclo de feedback para colaboradores e documenta a saúde do projeto de forma reproduzível.
+## 🌐 Gatilhos do workflow
 
-Por que investir em CI?
+```yaml
+on:
+  push:
+    branches: [ "main", "develop" ]
+  pull_request:
+    branches: [ "main", "develop" ]
+```
 
-Confiança antes do merge – todo push ou Pull Request (PR) é construído e testado exatamente como em produção.
+Executado no commit direto e em PRs, garantindo que o merge final também passe.
 
-Feedback rápido – erros de estilo, problemas de tipo ou testes falhando aparecem em minutos.
+---
 
-Cobertura multiplataforma – a matriz executa Ubuntu e Windows em Python 3.10 → 3.12, revelando bugs específicos de SO.
+## 🔐 Permissões mínimas
 
-Estilo e segurança automáticos – linters e scanners de segurança comentam direto no PR, liberando os revisores para focarem na regra de negócio.
+```yaml
+permissions:
+  contents: read        # checkout
+  pull-requests: write  # comentários do Ruff / Codecov
+```
 
-Qualidade mensurável – relatórios de cobertura acompanham a evolução dos testes ao longo do tempo.
+Aderimos ao **princípio do menor privilégio**.
 
-Gatilhos do workflow
+---
 
-Evento
+## 🖥️ Matriz de execução
 
-Quando dispara
+| Eixo       | Valores                           | Objetivo                                      |
+| ---------- | --------------------------------- | --------------------------------------------- |
+| **OS**     | `ubuntu-latest`, `windows-latest` | Detectar problemas de *path* / case‑sensitive |
+| **Python** | `3.10`, `3.11`, `3.12`            | Garantir compatibilidade futura               |
 
-push
+> `fail-fast: true` aborta os demais jobs da matriz se a primeira combinação falhar.
 
-Qualquer commit em main ou develop
+---
 
-pull_request
+## 📜 Passo‑a‑passo do job `test`
 
-Novos PRs e cada atualização neles
+| #   | Etapa                     | Ação / Comando                                                                               | Por quê                            |
+| --- | ------------------------- | -------------------------------------------------------------------------------------------- | ---------------------------------- |
+| 1️⃣ | **Checkout**              | `actions/checkout@v4`                                                                        | Disponibiliza o fonte no runner    |
+| 2️⃣ | **Setup Python**          | `actions/setup-python@v5` + cache de `pip`                                                   | Ambiente reproduzível              |
+| 3️⃣ | **Cache Poetry + venv**   | `actions/cache@v4`                                                                           | Acelera builds (\~ 60 %)           |
+| 4️⃣ | **Instalar dependências** | `poetry install --with dev`                                                                  | Disponibiliza todas as ferramentas |
+| 5️⃣ | **Ruff**                  | `poetry run ruff check --output-format=github .`                                             | Lint + comentários inline          |
+| 6️⃣ | **PyUpgrade**             | `poetry run pyupgrade --py312-plus --exit-zero-even-if-changed $(git ls-files '*.py')`       | Sugere modernização                |
+| 7️⃣ | **MyPy**                  | `poetry run mypy app`                                                                        | Checagem estrita de tipos          |
+| 8️⃣ | **Bandit**                | `poetry run bandit -q -r app -lll`                                                           | Scanner de segurança               |
+| 9️⃣ | **Pytest + coverage**     | `poetry run pytest --cov=app --cov-report=xml --cov-report=term-missing --cov-fail-under=80` | Garante cobertura mínima           |
+| 🔟  | **Codecov**               | `codecov/codecov-action@v4`                                                                  | Badge & *diff* de cobertura        |
 
-Rodar nos dois eventos garante que commits isolados fiquem verdes e que o resultado final do merge também passe.
+---
 
-Permissões mínimas
+## 🛠️ Ferramentas & comandos locais
+
+| Ferramenta    | Categoria     | Comando                                              |
+| ------------- | ------------- | ---------------------------------------------------- |
+| **Ruff**      | Lint + Format | `poetry run ruff check .`                            |
+| **PyUpgrade** | Modernização  | `pyupgrade --py312-plus $(git ls-files '*.py')`      |
+| **MyPy**      | Tipagem       | `poetry run mypy app`                                |
+| **Bandit**    | Segurança     | `poetry run bandit -q -r app -lll`                   |
+| **Pytest**    | Testes        | `poetry run pytest -x --cov=app --cov-report=xml --cov-report=html --cov-fail-under=80` |
+
+Execute esses comandos localmente antes do *push* para obter feedback idêntico ao CI.
+
+---
+
+## 🎯 Exemplo completo de workflow (`.github/workflows/ci.yml`)
+
+```yaml
+ame: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
 
 permissions:
-  contents: read          # clonar o repositório
-  pull-requests: write    # permite que o Ruff / Codecov escrevam comentários
+  contents: read
+  pull-requests: write
+
+jobs:
+  test:
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ['3.10', '3.11', '3.12']
+
+    runs-on: ${{ matrix.os }}
+
+    env:
+      PYTHON_KEYRING_BACKEND: keyring.backends.fail.Keyring
+      ENVIRONMENT: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pypoetry
+            ~/.virtualenvs
+          key: ${{ runner.os }}-poetry-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install poetry
+          poetry install --with dev --no-interaction
+
+      - name: Ruff
+        run: poetry run ruff check --output-format=github .
+
+      - name: PyUpgrade
+        run: poetry run pyupgrade --py312-plus --exit-zero-even-if-changed $(git ls-files '*.py')
+
+      - name: MyPy
+        run: poetry run mypy app
+
+      - name: Bandit
+        run: poetry run bandit -q -r app -lll
+
+      - name: Pytest
+        run: |
+          poetry run pytest --cov=app \
+                            --cov-report=xml \
+                            --cov-report=term-missing \
+                            --cov-fail-under=80
+
+      - name: Upload coverage to Codecov
+        if: success()
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.xml
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+```
+
+---
+
+## ⚠️ Conflitos de Docstring (D203 × D211, D212 × D213)
+
+Os pares de regras abaixo se anulam; declaramos *ignore* para o segundo par no `pyproject.toml`:
+
+| Regra  | Resumo                                                  | Conflita com |
+| ------ | ------------------------------------------------------- | ------------ |
+| `D203` | Requer linha em branco **antes** da docstring de classe | `D211`       |
+| `D211` | Não pode haver linha em branco **antes** da docstring de classe | `D203`       |
+| `D212` | Para docstring multilinha, o resumo deve iniciar na primeira linha | `D213`       |
+| `D213` | Para docstring multilinha, o resumo deve iniciar na segunda linha | `D212`       |
+
+---
+
+## 🕹️ Patch específico de testes ( `asyncio.create_task` )
+
+Nos testes unitários, rotas síncronas chamavam `asyncio.create_task()` e geravam `RuntimeError: no running event loop`.
+Foi aplicado um **monkeypatch** em `tests/conftest.py`:
+
+```python
+import asyncio
 
-Aplicar apenas o necessário segue o princípio do menor privilégio e reduz riscos na cadeia de suprimentos.
-
-Matriz de execução
-
-Eixo
-
-Valores
-
-Objetivo
-
-OS
-
-ubuntu-latest, windows-latest
-
-Detectar problemas de path/case‑sensitive
-
-Python
-
-3.10, 3.11, 3.12
-
-Garantir compatibilidade futura
-
-O fail-fast: true aborta os demais jobs da matriz após a primeira falha, economizando minutos de build.
-
-Passo a passo
-
-#
-
-Etapa
-
-O que faz
-
-Por que importa
-
-1️⃣
-
-Checkout (actions/checkout)
-
-Clona o código
-
-Torna o fonte disponível no runner
-
-2️⃣
-
-Setup Python (actions/setup-python)
-
-Instala a versão da matriz e restaura cache de pip
-
-Ambiente homogêneo
-
-3️⃣
-
-Cache Poetry + venv
-
-Restaura cache do Poetry e virtualenv se o poetry.lock não mudou
-
-Reduz o tempo de instalação
-
-4️⃣
-
-Instalar dependências
-
-Atualiza pip, instala Poetry e executa poetry install --with dev
-
-Disponibiliza pytest, Ruff etc.
-
-5️⃣
-
-Ruff
-
-Lint + formatação, gera comentários inline
-
-Garante PEP 8, detecta imports não usados e sintaxe antiga
-
-6️⃣
-
-PyUpgrade
-
-Sugere modernização para Python 3.12
-
-Mantém o código atual
-
-7️⃣
-
-MyPy
-
-Checagem estrita de tipos
-
-Encontra erros de contrato antes da execução
-
-8️⃣
-
-Bandit
-
-Linter de segurança
-
-Alerta para eval, md5, injeções…
-
-9️⃣
-
-Pytest
-
-Roda a suíte com -x (fail‑fast) e cobertura ≥ 80 %
-
-Evita regressões
-
-🔟
-
-Codecov (opcional)
-
-Faz upload do coverage.xml e comenta diffs
-
-Métrica de qualidade visível
-
-Cobertura mínima – --cov-fail-under=80 falha o job se a cobertura total cair abaixo de 80 %. Ajuste conforme o projeto amadurece.
-
-Resumo das ferramentas
-
-Ferramenta
-
-Categoria
-
-Comando local
-
-Valor agregado
-
-Ruff
-
-Estilo / análise estática básica
-
-poetry run ruff check .
-
-PEP 8, imports, docstrings
-
-PyUpgrade
-
-Modernização de sintaxe
-
-pyupgrade --py312-plus $(git ls-files '*.py')
-
-Remove legados
-
-MyPy
-
-Tipagem
-
-poetry run mypy app
-
-Previne erros de tipo
-
-Bandit
-
-Segurança
-
-poetry run bandit -q -r app -lll
-
-Detecta padrões inseguros
-
-Pytest
-
-Testes e cobertura
-
-poetry run pytest -x --cov=app
-
-Garante comportamento
-
-Codecov
-
-Cobertura diferencial
-
-Automático pelo Action
-
-Badge + comentários
-
-Execute os mesmos comandos localmente antes do push para obter feedback idêntico ao CI:
-
-poetry install --with dev --no-interaction
-poetry run ruff check .
-pyupgrade --py312-plus $(git ls-files '*.py')
-poetry run mypy app
-poetry run bandit -q -r app -lll
-poetry run pytest -x --cov=app --cov-fail-under=80
-
-Próximos passos possíveis
-
-Melhoria
-
-Benefício
-
-Observação
-
-CodeQL
-
-Análise de fluxo de dados (SQLi, Path Traversal)
-
-Grátis em repositórios públicos
-
-Dependabot
-
-PRs automáticos para libs vulneráveis
-
-dependabot.yml semanal
-
-pre‑commit
-
-Mesmos linters rodando no hook local
-
-Evita rodadas de CI perdidas
-
-Build de Docker
-
-Publica imagem em cada tag
-
-docker/build-push-action
-
-Release‑drafter
-
-Gera CHANGELOG automaticamente
-
-Ajuda no versionamento
-
-Artefatos
-
-Armazena relatórios HTML, wheels
-
-actions/upload-artifact
-
-Notificações Slack
-
-Status do CI no chat
-
-8398a7/action-slack
-
-Referência de configuração (trecho)
-
-[tool.ruff]
-line-length = 250
-
-[tool.ruff.lint]
-select = ["E", "F", "I", "UP"]
-ignore = ["E241", "E302", "E231", "E226", "E261", "E262", "E305", "E251", "I001"]
-extend-ignore = ["D203", "D213"]
-preview = true
-
-[tool.mypy]
-python_version = "3.12"
-strict = true
-ignore_missing_imports = true
-
-Simulando o workflow localmente (opcional)
-
-Com act:
-
-act push --job test
-
-O act roda um contêiner Docker que imita o ubuntu-latest, devolvendo resultados quase idênticos ao CI real sem esperar na fila.
-
-Bom código – e aproveite a rede de segurança! 🚀
-
-
-
-Essas funcionalidades ampliam significativamente a interatividade e eficiência do projeto, oferecendo feedback instantâneo e facilitando operações em lote por meio de arquivos.
-
-🧪 Testes Automatizados
-O projeto utiliza testes automatizados com pytest para garantir a confiabilidade e robustez do sistema, garantindo também que as novas funcionalidades não quebrem implementações existentes. Os testes abrangem tanto testes unitários quanto testes de integração, com medição de cobertura utilizando pytest-cov.
-
-🔧 Decisões técnicas para os testes
-Durante o desenvolvimento dos testes, foram encontrados cenários específicos que geraram erros de execução, especialmente relacionados à criação de tarefas assíncronas usando a função asyncio.create_task() em rotas síncronas.
-
-Para resolver isso mantendo a integridade do código principal (o sistema já estava em produção e funcionando corretamente), foi tomada a decisão de ajustar exclusivamente o comportamento dos testes ao invés do código da aplicação.
-
-Motivos da decisão:
-
-O sistema em produção estava funcionando corretamente.
-
-Alterações no código principal poderiam impactar negativamente o ambiente produtivo.
-
-O problema era específico dos testes, que executavam em contextos síncronos onde não havia um event loop ativo.
-
-⚙️ Alteração Realizada nos Testes
-A alteração foi feita diretamente na configuração dos testes (no arquivo tests/conftest.py), utilizando o recurso monkeypatch do pytest para substituir a função problemática durante a execução dos testes:
-
-Função substituída: asyncio.create_task
-
-Motivo: Durante testes, esta função lançava RuntimeError: no running event loop, já que o pytest executava as chamadas síncronas em um contexto sem event loop ativo.
-
-Antes:
-python
-Copiar
-Editar
-asyncio.create_task(coroutine)
-Depois (apenas nos testes):
-python
-Copiar
-Editar
 def _safe_create_task(coro, *args, **kwargs):
     try:
         loop = asyncio.get_running_loop()
@@ -589,34 +246,103 @@ def _safe_create_task(coro, *args, **kwargs):
                 pass
         return _DummyTask()
 
-monkeypatch.setattr(asyncio, "create_task", _safe_create_task, raising=True)
-Essa solução garante que:
+pytest.monkeypatch.setattr(asyncio, "create_task", _safe_create_task, raising=True)
+```
 
-Caso já exista um event loop ativo, o comportamento padrão de asyncio.create_task() é mantido.
-
-Caso contrário (cenário de testes síncronos), é criado um novo event loop temporário para executar o coroutine diretamente, garantindo a execução e evitando erros durante o teste.
-
-📌 Funções Impactadas e Testes Relacionados
-As funções do sistema afetadas e ajustadas especificamente para testes foram:
-
-put_events (rota /eventos), que dispara tarefas assíncronas como notificações WebSocket.
-
-post_create_event (rota POST /eventos), que dispara notificações assíncronas após criar eventos.
-
-Essas funções são testadas pelos seguintes testes, entre outros:
-
-test_create_event_valid
-
-test_replace_all_events
-
-test_update_event_type_valid
-
-test_update_local_info
-
-test_atualizar_forecast_info
-
-Dessa forma, os testes foram corrigidos sem nenhuma alteração funcional ou estrutural no código da aplicação, preservando o comportamento original do sistema e garantindo testes estáveis e confiáveis.
+Isso preserva o comportamento em produção e estabiliza a suíte de testes.
 
 ---
 
-[⬅ Voltar para o índice](../README.md)
+## 🐞 Correção recente – *timezone‑aware*
+
+Um `TypeError` surgiu ao comparar `datetime.utcnow()` (naive) com objetos *aware*.
+Foi corrigido trocando:
+
+```python
+now = datetime.utcnow()
+```
+
+por
+
+```python
+from datetime import datetime, timezone
+now = datetime.now(timezone.utc)
+```
+
+no endpoint **GET /eventos/top/soon**.
+
+---
+
+## 🔮 Próximas melhorias
+
+| Item                    | Benefício                              | Observação                      |
+| ----------------------- | -------------------------------------- | ------------------------------- |
+| **CodeQL**              | Varredura de vulnerabilidades avançada | Grátis em repositórios públicos |
+| **Dependabot**          | PRs automáticos de atualização         | `dependabot.yml` semanal        |
+| **pre‑commit**          | Linters locais antes do *push*         | Evita CI falhar por estilo      |
+| **Docker Build & Push** | Imagem publicada a cada tag            | `docker/build-push-action`      |
+| **Release‑drafter**     | CHANGELOG automático                   | Facilita versionamento          |
+| **Slack notify**        | Status do CI no chat                   | `8398a7/action-slack`           |
+
+* Deploy automático para ambientes de staging/homologação.
+* Geração automática de documentação.
+
+---
+
+## 📚 Referências de configuração
+
+```toml
+[tool.ruff]
+line-length = 100                     # segue no nível raiz (formatação)
+
+[tool.ruff.lint]                      # ⬅️ tudo abaixo diz respeito ao *linter*
+select = ["E", "F", "I", "UP", "D"]   # incluí "D" para docstrings
+ignore = ["F401"]                     # exemplo: allow unused import
+extend-ignore = ["D203", "D213"]      # (explico no ponto 2)
+preview = true                        # já usa as regras “next-gen”
+
+# Regras diferentes para testes
+[tool.ruff.per-file-ignores]
+"tests/**/*" = ["D", "E501"]         # sem docstring + sem limite de linha
+
+# Exemplo de exclusão de diretório
+[tool.ruff.exclude]
+extend = ["migrations", "scripts"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+ignore_missing_imports = true
+```
+
+---
+
+## 💻 Rodando tudo localmente
+
+Rodar testes localmente igual ao CI
+# 1ª vez
+  poetry install --with dev --no-interaction
+# sempre que for commitar
+  poetry run pytest --cov=app --cov-report=term-missing
+
+Adicione a dependência no grupo dev para rodar localmente:
+  poetry add --group dev ruff
+
+```bash
+poetry install --with dev --no-interaction
+poetry run ruff check .
+pyupgrade --py312-plus $(git ls-files '*.py')
+poetry run mypy app
+poetry run bandit -q -r app -lll
+poetry run pytest -x --cov=app --cov-fail-under=80
+```
+
+Para simular o workflow GitHub Actions sem sair do terminal:
+
+```bash
+act push --job test
+```
+
+---
+
+[⬅ Voltar para o Índice](../README.md)
