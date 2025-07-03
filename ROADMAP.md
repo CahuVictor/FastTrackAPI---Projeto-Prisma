@@ -42,17 +42,6 @@ def criar_evento(evento: Evento, tasks: BackgroundTasks):
 
 ---
 
-# 📌 Roadmap Completo de Atualizações e Melhorias para o Projeto
-
-Este documento descreve detalhadamente os próximos passos para o upgrade e aprimoramento do projeto backend FastAPI atual, detalhando cada tópico, vantagens e exemplos claros de implementação.
-
----
-
-
----
-
----
-
 ## 9. Hardening de Segurança
 
 **O que é:** Aumentar a segurança geral da aplicação.
@@ -193,93 +182,6 @@ async def secure_headers_middleware(request, call_next):
 
 ---
 
-## 10. Observabilidade Completa
-
-**O que é:** Ter visibilidade detalhada do comportamento e performance da aplicação.
-
-**Vantagens:**
-
-* Diagnóstico rápido de problemas.
-* Monitoramento eficiente do desempenho.
-
-**Implementação:**
-
-* Logs estruturados com Loguru.
-* Métricas detalhadas com Prometheus e Grafana.
-* Tracing com OpenTelemetry e Jaeger.
-
-Observabilidade refere-se à capacidade de medir o estado interno do sistema, garantindo uma visão clara e precisa de sua operação, falhas e desempenho. É formada por três pilares principais:
-
-Logs
-
-Métricas
-
-Tracing
-
-📋 A. Logs Estruturados
-Objetivo: Entender o comportamento histórico do sistema.
-
-Ferramentas:
-
-loguru (mais simples) ou structlog (mais avançado).
-
-Exemplo com loguru:
-
-python
-Copiar
-Editar
-from loguru import logger
-
-logger.add("file.log", rotation="500 MB", retention="10 days", serialize=True)
-
-@router.get("/users/{user_id}")
-async def get_user(user_id: int):
-    logger.info("Consultando usuário", user_id=user_id)
-    return {"user": user_id}
-📈 B. Métricas
-Objetivo: Acompanhar desempenho e comportamento operacional.
-
-Ferramentas: Prometheus + Grafana
-
-Integração básica FastAPI com Prometheus:
-
-bash
-Copiar
-Editar
-pip install prometheus-fastapi-instrumentator
-python
-Copiar
-Editar
-from prometheus_fastapi_instrumentator import Instrumentator
-
-Instrumentator().instrument(app).expose(app, endpoint="/metrics")
-O Prometheus coleta métricas e o Grafana as visualiza.
-
-🔗 C. Tracing
-Objetivo: Analisar o fluxo detalhado das requisições, identificando gargalos ou falhas.
-
-Ferramentas: OpenTelemetry + Jaeger
-
-Exemplo com OpenTelemetry:
-
-bash
-Copiar
-Editar
-pip install opentelemetry-api opentelemetry-sdk opentelemetry-exporter-jaeger opentelemetry-instrumentation-fastapi
-python
-Copiar
-Editar
-from opentelemetry import trace
-from opentelemetry.exporter.jaeger.thrift import JaegerExporter
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-
-trace.set_tracer_provider(TracerProvider())
-jaeger_exporter = JaegerExporter(agent_host_name="localhost", agent_port=6831)
-trace.get_tracer_provider().add_span_processor(BatchSpanProcessor(jaeger_exporter))
-
-FastAPIInstrumentor.instrument_app(app)
 🚧 D. Middleware Global para Observabilidade
 Um middleware para capturar erros e métricas de requisição automaticamente:
 

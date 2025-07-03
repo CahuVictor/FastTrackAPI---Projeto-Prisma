@@ -78,5 +78,5 @@ app.add_exception_handler(OperationalError, db_connection_exception_handler)
 
 instrumentator = Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
-configure_tracing(agent_host="jaeger")  # "localhost" se fora do Docker
+configure_tracing(agent_host="localhost")  # "jaeger" se dentro do Docker
 FastAPIInstrumentor.instrument_app(app)

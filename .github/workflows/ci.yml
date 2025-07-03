@@ -30,6 +30,9 @@ jobs:
       # 1️⃣  Checkout
       - uses: actions/checkout@v4
 
+      - name: Export GIT_SHA
+        run: echo "GIT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV 
+
       # 2️⃣  Setup Python conforme a matrix
       - uses: actions/setup-python@v5
         with:
