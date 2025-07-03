@@ -42,10 +42,6 @@ def criar_evento(evento: Evento, tasks: BackgroundTasks):
 
 ---
 
-\[...]
-
-*(Continua com os demais tópicos detalhados)*
-
 # 📌 Roadmap Completo de Atualizações e Melhorias para o Projeto
 
 Este documento descreve detalhadamente os próximos passos para o upgrade e aprimoramento do projeto backend FastAPI atual, detalhando cada tópico, vantagens e exemplos claros de implementação.
@@ -348,22 +344,6 @@ Checklist rápido: cada arquivo deve responder “qual única responsabilidade e
 **Implementação:**
 
 * Verificar e atualizar Dockerfile e docker-compose com Redis e PostgreSQL configurados adequadamente.
-
----
-
-## 13. Implementações Relativas ao Banco de Dados
-
-**O que é:** Migração para persistência robusta de dados usando SQLAlchemy.
-
-**Vantagens:**
-
-* Garantia de integridade e consistência dos dados.
-* Facilita consultas avançadas e complexas.
-
-**Implementação:**
-
-* Criar modelos ORM com SQLAlchemy.
-* Gerenciar migrações usando Alembic.
 
 ---
 

@@ -59,24 +59,28 @@ Este roadmap apresenta as etapas planejadas e já realizadas para o desenvolvime
 * Evitar chamadas externas repetidas.
 * TTL configurável.
 
----
-
-## 🔜 Próximos Passos
-
-### Etapa 8: Integração com Banco de Dados
-
-* Migrar de armazenamento em memória para PostgreSQL.
-* Adicionar camada `SQLAlchemy` com repositório adaptado.
-
-### Etapa 9: Paginação e Filtros Avançados
+### Etapa 8: Paginação e Filtros Avançados
 
 * Suporte a query parameters como `limit`, `offset`, `data_inicio`.
 * Filtros combinados com busca textual.
+
+### Etapa 9: Integração com Banco de Dados
+
+* Migrar de armazenamento em memória para PostgreSQL.
+* Adicionar camada `SQLAlchemy` com repositório adaptado.
 
 ### Etapa 10: Pipeline CI/CD
 
 * Automatizar execução de testes e lint com GitHub Actions.
 * Deploy automático em ambiente de staging.
+
+### Etapa 11: Benchmark
+
+### Etapa 12: Métricas com Prometheus + Grafana
+
+---
+
+## 🔜 Próximos Passos
 
 ### Etapa 11: Modo assíncrono full
 
@@ -91,16 +95,6 @@ Este roadmap apresenta as etapas planejadas e já realizadas para o desenvolvime
 * Publicação da API em um registry de demonstração.
 
 ---
-
-## 🧭 Próximo Passo do Desenvolvimento
-
-O próximo passo será **escolher uma das três frentes iniciais para iniciar o desenvolvimento prático**:
-
-1. **Criar a primeira rota da API (ex: rota de usuários ou status)**  
-2. **Configurar o banco de dados e a primeira modelagem com SQLAlchemy + Alembic**  
-3. **Implementar os primeiros testes automatizados com Pytest**
-
-> Recomendação: começar pela criação da primeira rota para já ver a API funcionando e integrar gradualmente os demais pontos.
 
 ---
 

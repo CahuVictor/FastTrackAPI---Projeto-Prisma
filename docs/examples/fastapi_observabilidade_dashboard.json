@@ -1,0 +1,121 @@
+{
+  "dashboard": {
+    "id": 1223,
+	"name": "teste",
+    "title": "FastAPI - Observabilidade",
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "10s",
+    "panels": [
+      {
+        "type": "timeseries",
+        "title": "Requisi\u00e7\u00f5es por Rota",
+        "targets": [
+          {
+            "expr": "http_server_requests_total",
+            "legendFormat": "{{handler}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "x": 0,
+          "y": 0,
+          "w": 12,
+          "h": 8
+        }
+      },
+      {
+        "type": "timeseries",
+        "title": "Dura\u00e7\u00e3o M\u00e9dia das Requisi\u00e7\u00f5es",
+        "targets": [
+          {
+            "expr": "rate(http_request_duration_seconds_sum[1m]) / rate(http_request_duration_seconds_count[1m])",
+            "legendFormat": "{{handler}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "x": 12,
+          "y": 0,
+          "w": 12,
+          "h": 8
+        }
+      },
+      {
+        "type": "bargauge",
+        "title": "C\u00f3digos de Status HTTP",
+        "targets": [
+          {
+            "expr": "sum by (status) (rate(http_server_requests_total[1m]))",
+            "legendFormat": "{{status}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "x": 0,
+          "y": 8,
+          "w": 8,
+          "h": 8
+        }
+      },
+      {
+        "type": "barchart",
+        "title": "Top 5 Rotas por Volume",
+        "targets": [
+          {
+            "expr": "topk(5, sum by (handler) (rate(http_server_requests_total[1m])))",
+            "legendFormat": "{{handler}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "x": 8,
+          "y": 8,
+          "w": 8,
+          "h": 8
+        }
+      },
+      {
+        "type": "timeseries",
+        "title": "Lat\u00eancia 95% por M\u00e9todo",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, method))",
+            "legendFormat": "{{method}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "x": 16,
+          "y": 8,
+          "w": 8,
+          "h": 8
+        }
+      }
+    ],
+    "templating": {
+      "list": []
+    },
+    "annotations": {
+      "list": []
+    },
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    }
+  },
+  "overwrite": true
+}
