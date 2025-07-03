@@ -5,12 +5,14 @@ import logging
 from contextlib import asynccontextmanager
 from sqlalchemy.exc import OperationalError
 from prometheus_fastapi_instrumentator import Instrumentator
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 from app.api.v1.endpoints import eventos, auth          #  ←  agora importamos auth
 # from app.services.auth_service import get_current_user          #  ←  dependência global
 
 from app.core.logging_config import configure_logging
 from app.core.exception_handlers import db_connection_exception_handler
+from app.core.tracing_config import configure_tracing
 
 from app.middleware.logging_middleware import LoggingMiddleware
 
@@ -75,3 +77,6 @@ app.add_middleware(LoggingMiddleware)
 app.add_exception_handler(OperationalError, db_connection_exception_handler)
 
 instrumentator = Instrumentator().instrument(app).expose(app, endpoint="/metrics")
+
+configure_tracing(agent_host="jaeger")  # "localhost" se fora do Docker
+FastAPIInstrumentor.instrument_app(app)

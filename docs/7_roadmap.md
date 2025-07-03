@@ -64,6 +64,10 @@ Este roadmap apresenta as etapas planejadas e já realizadas para o desenvolvime
 * Suporte a query parameters como `limit`, `offset`, `data_inicio`.
 * Filtros combinados com busca textual.
 
+### Etapa X: Logs com Struct Log
+
+### Etapa Y: Middleware
+
 ### Etapa 9: Integração com Banco de Dados
 
 * Migrar de armazenamento em memória para PostgreSQL.
@@ -77,6 +81,8 @@ Este roadmap apresenta as etapas planejadas e já realizadas para o desenvolvime
 ### Etapa 11: Benchmark
 
 ### Etapa 12: Métricas com Prometheus + Grafana
+
+### Etapa 13: Tracing com OpenTelemetry + Jaeger
 
 ---
 

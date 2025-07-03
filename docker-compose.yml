@@ -85,6 +85,12 @@ services:
     volumes:
       - grafana-storage:/var/lib/grafana
 
+  jaeger:
+    image: jaegertracing/all-in-one:1.52
+    ports:
+      - "6831:6831/udp"   # porta do agente UDP
+      - "16686:16686"     # UI do Jaeger
+
 # networks:
 #   backend:
 
