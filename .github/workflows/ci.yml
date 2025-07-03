@@ -74,6 +74,7 @@ jobs:
 
       # 6️⃣  Testes com fail-fast e cobertura ≥ 85 % -> testes vêm depois dos linters
       - name: Run Pytest
+        shell: bash                         # <-- força bash em qualquer runner
         run: |
           poetry run pytest --cov=app \
                             --cov-report=xml \

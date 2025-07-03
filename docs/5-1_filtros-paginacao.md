@@ -1,48 +1,124 @@
 # Em Construção
-# 📌 Filtros e Paginação in-memory
+# 📌 Filtros e Paginação
 
-Este documento descreve como os filtros e a paginação em memória foram implementados no projeto **FastTrackAPI**. Essa abordagem permite rápida prototipagem e facilita testes e desenvolvimento antes da implementação de um banco de dados definitivo, mantendo o mesmo contrato público da API.
-Antes de conectar o banco de dados definitivo, usamos um método interno para realizar filtros e paginação diretamente na memória do sistema. Isso permite que as APIs sejam testadas rapidamente sem depender do banco externo.
+Este documento descreve **como** e **por que** o projeto **FastTrackAPI** aplica filtros arbitrários e paginação (`skip` / `limit`) nos dados. A abordagem do projeto segue o padrão **Port-Adapter**: a rota nunca sabe se está falando com RAM ou com o banco — basta trocar o “adaptador” injetado pelo `Depends()`.
 Princípio **OCP / port-adapter**. - Ver mais sobre
 
 ---
 
 ## 🔍 Motivação
 
-Antes de conectar ao banco de dados definitivo, é importante garantir que:
-
-* As funcionalidades de paginação (`skip`, `limit`) e filtros de consultas estejam plenamente funcionais.
-* Os testes de integração e o front-end possam consumir a API sem alterações adicionais ao trocar a camada de persistência.
-
-Dessa forma, adotou-se uma implementação de filtros e paginação diretamente em memória, simplificando o desenvolvimento inicial.
+* ✅ Desenvolver e testar **rápido**: o adapter em memória roda em milissegundos, sem container de banco.
+* ✅ **Contrato estável**: o front-end continua chamando `GET /api/v1/eventos?skip=10&city=Recife`, independe se é na RAM ou em Postgres.
+* ✅ **Cobertura de testes** completa já no CI.
 
 ---
 
-## 📐 Implementação Técnica
+## 🏗️ Arquitetura
 
-### Estrutura em memória
-
-A estrutura utilizada é um repositório em memória definido no arquivo:
-
-```python
-app/repositories/event_mem.py
+```text
+┌──────────┐      provide_event_repo()         ┌─────────────────┐
+│ endpoints│ ────────────────────────────────▶ │ EventRepo (⚡) │◀─ SQLAlchemy
+└──────────┘                                   │ InMemoryEvent   │◀─ dicionário
+                                               └─────────────────┘
 ```
 
-A função principal de paginação e filtragem:
+---
+
+1. **AbstractEventRepo**
 
 ```python
-def list_partial(self, *, skip: int = 0, limit: int = 20, **filters):
-    data = list(self._events.values())
-    for key, expected in filters.items():
-        if expected is not None:
-            data = [item for item in data if getattr(item, key, None) == expected]
-    return data[skip: skip + limit]
+class AbstractEventRepo(Protocol):
+    def list_partial(self, *, skip:int=0, limit:int=20, **filters) -> list[Event]:
+        ...
 ```
 
+2. **Adapters**
+
+* `InMemoryEventRepo` – filtro + paginação em RAM (dev / testes).
+* `SqlEventRepo` (exemplo) – traduz **filters para select() .where(...).offset(skip).limit(limit).
+
+3. **Provider** (`app/deps.py`) escolhe o adapter:
+
+```python
+def provide_evento_repo() -> AbstractEventoRepo:
+    if settings.environment == "dev":
+        return InMemoryEventoRepo()
+    return SqlEventoRepo(SessionLocal())
+```
+
+---
+
+## ⚙️ Implementação Técnica
+
+1. Filtragem genérica com `**filters` (RAM)
+
+```python
+def list_partial(self, *, skip: int = 0, limit: int = 20, **filters) -> list[EventResponse]:
+    """
+    Devolve um recorte paginado da coleção em memória, aplicando
+    dinamicamente filtros recebidos como keyword-args.
+
+    Exemplos de chamada:
+        repo.list_partial(skip=0, limit=10)                    # sem filtros
+        repo.list_partial(skip=0, limit=10, city="Recife")     # filtra por cidade
+        repo.list_partial(skip=0, limit=10, xyz="ABC")         # filtra por outro campo
+    """
+    data: list[EventResponse] = list(self._db.values())
+    
+    # aplica cada filtro recebido
+    for field, expected in filters.items():
+        if expected is None:        # ignora filtros vazios
+            continue
+
+        def _match(event: EventResponse) -> bool:
+            actual = getattr(event, field, None)
+            # comparação "case-insensitive" para strings
+            if isinstance(actual, str) and isinstance(expected, str):
+                return actual.lower() == expected.lower()
+            return actual == expected
+
+        data = [e for e in data if _match(e)]
+
+    # paginação final
+    result = data[skip : skip + limit]
+    
+    logger.info("Listagem parcial de eventos", filtros=filters, total=len(result))
+    return result
+```
+
+* `_cmp` compara **strings case-insensitive** e mantém igualdade simples para números/datas.
+* Nenhum `if city`, `if date_from`, etc.; logo, **novo filtro = zero refator**.
 * **skip e limit:** Define qual fatia dos dados será retornada.
 * **filters:** Aceita filtros dinâmicos por parâmetros chave-valor.
 
-📝 Por que **filters?
+2. Filtragem via SQLAlchemy
+
+```python
+def list_partial(self, skip: int = 0, limit: int = 20, **filters):
+    """
+    Retorna uma lista paginada de eventos, com filtros dinâmicos aplicáveis
+    (ex: `city="Recife"` ou `title="Festival"`).
+    Retorna já convertidos para o schema EventResponse.
+    """
+    query = self.db.query(Event)
+    for attr, value in filters.items():
+        if value is not None and hasattr(Event, attr):
+            query = query.filter(getattr(Event, attr) == value)
+    
+    db_events = query.offset(skip).limit(limit).all()
+    
+    return [
+        EventResponse.model_validate(e, from_attributes=True)
+        for e in db_events
+    ]
+```
+
+Repare: mesma assinatura, corpo trocado.
+
+---
+
+## 📝 Por que **filters?
 
 Evita “quebrar” o contrato público quando surgirem filtros novos (ex.: date_from, venue_type).
 
@@ -62,9 +138,12 @@ def list_partial(self, *, skip: int = 0, limit: int = 20, **filters) -> list[Eve
 
 ---
 
-## 🛣️ Rotas Implementadas
+## 🌐 Rotas
 
-### GET `/api/v1/eventos`
+| Método | Rota                    | Descrição                                             |
+| ------ | ----------------------- | ----------------------------------------------------- |
+| `GET`  | `/api/v1/eventos`       | lista paginada + filtros (`skip`, `limit`, `city`, …) |
+| `GET`  | `/api/v1/eventos/todos` | **obsoleta** – mantida só para retro-compatibilidade  |
 
 Exemplo da chamada HTTP:
 
@@ -98,13 +177,8 @@ Mantida apenas para retro-compatibilidade:
 
 ## 🧪 Testes
 
-Testes cobrindo paginação e filtragem são implementados no arquivo:
-
-```python
-tests/unit/test_eventos.py
-```
-
-Exemplo de um teste:
+Os cenários estão em `tests/unit/test_eventos.py`, gerando eventos via
+Pydantic e chamando a rota real com o `TestClient`.
 
 ```python
 def test_paginacao(client, evento_valido):
@@ -118,139 +192,15 @@ def test_paginacao(client, evento_valido):
     assert len(response.json()) == 5
 ```
 
-Esses testes garantem que a funcionalidade está correta e pode ser expandida sem quebrar contratos.
-
-**filters percorrido dinamicamente	Escalável: novos filtros (ex. date_from) não exigem refactor de assinatura nem de testes.
-Comparação “case-insensitive” só para str	Evita falso-negativo em campos textuais sem afetar tipos numéricos/datas.
-expected is None → filtro é ignorado	Permite passar o parâmetro sempre, sem precisar de condicionais na rota (`city: str
-Docstring com exemplos	Facilita entendimento para quem implementar o próximo adapter (SQL, Elastic etc.).
-
-— e, quando você quiser acrescentar outro parâmetro (date_from, venue_type…), basta incluí-lo no Query(...) da rota e repassar para list_partial sem alterar o contrato nem quebrar clientes.
-
-## Próximos passos possíveis
-
-Cursor Pagination: manter skip/limit para retro-compatibilidade e aceitar um cursor para coleções muito grandes.
+O mesmo teste passa usando o adapter SQL, bastando setar `ENVIRONMENT=prod` na hora de rodar o CI.
 
 ---
 
-migrations
+## 🚀 Próximos passos
 
-2. Recrie a migração corretamente
-Como a migração anterior não criou a tabela events, você precisa apagar essa versão e gerar outra:
-
-bash
-Copiar
-Editar
-# 1. Apague o migration antigo (ou renomeie para backup)
-rm migrations/versions/*.py  # cuidado: isso remove TODAS as versões de migração
-
-# 2. Gere nova migração com os modelos agora corretamente importados
-alembic revision --autogenerate -m "create tables"
-
-# 3. Aplique a nova migração
-alembic upgrade head
-
-Esse erro aconteceu porque você deletou ou removeu os arquivos da pasta migrations/versions/, mas o banco de dados ainda está com o controle interno apontando para a versão 'e69fdb78a658'.
-
-✅ Como resolver isso corretamente
-📌 Objetivo:
-Resetar o histórico de migrações para sincronizar o banco com a nova estrutura de arquivos.
-
-✅ Etapas para resolver:
-1. Apague a tabela de controle de migração (alembic_version)
-Essa tabela fica no seu banco de dados e guarda qual versão está atualmente aplicada. Execute no seu banco (via psql, DBeaver, pgAdmin, ou terminal):
-
-sql
-Copiar
-Editar
-DROP TABLE alembic_version;
-Isso permite que o Alembic recrie o controle corretamente com a nova versão.
-
-2. Crie uma nova migração do zero
-Com os modelos devidamente importados no migrations/env.py, rode:
-
-bash
-Copiar
-Editar
-alembic revision --autogenerate -m "create all tables"
-Isso vai gerar um novo arquivo de migração em migrations/versions/.
-
-3. Aplique essa nova migração ao banco
-bash
-Copiar
-Editar
-alembic upgrade head
-Se tudo estiver correto, agora a tabela events e as outras (local_infos, forecast_infos) serão criadas.
-
-Entendendo o comando alembic upgrade head
-O comando:
-
-bash
-Copiar
-Editar
-alembic upgrade head
-é utilizado para aplicar migrações de banco de dados geradas por meio da ferramenta Alembic.
-
-O Alembic é uma ferramenta do ecossistema SQLAlchemy utilizada para:
-
-Gerenciar evoluções/migrações no esquema do banco (criação, alteração ou exclusão de tabelas e campos).
-
-Garantir que seu banco tenha sempre um esquema consistente com os modelos definidos na aplicação Python.
-
-📌 Como o Alembic sabe qual banco usar?
-O Alembic procura sua configuração de banco no arquivo chamado alembic.ini (que fica na raiz do seu projeto ou onde você executa o comando). Nele há uma linha que define a conexão com o banco:
-
-Exemplo (alembic.ini):
-
-ini
-Copiar
-Editar
-[alembic]
-script_location = migrations
-sqlalchemy.url = postgresql://prisma:prisma123@localhost:5432/prisma_db
-Aqui:
-
-postgresql://prisma:prisma123@localhost:5432/prisma_db define exatamente:
-
-user: prisma
-
-senha: prisma123
-
-host: localhost
-
-porta: 5432
-
-nome do banco: prisma_db
-
-Essa é a conexão usada pelo comando alembic upgrade head.
-
-🗃️ Se eu tiver mais de um banco, como o Alembic saberia qual usar?
-O Alembic usa exatamente o banco especificado no alembic.ini. Se você tiver múltiplos bancos, você precisará ter:
-
-Múltiplos arquivos de configuração (alembic.ini) separados por banco, ou
-
-Ajustar dinamicamente a URL via variáveis de ambiente ou scripts antes de executar alembic.
-
-Exemplo com variável de ambiente no alembic.ini:
-
-ini
-Copiar
-Editar
-sqlalchemy.url = ${DATABASE_URL}
-Você pode definir no terminal antes de rodar o comando:
-
-bash
-Copiar
-Editar
-export DATABASE_URL=postgresql://prisma:prisma123@localhost:5432/prisma_db
-alembic upgrade head
-Ou pode ter múltiplos arquivos alembic.ini (por exemplo alembic-db1.ini, alembic-db2.ini) e chamar explicitamente:
-
-bash
-Copiar
-Editar
-alembic -c alembic-db1.ini upgrade head
-alembic -c alembic-db2.ini upgrade head
+1. **Cursor pagination:** aceitar cursor além de skip/limit.
+2. **Filtros avançados:** ranges (date_from/date_to), busca textual, etc.
+3. **Cache Redis** para páginas mais pedidas quando em produção.
 
 ---
 

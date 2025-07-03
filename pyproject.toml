@@ -40,7 +40,18 @@ structlog = "^25.4.0"
 trio = "^0.30.0"
 
 [tool.mypy]
-check_untyped_defs = true
+# python_version = 3.12
+# strict                 = true   # ativa todas as verificações estritas
+ignore_missing_imports = true   # ignora libs sem stub
+check_untyped_defs     = true   # também analisa funções sem hints
+# plugins = pydantic.mypy     # se você usa Pydantic v1; remova se for v2
+warn_unused_ignores    = true
+
+# Desative, por ora, as regras mais duras
+disallow_untyped_defs  = false  # permite funções sem hints
+disallow_untyped_calls = false  # permite chamar Any
+disallow_incomplete_defs = false
+strict_optional        = true   # mantenha verificação de None
 
 [tool.ruff]
 line-length = 250               # segue no nível raiz (formatação)

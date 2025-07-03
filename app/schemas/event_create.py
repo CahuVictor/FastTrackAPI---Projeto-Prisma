@@ -24,7 +24,7 @@ class EventCreate(BaseModel):
     # ----------------------------------------------
     #  Permite EventCreate(...) nos testes unitários
     # ----------------------------------------------
-    def __init__(self, *args: Any, **data: Any) -> None:  # type: ignore[override]
+    def __init__(self, *args: Any, **data: Any) -> None:
         if args and args[0] is ... and not data:
             data = _make_dummy_event_data()
         

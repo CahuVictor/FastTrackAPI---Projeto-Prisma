@@ -27,6 +27,7 @@ Este repositório faz parte de uma mentoria prática em desenvolvimento backend 
   * [Cache com Redis](docs/5-2_cache-redis.md)
   * [Observabilidade e Logs](docs/5-3_observabilidade-logs.md)
   * [WebSockets e Arquivos](docs/5-4_websockets-arquivos.md)
+  * [Banco de Dados e Migrations](docs/5-5_banco-migrations.md)
 * [Qualidade & Automação](docs/6_qualidade-automacao.md)
 
   * [Testes Automatizados](docs/6-1_testes-automatizados.md)

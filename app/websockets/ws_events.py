@@ -1,6 +1,4 @@
 # app/websockets/events.py
-from typing import List
-
 from app.websockets.ws_manager import manager
 
 # ───────────────────────── notificações upload ──────────────────────────

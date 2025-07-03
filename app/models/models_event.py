@@ -13,8 +13,7 @@ class Event(Base):
     description = Column(String, nullable=False)
     event_date = Column(DateTime, nullable=False)
     city = Column(String, nullable=False)
-    # participants = Column(ARRAY(String), default=list, nullable=False)
-    participants = Column(ARRAY(String), nullable=False, server_default="{}")
+    participants = Column(ARRAY(String), nullable=False, server_default="{}") # type: ignore[var-annotated]
     views = Column(Integer, default=0)
 
     local_info_id = Column(Integer, ForeignKey('local_infos.id'))

@@ -11,7 +11,7 @@ class LocalInfo(Base):
     id = Column(Integer, primary_key=True, index=True)
     location_name = Column(String, nullable=False)
     capacity = Column(Integer, nullable=False)
-    venue_type = Column(Enum(VenueTypes), nullable=True)
+    venue_type = Column(Enum(VenueTypes), nullable=True) # type: ignore[var-annotated]
     is_accessible = Column(Boolean, default=False)
     address = Column(String, nullable=True)
     manually_edited = Column(Boolean, default=False)
