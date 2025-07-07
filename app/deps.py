@@ -5,11 +5,14 @@ from sqlalchemy.orm import Session
 from fastapi import Depends
 
 from app.db.session import get_db
+
 from app.repositories.event_orm_db import SQLEventRepo
 from app.repositories.event import AbstractEventRepo
+# from app.repositories.user import AbstractUserRepo
 
 from app.services.interfaces.user_protocol import AbstractUserRepo
-from app.services.mock_users import MockUserRepo
+# from app.services.mock_users import MockUserRepo
+# from app.services.user_db import UserRepo
 
 from app.services.mock_local_info import MockLocalInfoService
 from app.services.interfaces.local_info_protocol import AbstractLocalInfoService
@@ -19,13 +22,30 @@ from app.services.interfaces.forecast_info_protocol import AbstractForecastServi
 
 from app.core.config import get_settings
 
+# class Deps:
+#     USER_REPO: AbstractUserRepo = MockUserRepo()
+
 logger = get_logger().bind(module="deps")
 
 _settings = get_settings()
 
-def provide_user_repo() -> AbstractUserRepo:
-    logger.debug("Injetando repositório de usuários (mock)")
-    return MockUserRepo()
+# Singleton global, usado em modo in-memory
+# _user_repo_singleton = MockUserRepo()
+
+# def provide_user_repo() -> AbstractUserRepo:
+#     logger.debug("Injetando repositório de usuários (mock)")
+#     return Deps.USER_REPO
+
+def provide_user_repo(db: Session = Depends(get_db)) -> AbstractUserRepo:
+    """
+    Retorna o repositório de usuários, adaptando à origem de dados.
+    """
+    # if _settings.environment == "test.inmemory":
+    from app.deps_singletons import get_in_memory_user_repo
+    logger.debug("Injetando instância global de usuários em memória (via singleton manual)")
+    return get_in_memory_user_repo()
+    # logger.debug("Injetando repositório de usuários (SQLAlchemy)")
+    # return UserRepo(db)
 
 def provide_local_info_service() -> AbstractLocalInfoService:
     logger.debug("Injetando serviço de local_info (mock)")

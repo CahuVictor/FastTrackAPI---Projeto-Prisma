@@ -6,36 +6,37 @@ Name                                                Stmts   Miss  Cover   Missin
 TOTAL                                                1016    192    81%
 
 Required test coverage of 80% reached. Total coverage: 82.36%
+> **Cobertura de testes:** 82,36 % (mínimo exigido ≥ 80 %)
 
-Este repositório faz parte de uma mentoria prática em desenvolvimento backend com Python e FastAPI, focado em boas práticas, segurança, testes automatizados e infraestrutura moderna.
+Este repositório é o resultado de uma mentoria prática em desenvolvimento **Backend** com **Python 3.12 + FastAPI**, cobrindo arquitetura limpa, segurança, testes, CI/CD e observabilidade.
 
 ---
 
 ## 📚 Sumário
 
-* [Introdução](docs/1_introducao.md)
-* [Visão Geral](docs/2_visao-geral.md)
-* [Objetivos](docs/3_objetivos.md)
-* [Fundamentos de Arquitetura](docs/4_fundamentos-arquitetura.md)
-
-  * [Arquitetura do Projeto](docs/4-1_arquitetura.md)
-  * [Configuração por Ambiente + Fallback Seguro](docs/4-2_configuracao-ambiente.md)
-  * [Dependências Reutilizáveis e Testáveis](docs/4-3_dependencias-reutilizaveis.md)
-* [Tecnologias & Boas Práticas](docs/5_tecnologias-boas-praticas.md)
-
-  * [Filtros e Paginação](docs/5-1_filtros-paginacao.md)
-  * [Cache com Redis](docs/5-2_cache-redis.md)
-  * [Observabilidade e Logs](docs/5-3_observabilidade-logs.md)
-  * [WebSockets e Arquivos](docs/5-4_websockets-arquivos.md)
-  * [Banco de Dados e Migrations](docs/5-5_banco-migrations.md)
-* [Qualidade & Automação](docs/6_qualidade-automacao.md)
-
-  * [Testes Automatizados](docs/6-1_testes-automatizados.md)
-  * [Pipeline de CI/CD](docs/6-2_pipeline-ci.md)
-* [Roadmap e Próximos Passos](docs/7_roadmap.md)
-* [Como Executar Localmente](docs/8_executar-localmente.md)
-* [Benchmark](docs/10_benchmark_documentacao.md)
-* [Referências](docs/9_referencias.md)
+| #     | Seção                                       | Arquivo                                  |
+| ----- | ------------------------------------------- | ---------------------------------------- |
+| 1     | [Introdução](docs/1_introducao.md)          | `docs/1_introducao.md`                   |
+| 2     | [Visão Geral](docs/2_visao-geral.md)        | `docs/2_visao-geral.md`                  |
+| 3     | [Objetivos](docs/3_objetivos.md)            | `docs/3_objetivos.md`                    |
+| 4     | [Fundamentos de Arquitetura](docs/4_fundamentos-arquitetura.md) | `docs/4_fundamentos-arquitetura.md`      |
+|   4.1 | [Arquitetura do Projeto](docs/4-1_arquitetura.md) | `docs/4-1_arquitetura.md`                |
+|   4.2 | [Configuração por Ambiente + Fallback Seguro](docs/4-2_configuracao-ambiente.md) | `docs/4-2_configuracao-ambiente.md`      |
+|   4.3 | [Dependências Reutilizáveis e Testáveis](docs/4-3_dependencias-reutilizaveis.md) | `docs/4-3_dependencias-reutilizaveis.md` |
+| 5     | [Tecnologias & Boas Práticas](docs/5_tecnologias-boas-praticas.md) | `docs/5_tecnologias-boas-praticas.md`    |
+|   5.1 | [Filtros e Paginação](docs/5-1_filtros-paginacao.md) | `docs/5-1_filtros-paginacao.md`          |
+|   5.2 | [Cache com Redis](docs/5-2_cache-redis.md)  | `docs/5-2_cache-redis.md`                |
+|   5.3 | [Observabilidade e Logs](docs/5-3_observabilidade-logs.md) | `docs/5-3_observabilidade-logs.md`       |
+|   5.4 | [WebSockets e Arquivos](docs/5-4_websockets-arquivos.md) | `docs/5-4_websockets-arquivos.md`        |
+|   5.5 | [Banco de Dados e Migrations](docs/5-5_banco-migrations.md) | `docs/5-5_banco-migrations.md`           |
+|   5.6 | [Latência em Mocks](docs/5-6_latencia-mocks.md) | `docs/5-6_latencia-mocks.md`             |
+| 6     | [Qualidade & Automação](docs/6_qualidade-automacao.md) | `docs/6_qualidade-automacao.md`          |
+|   6.1 | [Testes Automatizados](docs/6-1_testes-automatizados.md) | `docs/6-1_testes-automatizados.md`       |
+|   6.2 | [Pipeline de CI/CD](docs/6-2_pipeline-ci.md) | `docs/6-2_pipeline-ci.md`                |
+| 7     | [Roadmap e Próximos Passos](docs/7_roadmap.md) | `docs/7_roadmap.md`                      |
+| 8     | [Como Executar Localmente](docs/8_executar-localmente.md) | `docs/8_executar-localmente.md`          |
+| 9     | [Referências](docs/9_referencias.md)         | `docs/9_referencias.md`                  |
+| 10    | [Benchmark](docs/10_benchmark_documentacao.md) | `docs/10_benchmark_documentacao.md`      |
 
 ---
 
@@ -68,6 +69,8 @@ Este repositório faz parte de uma mentoria prática em desenvolvimento backend 
 
 #### [Dependências Reutilizáveis e Testáveis](docs/4-3_dependencias-reutilizaveis.md)
 
+Adotamos **`Protocol`** + injecção de dependências para trocar facilmente implementações (mock ⇄ SQLAlchemy) sem tocar nos *endpoints*.
+
 * Explicação detalhada sobre protocolos e abstrações.
 * Como criar mocks e substituir facilmente dependências para testes.
 
@@ -92,6 +95,14 @@ Este repositório faz parte de uma mentoria prática em desenvolvimento backend 
 
 * Uso de WebSockets para comunicação em tempo real.
 * Upload e download de arquivos CSV e JSON.
+
+#### [Banco de Dados e Migrations](docs/5-5_banco-migrations.md)
+
+TODO Descrição
+
+#### [Latência em Mocks](docs/5-6_latencia-mocks.md)
+
+Corrigimos um gargalo de 3 – 10 s por requisição: o `MockUserRepo` executava `bcrypt` a cada request. Agora o mock é **singleton** quando `ENVIRONMENT=test.inmemory`, reduzindo para ≈ 30 ms. Detalhes em `docs/5-6_latencia-mocks.md`.
 
 ### [Qualidade & Automação](docs/6_qualidade-automacao.md)
 
