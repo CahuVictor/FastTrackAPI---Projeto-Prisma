@@ -269,7 +269,7 @@ async def get_events_top_soon(
 @cached_json("top-viewed", ttl=30)  # 30 s é suficiente p/ ranking
 async def get_events_top_viewed(
     limit: int = Query(10, ge=1, le=50),
-    repo: AbstractEventRepo = Depends(provide_event_repo),
+    repo: AbstractEventRepo = _provide_event_repo,
 ) -> list[EventResponse]:
     """
     Retorna os *limit* eventos com maior contagem de `views`.
@@ -295,6 +295,7 @@ async def get_events_top_viewed(
     if not most_viewed:
         raise_http(logger.warning, 404, "Nenhum evento encontrado", limit=limit)
     logger.info("Consulta de eventos mais vistos concluída", quantidade=len(most_viewed))
+    
     return most_viewed
 
 @router.post(

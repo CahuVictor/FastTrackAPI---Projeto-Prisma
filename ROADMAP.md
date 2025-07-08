@@ -4,6 +4,19 @@ Este documento descreve detalhadamente os próximos passos para o upgrade e apri
 
 ---
 
+Próximos passos
+
+Documentar o problema do mock_users.py com multiplas instancias, termúltiplas instancias é interessante para aplicações web para cada requisição ter a sua instância, porém nesse caso quando era instanciado o mock_users.py era feito também o processamento das keys em hash, e esse processo era lento o que deixava todas as requisições lentas, no desenvolvimento para tomar cuidado quando for usada múltiplas instâncias por requisição para garantir que essas instâncias não tenham processos dependentes ou custosos, caso exista tais processos verificar se é possível executar esses processos antes, atualizar os dados no servidor e depois pegar as instâncias, pois dessa forma a próxima requisição pega o dado atualizado sem precisar repetir o processo, documentar como exemplo o caso do mock_users.py
+
+Nos usuários em memória, ver estratégia para como ter o primeiro usuário para poder carregar os outros
+Carregar os outros usuários em lote -> Feito isso deletar mock_users.py
+
+Criar rotas administrativas
+    CRUD Usuários
+    Tem mais alguma?
+    Atualizar o URL do LocalInfo?
+    Atualizar o URL do ForecastInfo?
+
 ---
 
 ---

@@ -1,12 +1,22 @@
 from app.repositories.event_mem import InMemoryEventRepo
+from app.repositories.user_mem import InMemoryUserRepo
 
 # Módulo responsável por manter instâncias únicas manuais (sem usar lru_cache)
-_in_memory_repo_instance: InMemoryEventRepo | None = None
+_in_memory_event_repo_instance: InMemoryEventRepo | None = None
+_in_memory_user_repo_instance: InMemoryUserRepo | None = None
 
 def get_in_memory_event_repo() -> InMemoryEventRepo:
-    global _in_memory_repo_instance
-    if _in_memory_repo_instance is None:
-        _in_memory_repo_instance = InMemoryEventRepo()
-        if _in_memory_repo_instance is None:
+    global _in_memory_event_repo_instance
+    if _in_memory_event_repo_instance is None:
+        _in_memory_event_repo_instance = InMemoryEventRepo()
+        if _in_memory_event_repo_instance is None:
             raise RuntimeError("Repositório em memória não foi inicializado corretamente.")
-    return _in_memory_repo_instance
+    return _in_memory_event_repo_instance
+
+def get_in_memory_user_repo() -> InMemoryUserRepo:
+    global _in_memory_user_repo_instance
+    if _in_memory_user_repo_instance is None:
+        _in_memory_user_repo_instance = InMemoryUserRepo()
+        if _in_memory_user_repo_instance is None:
+            raise RuntimeError("Repositório em memória não foi inicializado corretamente.")
+    return _in_memory_user_repo_instance
