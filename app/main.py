@@ -7,7 +7,7 @@ from sqlalchemy.exc import OperationalError
 from prometheus_fastapi_instrumentator import Instrumentator
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
-from app.api.v1.endpoints import eventos, auth          #  ←  agora importamos auth
+from app.api.v1.endpoints import eventos, auth
 # from app.services.auth_service import get_current_user          #  ←  dependência global
 
 from app.core.logging_config import configure_logging

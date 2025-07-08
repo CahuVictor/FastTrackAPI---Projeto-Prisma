@@ -59,6 +59,7 @@ SENTRY_DSN=
 
 # ── CORS ─────────────────────────
 ALLOWED_ORIGINS=http://localhost,https://127.0.0.1:3000
+# opcional JSON → ALLOWED_ORIGINS=["http://localhost","https://127.0.0.1:3000"]
 
 # ── Filas / tarefas ──────────────
 CELERY_BROKER_URL=redis://redis:6379/1
@@ -71,7 +72,7 @@ Para usar JSON em vez de CSV: `ALLOWED_ORIGINS=["http://localhost","https://127.
 
 ---
 
-## 4 ▪ Implementação (`app/core/config.py`)
+## 4 ▪ Implementação principal (`app/core/config.py`)
 
 ```python
 from __future__ import annotations
@@ -84,15 +85,15 @@ from pydantic import BaseSettings, Field, field_validator
 from pydantic_settings import SettingsConfigDict
 from structlog import get_logger
 
-from app.utils.git_info import get_git_sha  # ← util externo
+from app.utils.git_info import get_git_sha
 
 logger = get_logger().bind(module="config")
 
-# Decide quais env‑files ler (base + overlay)
-_def_env_file = lambda env: (".env",) if env == "dev" else (".env", f".env.{env}")
+# Escolhe arquivos: base + overlay do ENVIRONMENT
+_env_files = lambda env: (".env",) if env == "dev" else (".env", f".env.{env}")
 
 class Settings(BaseSettings):
-    # ── modo ─────────────────────
+    # ── modo ─
     environment: str = Field("dev", alias="ENVIRONMENT")
     debug: bool = Field(False, alias="DEBUG")
     testing: bool = Field(False, alias="TESTING")
@@ -102,68 +103,77 @@ class Settings(BaseSettings):
         alias="BUILD_TIMESTAMP",
     )
 
-    # ── BD/cache ────────────────
+    # ── BD/cache ─
     db_url: str | None = Field(None, alias="DB_URL")
     redis_url: str | None = Field(None, alias="REDIS_URL")
 
-    # ── auth ────────────────────
-    auth_secret_key: str = Field(..., alias="AUTH_SECRET_KEY")
+    # ── auth ─
+    auth_secret_key: str | None = Field(None, alias="AUTH_SECRET_KEY")
     access_token_expire_min: int = Field(60 * 24, alias="ACCESS_TOKEN_EXPIRE_MIN")
     auth_algorithm: str = "HS256"
 
-    # ── log ─────────────────────
+    # ── log ─
     log_level: str = Field("INFO", alias="LOG_LEVEL")
     log_format: str = Field("plain", alias="LOG_FORMAT")
 
-    # ── CORS ────────────────────
+    # ── CORS ─
     allowed_origins: List[str] = Field(default_factory=list, alias="ALLOWED_ORIGINS")
 
-    # ── extra ───────────────────
+    # ── extras ─
     sentry_dsn: str | None = Field(None, alias="SENTRY_DSN")
     celery_broker_url: str | None = Field(None, alias="CELERY_BROKER_URL")
     enable_feature_x: bool = Field(False, alias="ENABLE_FEATURE_X")
     git_sha: str = Field(default_factory=lambda: os.getenv("GIT_SHA", get_git_sha()), alias="GIT_SHA")
 
-    # Pydantic config
+    # Config Pydantic
     model_config = SettingsConfigDict(
-        env_file=_def_env_file(os.getenv("ENVIRONMENT", "dev")),
+        env_file=_env_files(os.getenv("ENVIRONMENT", "dev")),
         env_file_encoding="utf-8",
         extra="forbid",
         case_sensitive=False,
-        env_parse_json=False,   # ← evita json.loads automático
+        env_parse_json=False,  # evita tentativa de json.loads em strings
     )
 
-    # Validators
+    # Validadores
     @field_validator("redis_url", mode="after")
     def _redis_required_in_prod(cls, v, info):
         if info.data.get("environment") == "prod" and not v:
             raise ValueError("REDIS_URL é obrigatório em produção")
         return v
 
-    @field_validator("allowed_origins", mode="before")
-    def _parse_origins(cls, v: Any):
-        if isinstance(v, str):
-            return [orig.strip() for orig in v.split(",") if orig.strip()]
+    @field_validator("auth_secret_key", mode="after")
+    def _key_required_in_prod(cls, v, info):
+        if info.data.get("environment") == "prod" and not v:
+            raise ValueError("AUTH_SECRET_KEY é obrigatório em produção")
         return v
 
+    @field_validator("allowed_origins", mode="before")
+    def _parse_origins(cls, v: Any):
+        if isinstance(v, str):  # CSV -> list
+            return [o.strip() for o in v.split(",") if o.strip()]
+        return v
+
+
+# Singleton + tratamento de erros amigável
+from pydantic import ValidationError
+from app.utils.settings_error import abort_with_validation_errors
+
 @lru_cache
-def get_settings() -> Settings:  # singleton
-    return Settings()
-```
-
-### 📂 Novo utilitário `app/utils/git_info.py`
-
-```python
-import subprocess
-
-def get_git_sha(short: bool = True) -> str:
-    """Retorna o hash do commit ou 'unknown' se não estiver num repositório."""
+def get_settings() -> Settings:
     try:
-        cmd = ["git", "rev-parse", "--short" if short else "HEAD"]
-        return subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode().strip()
-    except Exception:  # pragma: no cover
-        return "unknown"
+        s = Settings()
+        logger.info("Settings carregado", env=s.environment)
+        return s
+    except ValidationError as exc:  # imprime tabela e encerra
+        abort_with_validation_errors(exc)
 ```
+
+### 📂 Utils auxiliares
+
+* `app/utils/git_info.py` – gera `git_sha`
+* `app/utils/settings_error.py` – imprime erros de validação em tabela Rich (ou texto simples) e encerra.
+
+---
 
 ### 🚨 Validação de Ambiente e Segurança
 
@@ -238,6 +248,24 @@ $env:ENVIRONMENT = "prod"
 uvicorn app.main:app --reload
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
+
+## 7 ▪ Mensagens de erro amigáveis
+
+* Variáveis desconhecidas ou ausentes disparam `ValidationError`.
+* O wrapper em `get_settings()` usa **Rich** para exibir tabela:
+
+```
+🚫  Configuração de ambiente inválida
+┏━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Campo        ┃ Problema                       ┃
+┡━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ redis_url    │ REDIS_URL é obrigatório em produção │
+└──────────────┴────────────────────────────────┘
+```
+
+Se Rich não estiver instalado, mostra texto simples e finaliza com `exit(1)`.
+
+---
 
 ### 🌱 O que essa abordagem habilita?
 

@@ -9,7 +9,7 @@ packages = [{ include = "app" }]
 [tool.poetry.dependencies]
 python = "^3.11"
 fastapi = "^0.110.0"
-uvicorn = { extras = ["standard"], version = "^0.27.0" }
+uvicorn = {extras = ["standard"], version = "^0.35.0"}
 sqlalchemy = "^2.0"
 alembic = "^1.13.0"
 pydantic = "^2.0"
@@ -44,6 +44,7 @@ types-python-jose = "^3.5.0.20250531"
 types-passlib = "^1.7.7.20250602"
 structlog = "^25.4.0"
 trio = "^0.30.0"
+rich = "^14.0.0"
 
 [tool.mypy]
 # python_version = 3.12

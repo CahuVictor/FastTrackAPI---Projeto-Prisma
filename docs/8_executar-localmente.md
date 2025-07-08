@@ -28,6 +28,14 @@ cd FastTrackAPI---Projeto-Prisma
 # Instale dependências
 poetry install
 
+# A partir do Poetry 2.0, o comando poetry shell não vem instalado por padrão.
+# Para usar este comando  instale o plugin com:
+poetry self add poetry-plugin-shell
+
+# O PowerShell inicializa com a política de execução de scripts desabilitada, o que impede que o script activate.ps1 (usado para ativar o ambiente virtual) seja executado.
+# Para liberar temporariamente (só para a sessão atual do PowerShell):
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+
 # Ative o ambiente do poetry
 poetry shell
 
