@@ -47,6 +47,9 @@ poetry shell
 $env:ENVIRONMENT = "test.inmemory"
 uvicorn app.main:app --reload
 
+# Se não tiver sendo chamado pelo ambiente virtual, chame explicitamente o poetry
+poetry run uvicorn app.main:app
+
 # Execute a aplicação no Linux/macOS
 ENVIRONMENT=test.inmemory uvicorn app.main:app --reload
 ```
