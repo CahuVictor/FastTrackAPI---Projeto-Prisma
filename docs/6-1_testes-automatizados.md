@@ -53,7 +53,7 @@ Para facilitar o reuso de dados e evitar repetições:
 A cobertura atual é medida com o comando:
 
 ```bash
-poetry run pytest --cov=app --cov-report=html
+poetry run pytest --cov=app --cov-report=xml --cov-report=term-missing --cov-report=html
 ```
 
 * Um relatório interativo é gerado em `htmlcov/index.html`.
@@ -99,8 +99,8 @@ A camada de autenticação está preparada para ser testada com:
 
 ```bash
 # Execute todos os testes com cobertura
-pytest --cov=app --cov-report=term-missing
-poetry run pytest --cov=app --cov-report=xml --cov-report=html
+pytest --cov=app --cov-report=xml --cov-report=term-missing --cov-report=html
+poetry run pytest --cov=app --cov-report=xml --cov-report=term-missing --cov-report=html
 ```
 
 Para garantir que tudo funcione corretamente, instale as dependências de teste:

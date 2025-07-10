@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from fastapi.testclient import TestClient
 import fakeredis
 import asyncio
+from io import BytesIO
 
 # from app.main import app
 from app.main import app as fastapi_app   # FastAPI já criado em app.main
@@ -60,7 +61,7 @@ def auth_header(access_token):
     return {"Authorization": f"Bearer {access_token}"}
 
 @pytest.fixture(scope="function")
-def client_autenticado(access_token):
+def client_autenticado(app, access_token):
     """Retorna um TestClient que envia o header Authorization automaticamente."""
     class _AuthClient(TestClient):                              # noqa: D401
         def request(self, method, url, **kwargs):
@@ -306,3 +307,27 @@ def patch_create_task(monkeypatch):
     # substitui a função no próprio módulo asyncio
     monkeypatch.setattr(asyncio, "create_task", _safe_create_task, raising=True)
     yield
+
+@pytest.fixture(params=["valido", "invalido"])
+def csv_file(request):
+    if request.param == "valido":
+        # csv_content = (
+        #     "title,description,event_date,city,participants,local_info\n"
+        #     "Concerto,Um grande show,2025-06-20T19:00:00Z,Recife,Alice;Bob,"
+        #     "\"{\"\"location_name\"\": \"Teatro Santa Isabel\", \"\"capacity\"\": 300, "
+        #     "\"\"venue_type\"\": \"Teatro\", \"\"is_accessible\"\": true, "
+        #     "\"\"address\"\": \"Praça da República\", \"\"past_events\"\": [], "
+        #     "\"\"manually_edited\"\": false}\"\n"
+        # )
+        csv_content = (
+            "title","description","event_date","city","participants","local_info"
+            "Concerto","Um grande show","2025-06-20T19:00:00","Recife","Alice;Bob",
+            '{"location_name": "Teatro Santa Isabel", "capacity": 300, "venue_type": "Teatro", 
+            "is_accessible": true, "address": "Praça da República", "past_events": [], "manually_edited": false'
+        )
+    elif request.param == "invalido":
+        csv_content = (
+            "title,description,event_date,city,participants,local_info\n"
+            "Evento incompleto,,2025-07-20T19:00:00,Olinda,,\"{}\"\n"
+        )
+    return BytesIO(csv_content.encode('utf-8')), 'eventos.csv'

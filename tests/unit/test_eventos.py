@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 import pytest
 from datetime import datetime, timedelta, timezone
 # from starlette.testclient import TestClient
+from io import BytesIO
 
 # from fastapi import HTTPException
 
@@ -344,3 +345,44 @@ def test_list_events_with_pagination(repo):
                              city="Recife", participants=[]))
     page = repo.list_partial(skip=1, limit=1)
     assert len(page) == 1
+
+@pytest.mark.parametrize("csv_file", ["valido"], indirect=True)
+def test_upload_csv_sucesso(client_autenticado: TestClient, csv_file):
+    file, filename = csv_file
+    response = client_autenticado.post(
+        "/api/v1/eventos/upload",
+        files={"file": (filename, file, "text/csv")}
+    )
+
+    assert response.status_code == 201
+    resultado = response.json()
+    assert resultado["status"] == "finalizado"
+    assert resultado["total"] == 1
+
+@pytest.mark.parametrize("csv_file", ["invalido"], indirect=True)
+def test_upload_csv_falha(client_autenticado: TestClient, csv_file):
+    file, filename = csv_file
+    response = client_autenticado.post(
+        "/api/v1/eventos/upload",
+        files={"file": (filename, file, "text/csv")}
+    )
+
+    assert response.status_code == 400
+    resultado = response.json()
+    assert resultado["detail"] == "Nenhum evento válido foi importado"
+
+def test_upload_csv_sem_arquivo(client_autenticado: TestClient):
+    response = client_autenticado.post(
+        "/api/v1/eventos/upload"
+    )
+    assert response.status_code == 422  # FastAPI valida se arquivo é obrigatório
+
+def test_upload_csv_erro_decodificacao(client_autenticado: TestClient):
+    conteudo_invalido = b'\xff\xff\xff\xff'
+    response = client_autenticado.post(
+        "/api/v1/eventos/upload",
+        files={"file": ("erro.csv", BytesIO(conteudo_invalido), "text/csv")}
+    )
+    assert response.status_code == 400
+    resultado = response.json()
+    assert resultado["detail"] == "Nenhum evento válido foi importado"
