@@ -1,19 +1,19 @@
 # 🔧 Configuração por Ambiente + Fallback Seguro
 
-> Documento focado apenas na feature **Settings / .env**.  Para visão geral do projeto, consulte o README principal.
+> Documento focado apenas em **Settings /.env** e tratamento de erros de configuração. Para visão geral do projeto, veja o README.
 
 ---
 
-## 1 ▪ Por que separar ambientes?
+## 1 ▪ Por que separar ambientes?
 
-| Ambiente          | Objetivo                             | O que muda                                                   |
-| ----------------- | ------------------------------------ | ------------------------------------------------------------ |
-| **dev**           | Trabalho diário, auto‑reload, debug. | BD/Redis locais, segredos fictícios.                         |
-| **test**          | `pytest` + CI (Postgres).            | BD isolado, possivelmente Redis mockado/desligado.           |
-| **test.inmemory** | Testes turbo em RAM.                 | `DB_URL=sqlite:///:memory:` → zero I/O de disco.             |
-| **prod**          | Usuários reais.                      | Hostnames internos, segredos de Secret‑Manager, logs `INFO`. |
+| Ambiente          | Objetivo                                           | O que muda                                                   |
+| ----------------- | -------------------------------------------------- | ------------------------------------------------------------ |
+| **dev**           | Trabalho diário com *auto‑reload* e logs verbosos. | Postgres/Redis locais, segredos fictícios.                   |
+| **test**          | `pytest` + CI usando Postgres.                     | Banco isolado, Redis mock/fora.                              |
+| **test.inmemory** | Testes ultra‑rápidos em RAM.                       | `DB_URL=sqlite:///:memory:` (zero I/O).                      |
+| **prod**          | Servir usuários reais.                             | Hostnames internos, segredos em Secret‑Manager, logs `INFO`. |
 
-> **Dev ≠ Test** – a suíte de testes destrói dados sem atrapalhar seu BD local.
+> **Dev ≠ Test** – a suíte de testes deve poder destruir dados sem afetar seu BD local.
 
 ---
 
@@ -26,7 +26,7 @@
 | `.env.test.inmemory` | `ENV=test.inmemory` | `DB_URL=sqlite:///:memory:`                              |
 | `.env.prod`          | `ENV=prod`          | `DB_URL=postgres://postgres/prod_db`                     |
 
-Nunca commitamos segredos de produção; eles entram via variables do host ou secret‑manager.
+Segredos de produção **nunca** são commitados – use variáveis do host ou Secret‑Manager.
 
 ---
 
@@ -39,7 +39,8 @@ DEBUG=true
 TESTING=false
 RELOAD=true
 
-# ── Build info (gerado se ausente) ─
+# ── Build info (gerado se ausente, ISO‑8601 em **UTC**) ─
+# Usamos timezone UTC para que a data seja consistente em qualquer máquina (dev, CI ou produção).
 # BUILD_TIMESTAMP e GIT_SHA podem ser omitidos localmente; o Settings gera.
 
 # ── DB / Cache ───────────────────
@@ -191,8 +192,11 @@ A aplicação utiliza a biblioteca **Pydantic** para validar as variáveis de am
 # Dev (auto‑reload)
 python run.py               # run.py usa settings.reload
 
-# Testes
+# Testes (Postgres)
 ENVIRONMENT=test pytest -q
+
+# Testes em memória
+ENVIRONMENT=test.inmemory pytest -q
 
 # Prod local
 ENVIRONMENT=prod python run.py
@@ -202,7 +206,7 @@ ENVIRONMENT=prod python run.py
 
 ---
 
-## 6 ▪ Ciclo de build & deploy
+## 6 ▪ Pipeline - Ciclo de build & deploy (resumo)
 
 ```
 │ CI:  ENVIRONMENT=test.inmemory  → pytest

@@ -4,9 +4,7 @@
 from typing import Literal
 from fastapi.testclient import TestClient
 import pytest
-from datetime import datetime
-from datetime import timedelta
-from datetime import timezone
+from datetime import datetime, timedelta, timezone
 # from starlette.testclient import TestClient
 
 # from fastapi import HTTPException
@@ -24,14 +22,6 @@ from app.repositories.event_mem import InMemoryEventRepo
 # --------------------------------------------------------------------------- #
 def _new_event_json(titulo="Show", dias=1, views: int = 0):
     """Helper p/ montar o payload JSON de um evento futuro/presente."""
-    # data = datetime.now(tz=timezone.utc) + timedelta(days=dias)
-    # return EventCreate(
-    #     title=titulo,
-    #     description="desc",
-    #     city="Recife",
-    #     event_date=data,
-    #     participants=[],
-    # ).model_dump(exclude_none=True) | {"views": views}
     
     return {
         "title": titulo,
@@ -350,7 +340,7 @@ def test_pagination_works_correctly(client: TestClient, auth_header: dict[str, s
 def test_list_events_with_pagination(repo):
     # cria 3 eventos de teste
     for i in range(3):
-        repo.add(EventCreate(title=f"E{i}", description="...", event_date=datetime.now(),
+        repo.add(EventCreate(title=f"E{i}", description="...", event_date=datetime.now(timezone.utc),
                              city="Recife", participants=[]))
     page = repo.list_partial(skip=1, limit=1)
     assert len(page) == 1

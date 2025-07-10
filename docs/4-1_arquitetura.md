@@ -9,49 +9,49 @@ O projeto está estruturado da seguinte forma:
 ```bash
 fasttrackapi-projeto-prisma/
 ├── .github/
-│   └── workflows/ 
+│   └── workflows/
 │       └── ci.yml   
 ├── app/
 │   ├── api/                      # Rotas da API (FastAPI Routers)
 │   │   ├── v1/                   # Versão da API
 │   │   │   ├── endpoints/        # Endpoints específicos (ex: user.py)
-│   │   │   │   ├── auth.py       # 
-│   │   │   │   ├── eventos.py    # 
-│   │   │   │   ├── users.py      # 
+│   │   │   │   ├── auth.py       #
+│   │   │   │   ├── eventos.py    #
+│   │   │   │   ├── users.py      #
 │   │   │   │   └── ws_router.py  # Só conecta rotas com handlers
 │   │   │   └── api_router.py     # Agrupa todos os endpoints da v1
 │   ├── core/                     # Configurações globais da aplicação
 │   │   ├── config.py             # Carrega variáveis de ambiente com Pydantic
-│   │   ├── contextvars.py        # 
+│   │   ├── contextvars.py        #
 │   │   ├── logging_config.py     # Configuração estruturada de logs
 │   │   └── security.py           # Configurações relacionadas à segurança/autenticação
 │   ├── middleware/               # Middlewares customizados para logs e segurança
-│   │   └── logging_middleware.py # 
+│   │   └── logging_middleware.py #
 │   ├── models/                   # Modelos do banco de dados (SQLAlchemy)
 │   ├── repositories/             # Funções de acesso ao banco de dados (e fontes externas)?
-│   │   ├── event_mem.py          # 
-│   │   └── evento.py             # 
+│   │   ├── event_mem.py          #
+│   │   └── evento.py             #
 │   ├── schemas/                  # Modelos de entrada/saída (Pydantic)
-│   │   ├── event_create.py       # 
-│   │   ├── event_update.py       # 
-│   │   ├── local_info.py         # 
-│   │   ├── token.py              # 
-│   │   ├── user.py               # 
-│   │   ├── venue_type.py         # 
-│   │   └── weather_forecast.py   # 
+│   │   ├── event_create.py       #
+│   │   ├── event_update.py       #
+│   │   ├── local_info.py         #
+│   │   ├── token.py              #
+│   │   ├── user.py               #
+│   │   ├── venue_type.py         #
+│   │   └── weather_forecast.py   #
 │   ├── services/                 # Regras de negócio e lógica de aplicação
-│   │   ├── interfaces/           # 
-│   │   │   ├── forecast_info.py  # 
-│   │   │   ├── local_info.py     # 
-│   │   │   └── user.py           # 
-│   │   ├── auth_service.py       # 
-│   │   ├── mock_forecast_info.py # 
-│   │   ├── mock_local_info.py    # 
-│   │   └── mock_users.py         # 
+│   │   ├── interfaces/           #
+│   │   │   ├── forecast_info.py  #
+│   │   │   ├── local_info.py     #
+│   │   │   └── user.py           #
+│   │   ├── auth_service.py       #
+│   │   ├── mock_forecast_info.py #
+│   │   ├── mock_local_info.py    #
+│   │   └── mock_users.py         #
 │   ├── utils/                    # Funções auxiliares, cache e decorators
-│   │   └── cache.py              # 
+│   │   └── cache.py              #
 │   ├── websockets/               # Comunicação em tempo real
-│   │   ├── __init__.py           # 
+│   │   ├── __init__.py           #
 │   │   ├── ws_manager.py         # Gerencia conexões
 │   │   ├── ws_events.py          # Eventos relacionados a /eventos
 │   │   └── ws_dashboard.py       # Contador ao vivo e usuários online
@@ -59,14 +59,14 @@ fasttrackapi-projeto-prisma/
 │   └── main.py                   # Ponto de entrada da aplicação FastAPI
 │
 ├── postgres-data/                # Aqui estão os dados do PostgreSQL
-├── tests/                        # 
+├── tests/                        #
 │   ├── unit/                     # Testes unitários
-│   │   ├── __init__.py           # 
-│   │   ├── conftest.py           # 
-│   │   ├── test_auth.py          # 
-│   │   ├── test_eventos.py       # 
-│   │   ├── test_orecast_info.py  # 
-│   │   └── test_local_info.py    # 
+│   │   ├── __init__.py           #
+│   │   ├── conftest.py           #
+│   │   ├── test_auth.py          #
+│   │   ├── test_eventos.py       #
+│   │   ├── test_orecast_info.py  #
+│   │   └── test_local_info.py    #
 │   ├── integration/              # Testes de integração (rotas completas)
 │   └── conftest.py               # Configurações e fixtures para testes
 │
@@ -78,8 +78,8 @@ fasttrackapi-projeto-prisma/
 ├── pyproject.toml                # Gerenciado pelo Poetry (dependências, versão, etc)
 ├── poetry.lock                   # Trava das versões instaladas
 ├── README.md                     # Documentação principal do projeto
-├── ROADMAP.md                    # 
-├── TROUBLESHOOTING.md            # 
+├── ROADMAP.md                    #
+├── TROUBLESHOOTING.md            #
 └── .gitignore                    # Arquivos ignorados pelo Git
 ```
 
@@ -210,6 +210,56 @@ O tipo `dict` representa um conjunto de pares de chave e valor. Ele é útil qua
 Todos os dados manipulados nas entradas e saídas da aplicação serão validados por modelos `Pydantic`. O Pydantic permite criar classes que representam a estrutura esperada dos dados, garantindo que eles estejam no formato correto antes de serem usados ou armazenados. Ele também realiza conversões automáticas de tipo, fornece mensagens de erro claras em caso de dados inválidos e integra perfeitamente com o FastAPI para geração automática de documentação.
 
 A utilização do Pydantic torna o projeto mais robusto, seguro e fácil de manter.
+
+### 🏡 Uso de `datetime` com Timezone (timezone-aware)
+
+O projeto utiliza objetos `datetime` com **informação de fuso horário** (timezone-aware), em vez de objetos ingênuos (naive). Isso foi implementado tanto nos schemas quanto nos testes e validações, garantindo que os dados de data e hora tenham contexto temporal explícito.
+
+#### ✅ Por que usar `datetime` com fuso horário?
+
+1. **Consistência Global**: Permite que os dados de eventos sejam interpretados corretamente em diferentes regiões do mundo.
+2. **Evita Ambiguidades**: Horários de verão e mudanças regionais não afetam eventos com timezone explícito.
+3. **Compatibilidade com APIs Externas**: A API de previsão do tempo e outros serviços externos trabalham com timestamps em UTC ou com timezone declarado.
+4. **Conformidade com Boas Práticas**: Aplicações distribuídas devem sempre utilizar `datetime` com timezone para evitar bugs difíceis de rastrear.
+
+#### 📘 Implementação
+
+* Os campos `event_date`, `created_at`, `updated_at`, e `forecast_datetime` agora são validados para conter fuso horário.
+* O validador `field_validator(..., mode="before")` foi adicionado nos schemas para garantir que o `datetime` seja `aware`, ou seja, inclua timezone.
+* A função `ensure_aware` em `app/utils/h_events.py` converte ou rejeita `datetime` sem timezone.
+
+#### 🔎 Exemplo de uso do validador no schema
+
+
+```python
+from datetime import datetime
+from pydantic import BaseModel, field_validator
+from app.utils.h_events import ensure_aware
+
+class EventCreate(BaseModel):
+    title: str
+    event_date: datetime
+
+    @field_validator("event_date", mode="before")
+    @classmethod
+    def ensure_timezone(cls, value):
+        return ensure_aware(value)
+```
+
+### ⚙️ Função `ensure_aware`
+
+```python
+from datetime import datetime, timezone
+
+# Garante que datetime seja timezone-aware
+
+def ensure_aware(dt: datetime) -> datetime:
+    if dt.tzinfo is None:
+        raise ValueError("Datetime precisa conter timezone (tzinfo).")
+    return dt.astimezone(timezone.utc)
+```
+
+Essa função é chamada nos validadores para garantir que o `datetime` recebido esteja correto. Se for um `datetime` sem `tzinfo`, ele levanta um erro. Caso contrário, converte para UTC.
 
 ---
 

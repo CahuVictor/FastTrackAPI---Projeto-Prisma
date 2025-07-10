@@ -16,10 +16,10 @@ from app.schemas.event_update import EventUpdate, LocalInfoUpdate, ForecastInfoU
 from app.schemas.weather_forecast import WeatherForecast
 
 from app.utils.cache import cached_json
-from app.utils.h_events import order_and_slice
+from app.utils.h_events import order_and_slice, ensure_aware
 from app.utils.http import raise_http
 from app.utils.patch import update_event
-from app.utils.security import require_roles
+from app.utils.security import require_roles, auth_dep
 
 from app.services.interfaces.local_info_protocol import AbstractLocalInfoService
 from app.services.interfaces.forecast_info_protocol import AbstractForecastService
@@ -34,26 +34,22 @@ from app.websockets.ws_events import (
 )
 from app.websockets.ws_dashboard import notify_user_count
 
-# auth_dep = Depends(get_current_user)
 _provide_local_info_service = Depends(provide_local_info_service)
 _provide_forecast_service = Depends(provide_forecast_service)
 _provide_event_repo = Depends(provide_event_repo)
 
 logger = get_logger().bind(module="eventos")
 
-router = APIRouter()
-
-# router = APIRouter(
+router = APIRouter(
 #     dependencies=[auth_dep]
-# )
+)
 
 @router.get(
     "/local_info",
     tags=["eventos"],
     summary="Busca informações de um local pelo nome",
     response_model=LocalInfo,
-    dependencies=[Depends(require_roles("admin", "editor", "viewer"))],
-    # dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
     responses={
         200: {"description": "Local encontrado"},
         404: {"description": "Local não encontrado"}
@@ -83,7 +79,7 @@ async def get_local_info(
     tags=["eventos"],
     summary="Busca previsão do tempo para uma cidade e data/hora (mock)",
     response_model=WeatherForecast,
-    dependencies=[Depends(require_roles("admin", "editor", "viewer"))],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
     responses={
         200: {"description": "Previsão recebida"},
         404: {"description": "Previsão não recebida"}
@@ -117,7 +113,7 @@ async def get_forecast_info(
     tags=["eventos"],
     summary="Lista todos os eventos registrados.",
     response_model=list[EventResponse],
-    dependencies=[Depends(require_roles("admin", "editor", "viewer"))],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
     responses={
         200: {"description": "Lista de eventos retornada com sucesso."},
         404: {"description": "Nenhum evento encontrado."}
@@ -139,7 +135,7 @@ def list_events_all(repo: AbstractEventRepo = _provide_event_repo) -> list[Event
     tags=["eventos"],
     summary="Download de todos os eventos registrados.",
     response_model=list[EventResponse],
-    dependencies=[Depends(require_roles("admin", "editor"))],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
     responses={
         200: {"description": "Lista de eventos retornada com sucesso."},
         404: {"description": "Nenhum evento encontrado."}
@@ -158,7 +154,7 @@ def download_eventos(repo: AbstractEventRepo = _provide_event_repo):
     tags=["eventos"],
     summary="Lista eventos com filtros e paginação",
     response_model=list[EventResponse],
-    dependencies=[Depends(require_roles("admin", "editor", "viewer"))],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
 )
 def list_events(
     skip: int = Query(0, ge=0, description="Quantos registros pular"),
@@ -180,7 +176,7 @@ def list_events(
     tags=["eventos"],
     summary="Obtém um evento pelo ID.",
     response_model=EventResponse,
-    dependencies=[Depends(require_roles("admin", "editor", "viewer"))],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
     responses={
         200: {"description": "Evento encontrado."},
         404: {"description": "Evento não encontrado."}
@@ -217,7 +213,7 @@ async def get_event_by_id(
     tags=["eventos"],
     summary="N eventos com data mais próxima",
     response_model=list[EventResponse],
-    dependencies=[Depends(require_roles("admin", "editor", "viewer"))],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
     responses={
         200: {"description": "Lista dos eventos mais próximos."},
         404: {"description": "Nenhum evento futuro encontrado"}
@@ -234,22 +230,18 @@ async def get_events_top_soon(
     e devolve os *limit* mais próximos da data/hora atual.
     """
     logger.info("Consulta de eventos mais próximos iniciada", limit=limit)
-    now = datetime.now(timezone.utc)  # ✅ aware
-    # now = datetime.utcnow()              # retorna um datetime naive (sem fuso horário)
+    
+    # ✅ aware - retorna um datetime aware (com fuso horário)
+    #     naive - não usar datetime naive (sem fuso horário), pois irá dificultar a ordenação depois na consulta
+    now = datetime.now(timezone.utc)
 
-    events = repo.list_all()                     # dict[int, Evento] # Corrigir para list_partial()
-    # soons = (
-    #     sorted(
-    #         # (ev for ev in events.values() if ev.event_date >= now),
-    #         [ev for ev in events if ev.event_date >= now],
-    #         key=lambda ev: ev.event_date,
-    #     )[:limit]
-    # )
+    events = repo.list_all() # TODO Corrigir para list_partial()
     most_soon = order_and_slice(
-        [ev for ev in events if ev.event_date >= now],
+        [ev for ev in events if ensure_aware(ev.event_date) >= now],
         key_fn=lambda ev: ev.event_date,  # most soon first
         limit=limit
     )
+    
     if not most_soon:
         raise_http(logger.warning, 404, "Nenhum evento futuro encontrado", limit=limit)
     logger.info("Consulta de eventos mais próximos concluída", quantidade=len(most_soon))
@@ -260,7 +252,7 @@ async def get_events_top_soon(
     tags=["eventos"],
     summary="N eventos mais vistos",
     response_model=list[EventResponse],
-    dependencies=[Depends(require_roles("admin", "editor", "viewer"))],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
     responses={
         200: {"description": "Lista de eventos mais vistos."},
         404: {"description": "Nenhum evento encontrado."}
@@ -304,7 +296,7 @@ async def get_events_top_viewed(
     summary="Cria um novo evento e tenta enriquecer com previsão do tempo.",
     response_model=EventResponse,
     status_code=201,
-    dependencies=[Depends(require_roles("admin", "editor"))],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
     responses={
         201: {"description": "Evento criado com sucesso, podendo conter ou não previsão do tempo."},
         207: {"description": "Evento criado, mas sem previsão do tempo por falha ao acessar a API externa."} # 207 caso queria utilizar outro
@@ -343,7 +335,7 @@ async def post_create_event(
     summary="Adiciona uma lista de novos eventos, atribuindo novos IDs.",
     response_model=list[EventResponse],
     status_code=201,
-    dependencies=[Depends(require_roles("admin"))],
+    dependencies=[auth_dep, Depends(require_roles("admin"))],
     responses={
         201: {"description": "Eventos adicionados com sucesso."},
         400: {"description": "Lista inválida enviada."}
@@ -392,7 +384,7 @@ async def post_events_batch(
     # response_model=list[EventResponse],
     response_model=dict,
     status_code=201,
-    dependencies=[Depends(require_roles("admin"))],
+    dependencies=[auth_dep, Depends(require_roles("admin"))],
     responses={
         201: {"description": "Eventos adicionados com sucesso."},
         400: {"description": "Lista inválida enviada."}
@@ -458,7 +450,7 @@ async def upload_csv(
     tags=["eventos"],
     summary="Substitui todos os eventos existentes por uma nova lista.",
     response_model=list[EventResponse],
-    dependencies=[Depends(require_roles("admin"))],
+    dependencies=[auth_dep, Depends(require_roles("admin"))],
     responses={
         200: {"description": "Todos os eventos foram substituídos."},
         400: {"description": "Lista inválida enviada."}
@@ -492,7 +484,7 @@ def put_events(
     tags=["eventos"],
     summary="Substitui os dados de um evento existente.",
     response_model=EventResponse,
-    dependencies=[Depends(require_roles("admin", "editor"))],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
     responses={
         200: {"description": "Evento substituído com sucesso."},
         404: {"description": "Evento não encontrado."}
@@ -520,7 +512,7 @@ def put_event_by_id(
     tags=["eventos"],
     summary="Remove todos os eventos cadastrados.",
     response_model=dict,
-    dependencies=[Depends(require_roles("admin"))],
+    dependencies=[auth_dep, Depends(require_roles("admin"))],
     responses={
         200: {"description": "Todos os eventos removidos com sucesso."},
         400: {"description": "Não foi possível remover os eventos."}
@@ -546,7 +538,7 @@ def delete_events(
     tags=["eventos"],
     summary="Remove um evento específico pelo ID.",
     response_model=dict,
-    dependencies=[Depends(require_roles("admin"))],
+    dependencies=[auth_dep, Depends(require_roles("admin"))],
     responses={
         200: {"description": "Evento removido com sucesso."},
         404: {"description": "Evento não encontrado."}
@@ -571,7 +563,7 @@ def delete_event_by_id(
     tags=["eventos"],
     summary="Atualiza parcialmente as informações de um evento.",
     response_model=EventResponse,
-    dependencies=[Depends(require_roles("admin", "editor"))],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
     responses={
         200: {"description": "Evento atualizado com sucesso."},
         400: {"description": "Nenhum campo válido para atualização."},
@@ -605,7 +597,7 @@ def patch_event_by_id(
     tags=["eventos"],
     summary="Atualiza informações do local de um evento.",
     response_model=EventResponse,
-    dependencies=[Depends(require_roles("admin", "editor"))],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
     responses={
         200: {"description": "Informações do local atualizadas com sucesso."},
         404: {"description": "Evento não encontrado."}
@@ -638,7 +630,7 @@ def patch_event_by_id_local_info( #async?
     tags=["eventos"],
     summary="Atualiza a previsão do tempo de um evento.",
     response_model=EventResponse,
-    dependencies=[Depends(require_roles("admin", "editor"))],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
     responses={
         200: {"description": "Previsão do tempo atualizada com sucesso."},
         404: {"description": "Evento não encontrado."},

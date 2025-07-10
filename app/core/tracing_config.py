@@ -13,6 +13,6 @@ def configure_tracing(agent_host: str = "localhost", agent_port: int = 6831):
         agent_port=agent_port,
     )
 
-    trace.get_tracer_provider().add_span_processor(
+    trace.get_tracer_provider().add_span_processor(          # type: ignore[attr-defined]
         BatchSpanProcessor(jaeger_exporter)
     )

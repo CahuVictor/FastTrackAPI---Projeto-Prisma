@@ -1,9 +1,11 @@
-
 # app/models/models_user.py
 from sqlalchemy import Column, Integer, String
-from sqlalchemy.orm import declarative_base
+# from sqlalchemy.orm import declarative_base  TODO verificar se alteração funciona
 
-Base = declarative_base()
+from app.db.base import Base
+
+# Base = declarative_base()  TODO verificar se alteração funciona
+
 
 class User(Base):
     __tablename__ = "users"

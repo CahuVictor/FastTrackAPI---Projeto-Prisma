@@ -10,7 +10,7 @@ packages = [{ include = "app" }]
 python = "^3.11"
 fastapi = "^0.110.0"
 uvicorn = {extras = ["standard"], version = "^0.35.0"}
-sqlalchemy = "^2.0"
+sqlalchemy = ">=2.0,<2.1"
 alembic = "^1.13.0"
 pydantic = "^2.0"
 python-dotenv = "^1.0.0"
@@ -45,6 +45,8 @@ types-passlib = "^1.7.7.20250602"
 structlog = "^25.4.0"
 trio = "^0.30.0"
 rich = "^14.0.0"
+sqlalchemy2-stubs = "^0.0.2a38"
+sqlalchemy = {version = ">=2", extras = ["mypy"]}
 
 [tool.mypy]
 # python_version = 3.12
@@ -59,6 +61,8 @@ disallow_untyped_defs  = false  # permite funções sem hints
 disallow_untyped_calls = false  # permite chamar Any
 disallow_incomplete_defs = false
 strict_optional        = true   # mantenha verificação de None
+
+# plugins = ["sqlalchemy.ext.mypy.plugin"]
 
 [tool.ruff]
 line-length = 250               # segue no nível raiz (formatação)

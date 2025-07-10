@@ -331,7 +331,7 @@ Adicione a dependência no grupo dev para rodar localmente:
 ```bash
 poetry install --with dev --no-interaction
 poetry run ruff check .
-pyupgrade --py312-plus $(git ls-files '*.py')
+poetry run pyupgrade --py312-plus $(git ls-files '*.py')
 poetry run mypy app
 poetry run bandit -q -r app -lll
 poetry run pytest -x --cov=app --cov-fail-under=80

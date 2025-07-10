@@ -1,6 +1,6 @@
 # tests/unit/conftest.py -> Verificar se pode ficar na raiz de tests/
 import pytest
-from datetime import datetime
+from datetime import datetime, timezone
 # from fastapi import HTTPException
 from fastapi.testclient import TestClient
 import fakeredis
@@ -82,7 +82,7 @@ def event(request):
         return {
             "title": "Concerto de Jazz",
             "description": "Uma apresentação musical.",
-            "event_date": "2025-06-01T20:00:00",
+            "event_date": "2025-06-01T20:00:00Z",
             "participants": ["Alice", "Bruno"],
             "city": "Recife",
             "local_info": {
@@ -100,7 +100,7 @@ def event(request):
             "id": 1,
             "title": "Concerto de Jazz",
             "description": "Uma apresentação musical.",
-            "event_date": "2025-06-01T20:00:00",
+            "event_date": "2025-06-01T20:00:00Z",
             "participants": ["Alice", "Bruno"],
             "city": "fortaleza",
             "local_info": {
@@ -118,7 +118,7 @@ def event(request):
             "id": 123,  # pode ser qualquer valor (a rota sobrescreve)
             "title": "Concerto de Jazz",
             "description": "Uma apresentação musical.",
-            "event_date": "2025-06-01T20:00:00",
+            "event_date": "2025-06-01T20:00:00Z",
             "city": "Recife",
             "participants": ["Alice", "Bruno"],
             "local_info": {
@@ -144,7 +144,7 @@ def event(request):
             {
                 "title": "Evento 1",
                 "description": "Primeiro evento.",
-                "event_date": "2025-06-01T20:00:00",
+                "event_date": "2025-06-01T20:00:00Z",
                 "city": "Recife",
                 "participants": ["Alice", "Bruno"],
                 "local_info": {
@@ -160,7 +160,7 @@ def event(request):
             {
                 "title": "Evento 2",
                 "description": "Segundo evento.",
-                "event_date": "2025-07-10T19:00:00",
+                "event_date": "2025-07-10T19:00:00Z",
                 "city": "Olinda",
                 "participants": ["Carlos", "Diana"],
                 "local_info": {
@@ -177,7 +177,7 @@ def event(request):
     elif request.param == "evento_invalido":
         return {
             "title": "Incompleto",
-            "event_date": "2025-06-01T20:00:00",
+            "event_date": "2025-06-01T20:00:00Z",
             "participants": ["Zé"]
         }
     else:
@@ -239,12 +239,12 @@ def mock_local_info_service():
 
 @pytest.fixture
 def data_agora_iso():
-    return datetime.now().isoformat()
+    return datetime.now(timezone.utc).isoformat()
 
 @pytest.fixture
 def dt_now_iso() -> str:
     """ISO agora – para forecast_info."""
-    return datetime.now().isoformat()
+    return datetime.now(timezone.utc).isoformat()
 
 # ---------- Repositories --------------------------------------------------
 

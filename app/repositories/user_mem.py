@@ -1,5 +1,6 @@
 # app/repositories/user_mem.py
 from structlog import get_logger
+
 from app.schemas.user import UserInDB
 from app.repositories.user import AbstractUserRepo
 

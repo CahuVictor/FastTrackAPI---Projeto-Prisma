@@ -5,7 +5,6 @@ from pydantic import Field, field_validator, ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from structlog import get_logger
 from datetime import datetime, timezone
-from typing import List, Any
 
 from app.utils.settings_error import abort_with_validation_errors
 from app.utils.git_info import get_git_sha
@@ -105,8 +104,13 @@ class Settings(BaseSettings):
     
     @field_validator("auth_secret_key", mode="after")
     def _require_key_in_prod(cls, v, info):
+        env = info.data.get("environment")
         if info.data.get("environment") == "prod" and not v:
-            logger.error("Configuração inválida: AUTH_SECRET_KEY ausente em produção", environment=self.environment, auth_secret_key=self.auth_secret_key)
+            logger.error(
+                "Configuração inválida: AUTH_SECRET_KEY ausente em produção",
+                environment=env,
+                auth_secret_key=v,
+            )
             raise ValueError("AUTH_SECRET_KEY é obrigatório em produção")
         return v
 

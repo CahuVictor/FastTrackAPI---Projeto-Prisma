@@ -1,5 +1,4 @@
 # api/v1/endpoints/auth.py
-# from fastapi import APIRouter, Depends, HTTPException, status, Form
 from fastapi import APIRouter, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 from structlog import get_logger
@@ -7,12 +6,10 @@ from structlog import get_logger
 from app.schemas.token import Token
 from app.deps import provide_user_repo
 from app.services.interfaces.user_protocol import AbstractUserRepo
-from app.services.auth_service import authenticate # , create_access_token
+from app.services.auth_service import authenticate
 from app.core.security import create_access_token
 
 from app.utils.http import raise_http
-
-# from app.services.auth_service import authenticate, get_current_user # remover
 
 logger = get_logger().bind(module="auth")
 
