@@ -1,10 +1,11 @@
 # tests/unit/conftest.py -> Verificar se pode ficar na raiz de tests/
 import pytest
 from datetime import datetime, timezone
-# from fastapi import HTTPException
-from fastapi.testclient import TestClient
+from starlette.testclient import TestClient
+# from fastapi.testclient import TestClient
 import fakeredis
 import asyncio
+from io import BytesIO
 
 # from app.main import app
 from app.main import app as fastapi_app   # FastAPI já criado em app.main
@@ -28,7 +29,6 @@ def app():
     return fastapi_app
 
 @pytest.fixture(scope="session")
-# def client():
 def client(app) -> TestClient:
     """Client “cru”, sem header de autorização."""
     with TestClient(app) as c:
@@ -60,7 +60,7 @@ def auth_header(access_token):
     return {"Authorization": f"Bearer {access_token}"}
 
 @pytest.fixture(scope="function")
-def client_autenticado(access_token):
+def client_autenticado(app, access_token):
     """Retorna um TestClient que envia o header Authorization automaticamente."""
     class _AuthClient(TestClient):                              # noqa: D401
         def request(self, method, url, **kwargs):
@@ -305,7 +305,7 @@ def patch_create_task(monkeypatch):
     # monkeypatch.patch("asyncio.create_task", _safe_create_task)
     # substitui a função no próprio módulo asyncio
     monkeypatch.setattr(asyncio, "create_task", _safe_create_task, raising=True)
-    
+
 @pytest.fixture(params=["valido", "invalido"])
 def csv_file(request):
     if request.param == "valido":

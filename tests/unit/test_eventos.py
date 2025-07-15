@@ -2,19 +2,17 @@
 # (eventos & manipulação geral)
 
 from typing import Literal
-from fastapi.testclient import TestClient
 import pytest
 from datetime import datetime, timedelta, timezone
-# from starlette.testclient import TestClient
-
-# from fastapi import HTTPException
+# from fastapi.testclient import TestClient
+from starlette.testclient import TestClient
+from io import BytesIO
 
 from app.main import app
 
 from app.schemas.event_create import EventCreate
 
 from app.deps import provide_event_repo
-# from app.api.v1.endpoints.eventos import atualizar_evento
 from app.repositories.event_mem import InMemoryEventRepo
 
 from app.constants.routes import (
@@ -273,9 +271,6 @@ def test_replace_all_events_clear(client: TestClient, auth_header: dict[str, str
 # Testar erro de validação em update_event (try/except do update_event)
 @pytest.mark.parametrize("event", ["evento_valido"], indirect=True)
 def test_update_event_validationerror(client: TestClient, auth_header: dict[str, str], event: Literal['evento_valido']):
-    # from app.api.v1.endpoints import eventos as eventos_module
-    # from pydantic import ValidationError
-
     # Cria evento
     post_resp = client.post(EVENTS_PREFIX, json=event, headers=auth_header)
     event_id = post_resp.json()["id"]
@@ -397,4 +392,3 @@ def test_upload_csv_erro_decodificacao(client_autenticado: TestClient):
     assert response.status_code == 400
     resultado = response.json()
     assert resultado["detail"] == "Erro ao decodificar o arquivo CSV. Certifique-se de que está em UTF-8."
-

@@ -15,13 +15,20 @@ EVENTS_TOP_MOST_VIEWED_ROUTE = f"{EVENTS_PREFIX}/top/most-viewed"
 EVENTS_LOTE_ROUTE = f"{EVENTS_PREFIX}/lote"
 
 # Rota de detalhe de um evento
-EVENTS_DETAIL_ROUTE = lambda event_id: f"{EVENTS_PREFIX}/{event_id}"
+def EVENTS_DETAIL_ROUTE(event_id):
+    return f"{EVENTS_PREFIX}/{event_id}"
 
 # Rota para info local de um evento específico
-EVENTS_DETAIL_LOCAL_INFO_ROUTE = lambda event_id: f"{EVENTS_PREFIX}/{event_id}/local_info"
+def EVENTS_DETAIL_LOCAL_INFO_ROUTE(event_id):
+    return f"{EVENTS_DETAIL_ROUTE(event_id)}/local_info"
+
+# Rota para forecast de um evento específico
+def EVENTS_FORECAST_BY_ID_ROUTE(event_id):
+    return f"{EVENTS_DETAIL_ROUTE(event_id)}/forecast"
 
 # Rota com paginação (você pode passar os parâmetros via `params`, mas se quiser gerar direto como string):
-EVENTS_PAGINATED_ROUTE = lambda skip, limit: f"{EVENTS_PREFIX}?skip={skip}&limit={limit}"
+def EVENTS_PAGINATED_ROUTE(skip: int, limit: int):
+    return f"{EVENTS_PREFIX}/?skip={skip}&limit={limit}"
 
 # Autenticação (se existir)
 AUTH_PREFIX = f"{API_V1_PREFIX}/auth"
@@ -31,8 +38,11 @@ LOGIN_ROUTE = f"{AUTH_PREFIX}/login"
 FORECAST_PREFIX = f"{API_V1_PREFIX}/forecast"
 
 # Rota com query param dinâmico
-EVENTS_LOCAL_INFO_BY_NAME_ROUTE = lambda location_name: f"{EVENTS_LOCAL_INFO_ROUTE}?location_name={location_name}"
+def EVENTS_LOCAL_INFO_BY_NAME_ROUTE(location_name):
+    return f"{EVENTS_LOCAL_INFO_ROUTE}?location_name={location_name}"
 
 # Outros exemplos possíveis
 USER_PREFIX = f"{API_V1_PREFIX}/users"
-USER_DETAIL_ROUTE = lambda user_id: f"{USER_PREFIX}/{user_id}"
+
+def USER_DETAIL_ROUTE(user_id):
+    return f"{USER_PREFIX}/{user_id}"
