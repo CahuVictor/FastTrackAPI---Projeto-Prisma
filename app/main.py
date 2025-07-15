@@ -7,7 +7,8 @@ from sqlalchemy.exc import OperationalError
 from prometheus_fastapi_instrumentator import Instrumentator
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
-from app.api.v1.endpoints import eventos, auth
+from app.api.v1.api_router import router as api_router
+
 # from app.services.auth_service import get_current_user          #  ←  dependência global
 
 from app.core.logging_config import configure_logging
@@ -55,15 +56,7 @@ app = FastAPI(
     }
 )
 
-app.include_router(auth.router, prefix="/api/v1")
-
-# app.include_router(
-#     eventos.router,
-#     prefix="/api/v1",
-#     dependencies=[Depends(get_current_user)],   #  ←  proteção em bloco
-# )
-
-app.include_router(eventos.router, prefix="/api/v1")
+app.include_router(api_router)
 
 @app.get("/ping")
 def ping():

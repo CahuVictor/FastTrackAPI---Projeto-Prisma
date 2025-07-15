@@ -3,9 +3,15 @@ from fastapi import WebSocket, WebSocketDisconnect, APIRouter, Query
 from app.websockets.ws_manager import manager
 from app.websockets.ws_dashboard import notify_user_count
 
-ws_router = APIRouter()
+ws_router = APIRouter(
+#     dependencies=[auth_dep]
+    prefix="/ws",
+    tags=["WebSockets"],
+)
 
-@ws_router.websocket("/ws/status")
+@ws_router.websocket(
+    "/status",
+)
 async def websocket_status(websocket: WebSocket, admin: bool = Query(False)):
     await manager.connect(websocket, is_admin=admin)
     await notify_user_count()

@@ -305,4 +305,34 @@ def patch_create_task(monkeypatch):
     # monkeypatch.patch("asyncio.create_task", _safe_create_task)
     # substitui a função no próprio módulo asyncio
     monkeypatch.setattr(asyncio, "create_task", _safe_create_task, raising=True)
-    yield
+    
+@pytest.fixture(params=["valido", "invalido"])
+def csv_file(request):
+    if request.param == "valido":
+        # csv_content = (
+        #     "title,description,event_date,city,participants,local_info\n"
+        #     "Concerto,Um grande show,2025-06-20T19:00:00Z,Recife,Alice;Bob,"
+        #     "\"{\"\"location_name\"\": \"Teatro Santa Isabel\", \"\"capacity\"\": 300, "
+        #     "\"\"venue_type\"\": \"Teatro\", \"\"is_accessible\"\": true, "
+        #     "\"\"address\"\": \"Praça da República\", \"\"past_events\"\": [], "
+        #     "\"\"manually_edited\"\": false}\"\n"
+        # )
+        csv_content = (
+            'title,description,event_date,city,participants,local_info\n'
+            'Concerto,Um grande show,2025-06-20T19:00:00Z,Recife,"Alice;Bob",'
+            '"{' +
+            '""location_name"": ""Teatro Santa Isabel"", '
+            '""capacity"": 300, '
+            '""venue_type"": ""Auditorio"", '
+            '""is_accessible"": true, '
+            '""address"": ""Praça da República"", '
+            '""past_events"": [], '
+            '""manually_edited"": false'
+            '}"\n'
+        )
+    elif request.param == "invalido":
+        csv_content = (
+            "title,description,event_date,city,participants,local_info\n"
+            "Evento incompleto,,2025-07-20T19:00:00,Olinda,,\"{}\"\n"
+        )
+    return BytesIO(csv_content.encode('utf-8')), 'eventos.csv'

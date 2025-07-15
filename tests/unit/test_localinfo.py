@@ -14,9 +14,16 @@ from app.deps import provide_local_info_service
 from app.schemas.local_info import LocalInfo
 from app.services.mock_local_info import MockLocalInfoService
 
+from app.constants.routes import (
+    EVENTS_PREFIX,
+    EVENTS_LOCAL_INFO_ROUTE,
+    EVENTS_DETAIL_LOCAL_INFO_ROUTE,
+    EVENTS_LOCAL_INFO_BY_NAME_ROUTE,
+)
+
 def test_get_local_info_endpoint(client: TestClient, auth_header: dict[str, str]):
     resp = client.get(
-        "/api/v1/local_info",
+        EVENTS_LOCAL_INFO_ROUTE,
         params={"location_name": "auditorio central"},
         headers=auth_header,
     )
@@ -28,13 +35,13 @@ def test_get_local_info_endpoint(client: TestClient, auth_header: dict[str, str]
 def test_update_local_info_type_invalid_unit(client: TestClient, auth_header: dict[str, str], event: Literal['evento_valido_com_id']):
     evento_id = 300
     event["id"] = evento_id
-    client.put("/api/v1/eventos", json=[event], headers=auth_header)
+    client.put(EVENTS_PREFIX, json=[event], headers=auth_header)
     # with pytest.raises(HTTPException) as excinfo:
     #     # Passa um dict em vez de LocalInfoUpdate
-    #     client.patch(f"/api/v1/eventos/300/local_info", json={"foo": "bar"}, headers=auth_header)
+    #     client.patch(EVENTS_DETAIL_LOCAL_INFO_ROUTE(300), json={"foo": "bar"}, headers=auth_header)
     # assert excinfo.value.status_code == 500
     # assert excinfo.value.detail == "Tipo inválido para LocalInfoUpdate"
-    resp = client.patch(f"/api/v1/eventos/{evento_id}/local_info", json={"foo": "bar"}, headers=auth_header)
+    resp = client.patch(EVENTS_DETAIL_LOCAL_INFO_ROUTE(evento_id), json={"foo": "bar"}, headers=auth_header)
     assert resp.status_code == 422 # 502 - FastAPI/Pydantic devolve 422 p/ corpo inválido
     detail = resp.json()["detail"]
     # deve vir a lista gerada pelo Pydantic/FastAPI
@@ -47,12 +54,12 @@ def test_update_local_info_type_invalid_unit(client: TestClient, auth_header: di
 def test_update_local_info_none_unit(client: TestClient, auth_header: dict[str, str], event: Literal['evento_valido_com_id']):
     evento_id = 301
     event["id"] = evento_id
-    client.put("/api/v1/eventos", json=[event], headers=auth_header)
+    client.put(EVENTS_PREFIX, json=[event], headers=auth_header)
     # with pytest.raises(HTTPException) as excinfo:
-    #     client.patch(f"/api/v1/eventos/301/local_info", json=None, headers=auth_header)
+    #     client.patch(EVENTS_DETAIL_LOCAL_INFO_ROUTE(301), json=None, headers=auth_header)
     # assert excinfo.value.status_code == 502
     # assert excinfo.value.detail == "Erro ao receber dados do Local"
-    resp = client.patch(f"/api/v1/eventos/{evento_id}/local_info", json=None, headers=auth_header)
+    resp = client.patch(EVENTS_DETAIL_LOCAL_INFO_ROUTE(evento_id), json=None, headers=auth_header)
     assert resp.status_code == 422 # 502 - FastAPI/Pydantic devolve 422 p/ corpo inválido
     assert resp.json()["detail"] == "Erro ao receber dados do Local"
     # detail = resp.json()["detail"]
@@ -61,13 +68,13 @@ def test_update_local_info_none_unit(client: TestClient, auth_header: dict[str, 
 
 @pytest.mark.parametrize("event", ["evento_valido"], indirect=True)
 def test_update_local_info(client: TestClient, auth_header: dict[str, str], event: Literal['evento_valido']):
-    post_response = client.post("/api/v1/eventos", json=event, headers=auth_header)
+    post_response = client.post(EVENTS_PREFIX, json=event, headers=auth_header)
     evento_id = post_response.json()["id"]
     update = {
         "capacity": 999,
         "manually_edited": True  # Obrigatório!
     }
-    response = client.patch(f"/api/v1/eventos/{evento_id}/local_info", json=update, headers=auth_header)
+    response = client.patch(EVENTS_DETAIL_LOCAL_INFO_ROUTE(evento_id), json=update, headers=auth_header)
     assert response.status_code == 200
     assert response.json()["local_info"]["capacity"] == 999
     assert response.json()["local_info"]["manually_edited"] is True
@@ -75,7 +82,7 @@ def test_update_local_info(client: TestClient, auth_header: dict[str, str], even
 # Testar PATCH /eventos/{id}/local_info para evento inexistente
 def test_update_nonexistent_local_info(client: TestClient, auth_header: dict[str, str]):
     update = {"capacity": 100, "manually_edited": True}
-    response = client.patch("/api/v1/eventos/99999/local_info", json=update, headers=auth_header)
+    response = client.patch(EVENTS_DETAIL_LOCAL_INFO_ROUTE(99999), json=update, headers=auth_header)
     assert response.status_code == 404
 
 # ---------------------------------------------------------------------------
@@ -140,6 +147,6 @@ def fake_local_info_service():
 async def test_endpoint_dependency_override(client: TestClient, auth_header: dict[str, str]):
     app.dependency_overrides[provide_local_info_service] = fake_local_info_service
     # agora qualquer chamada à rota vai usar esse fake em vez do padrão
-    resp = client.get("/api/v1/local_info?location_name=fake", headers=auth_header)
+    resp = client.get(EVENTS_LOCAL_INFO_BY_NAME_ROUTE("fake"), headers=auth_header)
     assert resp.status_code == 404
     app.dependency_overrides = {}  # Limpe sempre após!

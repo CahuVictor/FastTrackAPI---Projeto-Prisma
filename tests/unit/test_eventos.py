@@ -17,8 +17,20 @@ from app.deps import provide_event_repo
 # from app.api.v1.endpoints.eventos import atualizar_evento
 from app.repositories.event_mem import InMemoryEventRepo
 
+from app.constants.routes import (
+    EVENTS_PREFIX,
+    EVENTS_DETAIL_ROUTE,
+    EVENTS_DETAIL_LOCAL_INFO_ROUTE,
+    EVENTS_PAGINATED_ROUTE,
+    EVENTS_ALL_ROUTE,
+    EVENTS_TOP_SOON_ROUTE,
+    EVENTS_TOP_MOST_VIEWED_ROUTE,
+    EVENTS_LOTE_ROUTE,
+    EVENTS_UPLOAD_CSV_ROUTE,
+)
+
 # --------------------------------------------------------------------------- #
-# 1. GET /eventos/{id}
+# 1. GET /events/{id}
 # --------------------------------------------------------------------------- #
 def _new_event_json(titulo="Show", dias=1, views: int = 0):
     """Helper p/ montar o payload JSON de um evento futuro/presente."""
@@ -34,23 +46,23 @@ def _new_event_json(titulo="Show", dias=1, views: int = 0):
 
 @pytest.mark.parametrize("event", ["evento_valido"], indirect=True)
 def test_create_event_valid(client: TestClient, auth_header: dict[str, str], event: Literal['evento_valido']):
-    resp = client.post("/api/v1/eventos", json=event, headers=auth_header) # evento_valido
+    resp = client.post(EVENTS_PREFIX, json=event, headers=auth_header) # evento_valido
     assert resp.status_code == 201
     assert resp.json()["title"].lower() == event["title"].lower() # evento_valido
 
 @pytest.mark.parametrize("event", ["evento_invalido"], indirect=True)
 def test_create_event_invalid(client: TestClient, auth_header: dict[str, str], event: Literal['evento_invalido']):
-    resp = client.post("/api/v1/eventos", json=event, headers=auth_header) # evento_invalido
+    resp = client.post(EVENTS_PREFIX, json=event, headers=auth_header) # evento_invalido
     assert resp.status_code == 422
 
 @pytest.mark.parametrize("event", ["evento_valido"], indirect=True)
 def test_get_event_by_id_ok(
     client: TestClient, auth_header: dict[str, str], event
 ):
-    resp = client.post("/api/v1/eventos", json=event, headers=auth_header)
+    resp = client.post(EVENTS_PREFIX, json=event, headers=auth_header)
     ev_id = resp.json()["id"]
 
-    resp_get = client.get(f"/api/v1/eventos/{ev_id}", headers=auth_header)
+    resp_get = client.get(EVENTS_DETAIL_ROUTE(ev_id), headers=auth_header)
 
     assert resp_get.status_code == 200
     body = resp_get.json()
@@ -58,12 +70,12 @@ def test_get_event_by_id_ok(
     assert body["views"] == 1  # contador é incrementado
 
 def test_get_event_by_id_404(client: TestClient, auth_header: dict[str, str]):
-    resp_get = client.get("/api/v1/eventos/9999", headers=auth_header)
+    resp_get = client.get(EVENTS_DETAIL_ROUTE(9999), headers=auth_header)
     assert resp_get.status_code == 404
     assert resp_get.json()["detail"] == "Evento não encontrado"
 
 def test_list_event(client: TestClient, auth_header: dict[str, str]):
-    resp = client.get("/api/v1/eventos", headers=auth_header)
+    resp = client.get(EVENTS_PREFIX, headers=auth_header)
     # Pode ser 200 ou 404, dependendo se já apagou ou não
     assert resp.status_code in (200, 404)
 
@@ -75,18 +87,18 @@ def test_list_events_all_ok(client: TestClient, auth_header: dict[str, str], rep
     for i in range(2):
         repo.add(EventCreate(...))  # fixture usa defaults
 
-    resp = client.get("/api/v1/eventos/todos", headers=auth_header)  # rota legacy
+    resp = client.get(EVENTS_ALL_ROUTE, headers=auth_header)  # rota legacy
     assert resp.status_code == 200
     assert len(resp.json()) == 2
 
 
 def test_list_events_all_clear(client: TestClient, auth_header: dict[str, str]):
-    resp = client.get("/api/v1/eventos/todos", headers=auth_header)
+    resp = client.get(EVENTS_ALL_ROUTE, headers=auth_header)
     assert resp.status_code == 404
     assert resp.json()["detail"] == "Nenhum evento encontrado"
 
 # --------------------------------------------------------------------------- #
-# 3. /eventos/top/soon – sem futuros                                     #
+# 3. /events/top/soon – sem futuros                                     #
 # --------------------------------------------------------------------------- #
 def test_get_top_upcoming_events_without_future(client: TestClient, auth_header: dict[str, str], repo):
     # somente eventos PASSADOS
@@ -101,29 +113,29 @@ def test_get_top_upcoming_events_without_future(client: TestClient, auth_header:
         )
     )
 
-    resp = client.get("/api/v1/eventos/top/soon", headers=auth_header)
+    resp = client.get(EVENTS_TOP_SOON_ROUTE, headers=auth_header)
     assert resp.status_code == 404
     assert resp.json()["detail"] == "Nenhum evento futuro encontrado"
 
 # --------------------------------------------------------------------------- #
-# 4. /eventos/top/most-viewed – sem registros                           #
+# 4. /events/top/most-viewed – sem registros                           #
 # --------------------------------------------------------------------------- #
 def test_top_most_viewed_clear(client: TestClient, auth_header: dict[str, str]):
-    resp = client.get("/api/v1/eventos/top/most-viewed", headers=auth_header)
+    resp = client.get(EVENTS_TOP_MOST_VIEWED_ROUTE, headers=auth_header)
     assert resp.status_code == 404
     assert resp.json()["detail"] == "Nenhum evento encontrado"
 
 @pytest.mark.parametrize("event", ["evento_valido_com_id"], indirect=True)
 def test_replace_all_events(client: TestClient, auth_header: dict[str, str], event: Literal['evento_valido_com_id']):
     event["title"] = "Evento Substituto"
-    resp = client.put("/api/v1/eventos", json=[event], headers=auth_header)
+    resp = client.put(EVENTS_PREFIX, json=[event], headers=auth_header)
     assert resp.status_code == 200
     assert resp.json()[0]["title"] == "Evento Substituto"
 
-# Testar PUT /eventos/{id} para substituir um evento inexistente
+# Testar PUT /events/{id} para substituir um evento inexistente
 @pytest.mark.parametrize("event", ["evento_valido_com_id_e_forecast"], indirect=True)
 def test_replace_nonexistent_event(client: TestClient, auth_header: dict[str, str], event: Literal['evento_valido_com_id_e_forecast']):
-    resp = client.put("/api/v1/eventos/99999", json=event, headers=auth_header)
+    resp = client.put(EVENTS_DETAIL_ROUTE(99999), json=event, headers=auth_header)
     assert resp.status_code == 404
 
 @pytest.mark.parametrize("event", ["evento_valido_com_id"], indirect=True)
@@ -134,12 +146,12 @@ def test_update_event_none_unit(client: TestClient, auth_header: dict[str, str],
     Espera-se um HTTPException 502.
     """
     # primeiro garante que o evento existe no repositório
-    client.put("/api/v1/eventos", json=[event], headers=auth_header)
+    client.put(EVENTS_PREFIX, json=[event], headers=auth_header)
     
     event_id = event["id"]
     
     resp = client.patch(
-        f"/api/v1/eventos/{event_id}",
+        EVENTS_DETAIL_ROUTE(event_id),
         data="null",
         headers={**auth_header, "Content-Type": "application/json"},
     )
@@ -160,12 +172,12 @@ def test_update_event_type_invalid_unit(client: TestClient, auth_header: dict[st
     Espera-se um HTTPException 500.
     """
     # garante que o evento existe
-    client.put("/api/v1/eventos", json=[event], headers=auth_header)
+    client.put(EVENTS_PREFIX, json=[event], headers=auth_header)
     
     event_id = event["id"]
     
     resp = client.patch(
-        f"/api/v1/eventos/{event_id}",
+        EVENTS_DETAIL_ROUTE(event_id),
         json=789,                       # corpo inválido
         headers=auth_header
     )
@@ -179,7 +191,7 @@ def test_update_event_type_invalid_unit(client: TestClient, auth_header: dict[st
 @pytest.mark.parametrize("event", ["evento_valido"], indirect=True)
 def test_replace_event_by_id(client: TestClient, auth_header: dict[str, str], event: Literal['evento_valido']):
     # 1) cria o evento original
-    post = client.post("/api/v1/eventos", json=event, headers=auth_header)
+    post = client.post(EVENTS_PREFIX, json=event, headers=auth_header)
     event_id = post.json()["id"]
 
     # 2) monta a versão completa que irá substituir
@@ -189,7 +201,7 @@ def test_replace_event_by_id(client: TestClient, auth_header: dict[str, str], ev
 
     # 3) faz a substituição
     resp = client.put(
-        f"/api/v1/eventos/{event_id}",
+        EVENTS_DETAIL_ROUTE(event_id),
         json=new_event,
         headers=auth_header,
     )
@@ -198,14 +210,14 @@ def test_replace_event_by_id(client: TestClient, auth_header: dict[str, str], ev
     assert resp.json()["title"] == "Novo Título"
 
 # --------------------------------------------------------------------------- #
-# 5. POST /eventos/lote                                                    #
+# 5. POST /events/lote                                                    #
 # --------------------------------------------------------------------------- #
 def test_add_events_batch_ok(client: TestClient, auth_header: dict[str, str]):
     lote = [
         _new_event_json("A"),
         _new_event_json("B"),
     ]
-    resp = client.post("/api/v1/eventos/lote", json=lote, headers=auth_header)
+    resp = client.post(EVENTS_LOTE_ROUTE, json=lote, headers=auth_header)
 
     assert resp.status_code == 201
     body = resp.json()
@@ -214,48 +226,48 @@ def test_add_events_batch_ok(client: TestClient, auth_header: dict[str, str]):
 
 
 def test_add_events_batch_lista_vazia(client: TestClient, auth_header: dict[str, str]):
-    resp = client.post("/api/v1/eventos/lote", json=[], headers=auth_header)
+    resp = client.post(EVENTS_LOTE_ROUTE, json=[], headers=auth_header)
     assert resp.status_code == 400
     assert resp.json()["detail"] == "Lista vazia enviada"
 
 # --------------------------------------------------------------------------- #
-# 6. DELETE /eventos/{id}                                                  #
+# 6. DELETE /events/{id}                                                  #
 # --------------------------------------------------------------------------- #
 @pytest.mark.parametrize("event", ["evento_valido"], indirect=True)
 def test_delete_event_ok(client: TestClient, auth_header: dict[str, str], event):
-    post = client.post("/api/v1/eventos", json=event, headers=auth_header)
+    post = client.post(EVENTS_PREFIX, json=event, headers=auth_header)
     ev_id = post.json()["id"]
 
-    del_resp = client.delete(f"/api/v1/eventos/{ev_id}", headers=auth_header)
+    del_resp = client.delete(EVENTS_DETAIL_ROUTE(ev_id), headers=auth_header)
     assert del_resp.status_code == 200
     assert f"ID {ev_id}" in del_resp.json()["mensagem"]
 
     # confirmar que realmente não existe mais
-    follow = client.get(f"/api/v1/eventos/{ev_id}", headers=auth_header)
+    follow = client.get(EVENTS_DETAIL_ROUTE(ev_id), headers=auth_header)
     assert follow.status_code == 404
 
 
 def test_delete_event_not_found(client: TestClient, auth_header: dict[str, str]):
-    resp = client.delete("/api/v1/eventos/8888", headers=auth_header)
+    resp = client.delete(EVENTS_DETAIL_ROUTE(8888), headers=auth_header)
     assert resp.status_code == 404
     assert resp.json()["detail"] == "Evento não encontrado"
 
 @pytest.mark.parametrize("event", ["evento_valido"], indirect=True)
 def test_delete_all_events(client: TestClient, auth_header: dict[str, str], event: Literal['evento_valido']):
-    client.post("/api/v1/eventos", json=event, headers=auth_header)
-    resp = client.delete("/api/v1/eventos", headers=auth_header)
+    client.post(EVENTS_PREFIX, json=event, headers=auth_header)
+    resp = client.delete(EVENTS_PREFIX, headers=auth_header)
     assert resp.status_code == 200
     assert resp.json()["mensagem"].startswith("Todos os eventos foram apagados")
 
-# Testar PATCH /eventos/{id} para atualizar um evento inexistente
+# Testar PATCH /events/{id} para atualizar um evento inexistente
 def test_update_nonexistent_event(client: TestClient, auth_header: dict[str, str]):
     update = {"title": "Novo Título"}
-    response = client.patch("/api/v1/eventos/99999", json=update, headers=auth_header)
+    response = client.patch(EVENTS_DETAIL_ROUTE(99999), json=update, headers=auth_header)
     assert response.status_code == 404
 
-# Testar PUT /eventos com lista vazia
+# Testar PUT /events com lista vazia
 def test_replace_all_events_clear(client: TestClient, auth_header: dict[str, str]):
-    response = client.put("/api/v1/eventos", json=[], headers=auth_header)
+    response = client.put(EVENTS_PREFIX, json=[], headers=auth_header)
     assert response.status_code == 400
 
 # Testar erro de validação em update_event (try/except do update_event)
@@ -265,12 +277,12 @@ def test_update_event_validationerror(client: TestClient, auth_header: dict[str,
     # from pydantic import ValidationError
 
     # Cria evento
-    post_resp = client.post("/api/v1/eventos", json=event, headers=auth_header)
+    post_resp = client.post(EVENTS_PREFIX, json=event, headers=auth_header)
     event_id = post_resp.json()["id"]
 
     # Envie update inválido para local_info (ex: capacity string)
     update = {"capacity": "invalido", "manually_edited": True}
-    resp = client.patch(f"/api/v1/eventos/{event_id}/local_info", json=update, headers=auth_header)
+    resp = client.patch(EVENTS_DETAIL_LOCAL_INFO_ROUTE(event_id), json=update, headers=auth_header)
     assert resp.status_code == 422
     # Detalhe do erro pode ser validado aqui se quiser
 
@@ -278,10 +290,10 @@ def test_update_event_validationerror(client: TestClient, auth_header: dict[str,
 # @pytest.mark.parametrize("event", ["evento_valido"], indirect=True)
 # def test_atualizar_evento_none(client_autenticado, event):
 #     # Crie um evento antes
-#     post_response = client_autenticado.post("/api/v1/eventos", json=event)
+#     post_response = client_autenticado.post(EVENTS_PREFIX, json=event)
 #     event_id = post_response.json()["id"]
 #     # Envie um body explícito None (JSON 'null')
-#     response = client_autenticado.patch(f"/api/v1/eventos/{event_id}", data="null", headers={"Content-Type": "application/json"})
+#     response = client_autenticado.patch(EVENTS_DETAIL_ROUTE(event_id), data="null", headers={"Content-Type": "application/json"})
 #     assert response.status_code == 502
 #     assert response.json()["detail"] == "Erro ao receber dados do evento"
 
@@ -289,10 +301,10 @@ def test_update_event_validationerror(client: TestClient, auth_header: dict[str,
 @pytest.mark.parametrize("event", ["evento_valido"], indirect=True)
 def test_update_event_type_invalid(client: TestClient, auth_header: dict[str, str], event: Literal['evento_valido']):
     # Crie um evento antes
-    post_resp = client.post("/api/v1/eventos", json=event, headers=auth_header)
+    post_resp = client.post(EVENTS_PREFIX, json=event, headers=auth_header)
     event_id = post_resp.json()["id"]
     # Envie um objeto com campo inválido ou tipo totalmente inválido
-    resp = client.patch(f"/api/v1/eventos/{event_id}", json={"not_expected_field": 123}, headers=auth_header)
+    resp = client.patch(EVENTS_DETAIL_ROUTE(event_id), json={"not_expected_field": 123}, headers=auth_header)
     assert resp.status_code == 422
     detail = resp.json()["detail"]
     # assert detail == "Nenhum campo válido para atualização."
@@ -307,14 +319,14 @@ def test_update_event_type_valid(client: TestClient, auth_header: dict[str, str]
 
     try:
         # --- 2. cria um evento ---
-        post = client.post("/api/v1/eventos", json=event, headers=auth_header)
+        post = client.post(EVENTS_PREFIX, json=event, headers=auth_header)
         assert post.status_code == 201
         event_id = post.json()["id"]
 
         # --- 3. envia PATCH parcial ---
         patch_body = {"description": "Descrição atualizada."}
         patch = client.patch(
-            f"/api/v1/eventos/{event_id}",
+            EVENTS_DETAIL_ROUTE(event_id),
             json=patch_body,
             headers=auth_header,
         )
@@ -333,7 +345,7 @@ def test_pagination_works_correctly(client: TestClient, auth_header: dict[str, s
     # cria n eventos dummy
     for _ in range(n):
         repo.add(EventCreate(...))   # use factory/faker
-    resp = client.get(f"/api/v1/eventos?skip={skip}&limit={limit}", headers=auth_header)
+    resp = client.get(EVENTS_PAGINATED_ROUTE(skip, limit), headers=auth_header)
     assert resp.status_code == 200
     assert len(resp.json()) == min(limit, max(0, n-skip))
 
@@ -344,3 +356,45 @@ def test_list_events_with_pagination(repo):
                              city="Recife", participants=[]))
     page = repo.list_partial(skip=1, limit=1)
     assert len(page) == 1
+
+@pytest.mark.parametrize("csv_file", ["valido"], indirect=True)
+def test_upload_csv_sucesso(client_autenticado: TestClient, csv_file):
+    file, filename = csv_file
+    response = client_autenticado.post(
+        EVENTS_UPLOAD_CSV_ROUTE,
+        files={"file": (filename, file, "text/csv")}
+    )
+
+    assert response.status_code == 201
+    resultado = response.json()
+    assert resultado["status"] == "finalizado"
+    assert resultado["total"] == 1
+
+@pytest.mark.parametrize("csv_file", ["invalido"], indirect=True)
+def test_upload_csv_falha(client_autenticado: TestClient, csv_file):
+    file, filename = csv_file
+    response = client_autenticado.post(
+        EVENTS_UPLOAD_CSV_ROUTE,
+        files={"file": (filename, file, "text/csv")}
+    )
+
+    assert response.status_code == 400
+    resultado = response.json()
+    assert resultado["detail"] == "Nenhum evento válido foi importado"
+
+def test_upload_csv_sem_arquivo(client_autenticado: TestClient):
+    response = client_autenticado.post(
+        EVENTS_UPLOAD_CSV_ROUTE
+    )
+    assert response.status_code == 422  # FastAPI valida se arquivo é obrigatório
+
+def test_upload_csv_erro_decodificacao(client_autenticado: TestClient):
+    conteudo_invalido = b'\xff\xff\xff\xff'
+    response = client_autenticado.post(
+        EVENTS_UPLOAD_CSV_ROUTE,
+        files={"file": ("erro.csv", BytesIO(conteudo_invalido), "text/csv")}
+    )
+    assert response.status_code == 400
+    resultado = response.json()
+    assert resultado["detail"] == "Erro ao decodificar o arquivo CSV. Certifique-se de que está em UTF-8."
+

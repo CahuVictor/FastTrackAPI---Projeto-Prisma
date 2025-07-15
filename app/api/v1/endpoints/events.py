@@ -41,12 +41,13 @@ _provide_event_repo = Depends(provide_event_repo)
 logger = get_logger().bind(module="eventos")
 
 router = APIRouter(
+    prefix="/events",
+    tags=["events"],
 #     dependencies=[auth_dep]
 )
 
 @router.get(
     "/local_info",
-    tags=["eventos"],
     summary="Busca informações de um local pelo nome",
     response_model=LocalInfo,
     dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
@@ -76,7 +77,6 @@ async def get_local_info(
 
 @router.get(
     "/forecast_info",
-    tags=["eventos"],
     summary="Busca previsão do tempo para uma cidade e data/hora (mock)",
     response_model=WeatherForecast,
     dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
@@ -107,10 +107,9 @@ async def get_forecast_info(
     return forecast_info
 
 @router.get(
-    "/eventos/todos",
+    "/all",
     deprecated=True,                                    # Marca rota como obsoleta, sem removê-la
     include_in_schema=False,                            # Oculta rota da doc quando False
-    tags=["eventos"],
     summary="Lista todos os eventos registrados.",
     response_model=list[EventResponse],
     dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
@@ -131,8 +130,7 @@ def list_events_all(repo: AbstractEventRepo = _provide_event_repo) -> list[Event
     return events
 
 @router.get(
-    "/eventos/download",
-    tags=["eventos"],
+    "/download",
     summary="Download de todos os eventos registrados.",
     response_model=list[EventResponse],
     dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
@@ -141,7 +139,6 @@ def list_events_all(repo: AbstractEventRepo = _provide_event_repo) -> list[Event
         404: {"description": "Nenhum evento encontrado."}
     },
 )
-@router.get("/eventos/download", tags=["eventos"])
 def download_eventos(repo: AbstractEventRepo = _provide_event_repo):
     eventos = repo.list_all()
     # return JSONResponse(content=[e.model_dump() for e in eventos])
@@ -150,8 +147,7 @@ def download_eventos(repo: AbstractEventRepo = _provide_event_repo):
     return JSONResponse(content=payload)
 
 @router.get(
-    "/eventos",
-    tags=["eventos"],
+    "/",
     summary="Lista eventos com filtros e paginação",
     response_model=list[EventResponse],
     dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
@@ -172,8 +168,7 @@ def list_events(
     return events
 
 @router.get(
-    "/eventos/{event_id}",
-    tags=["eventos"],
+    "/{event_id}",
     summary="Obtém um evento pelo ID.",
     response_model=EventResponse,
     dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
@@ -209,8 +204,7 @@ async def get_event_by_id(
     return EventResponse.model_validate(event)
 
 @router.get(
-    "/eventos/top/soon",
-    tags=["eventos"],
+    "/top/soon",
     summary="N eventos com data mais próxima",
     response_model=list[EventResponse],
     dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
@@ -248,8 +242,7 @@ async def get_events_top_soon(
     return most_soon
 
 @router.get(
-    "/eventos/top/most-viewed",
-    tags=["eventos"],
+    "/top/most-viewed",
     summary="N eventos mais vistos",
     response_model=list[EventResponse],
     dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
@@ -291,8 +284,7 @@ async def get_events_top_viewed(
     return most_viewed
 
 @router.post(
-    "/eventos",
-    tags=["eventos"],
+    "/",
     summary="Cria um novo evento e tenta enriquecer com previsão do tempo.",
     response_model=EventResponse,
     status_code=201,
@@ -330,8 +322,7 @@ async def post_create_event(
     return EventResponse.model_validate(event_resp, from_attributes=True)
 
 @router.post(
-    "/eventos/lote",
-    tags=["eventos"],
+    "/lote",
     summary="Adiciona uma lista de novos eventos, atribuindo novos IDs.",
     response_model=list[EventResponse],
     status_code=201,
@@ -378,8 +369,7 @@ async def post_events_batch(
     return new_events
 
 @router.post(
-    "/eventos/upload",
-    tags=["eventos"],
+    "/upload",
     summary="Adiciona uma lista de novos eventos a partir de um arquivo CSV, atribuindo novos IDs.",
     # response_model=list[EventResponse],
     response_model=dict,
@@ -399,7 +389,10 @@ async def upload_csv(
     Permite o envio de um arquivo CSV com eventos e adiciona ao repositório.
     """
     content = await file.read()
-    decoded = content.decode("utf-8")
+    try:
+        decoded = content.decode("utf-8")
+    except UnicodeDecodeError:
+        raise_http(logger.error, 400, "Erro ao decodificar o arquivo CSV. Certifique-se de que está em UTF-8.")
     reader = csv.DictReader(StringIO(decoded))
 
     new_events: list[EventResponse] = []
@@ -446,8 +439,7 @@ async def upload_csv(
     return {"status": "finalizado", "total": total}
 
 @router.put(
-    "/eventos",
-    tags=["eventos"],
+    "/",
     summary="Substitui todos os eventos existentes por uma nova lista.",
     response_model=list[EventResponse],
     dependencies=[auth_dep, Depends(require_roles("admin"))],
@@ -480,8 +472,7 @@ def put_events(
     return result
 
 @router.put(
-    "/eventos/{event_id}",
-    tags=["eventos"],
+    "/{event_id}",
     summary="Substitui os dados de um evento existente.",
     response_model=EventResponse,
     dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
@@ -508,8 +499,7 @@ def put_event_by_id(
     return resultado
 
 @router.delete(
-    "/eventos",
-    tags=["eventos"],
+    "/",
     summary="Remove todos os eventos cadastrados.",
     response_model=dict,
     dependencies=[auth_dep, Depends(require_roles("admin"))],
@@ -534,8 +524,7 @@ def delete_events(
     raise
 
 @router.delete(
-    "/eventos/{event_id}",
-    tags=["eventos"],
+    "/{event_id}",
     summary="Remove um evento específico pelo ID.",
     response_model=dict,
     dependencies=[auth_dep, Depends(require_roles("admin"))],
@@ -559,8 +548,7 @@ def delete_event_by_id(
     return {"mensagem": f"Evento com ID {event_id} removido com sucesso."}
 
 @router.patch(
-    "/eventos/{event_id}",
-    tags=["eventos"],
+    "/{event_id}",
     summary="Atualiza parcialmente as informações de um evento.",
     response_model=EventResponse,
     dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
@@ -593,8 +581,7 @@ def patch_event_by_id(
     raise
 
 @router.patch(
-    "/eventos/{event_id}/local_info",
-    tags=["eventos"],
+    "/{event_id}/local_info",
     summary="Atualiza informações do local de um evento.",
     response_model=EventResponse,
     dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
@@ -626,8 +613,7 @@ def patch_event_by_id_local_info( #async?
     return repo.replace_by_id(event_id, event)
 
 @router.patch(
-    "/eventos/{event_id}/forecast_info",
-    tags=["eventos"],
+    "/{event_id}/forecast_info",
     summary="Atualiza a previsão do tempo de um evento.",
     response_model=EventResponse,
     dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],

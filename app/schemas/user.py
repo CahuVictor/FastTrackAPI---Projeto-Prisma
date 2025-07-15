@@ -1,5 +1,5 @@
+# app\schemas\user.py
 from pydantic import BaseModel, Field
-# from typing import Annotated, Optional
 from typing import Annotated
 
 class User(BaseModel):
@@ -9,3 +9,6 @@ class User(BaseModel):
 
 class UserInDB(User):
     hashed_password: str
+
+class UserCreate(User):
+    password: str
