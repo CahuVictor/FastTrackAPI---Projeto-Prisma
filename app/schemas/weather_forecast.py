@@ -1,3 +1,4 @@
+# app\schemas\weather_forecast.py
 from pydantic import BaseModel, Field
 from typing import Annotated
 from datetime import datetime

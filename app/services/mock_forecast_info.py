@@ -14,6 +14,7 @@ class MockForecastService(AbstractForecastService):
         e retorna a previsão mais próxima do datetime solicitado.
         Caso a cidade não exista na lista, retorna None.
         """
+        logger.info("Usando serviço de forecast mockado", city=city, date=date)
         # Definições por cidade para variar um pouco
         base_temp = {
             "recife": 28,
@@ -42,7 +43,7 @@ class MockForecastService(AbstractForecastService):
                         weather_main=["Clear", "Rain", "Clouds", "Thunderstorm"][idx],
                         weather_desc=["Céu limpo", "Chuva leve", "Nuvens dispersas", "Tempestade elétrica"][idx],
                         humidity=65 + idx,
-                        wind_speed=2.5 + idx
+                        wind_speed=2.5 + idx,
                     )
                 )
         
@@ -55,4 +56,5 @@ class MockForecastService(AbstractForecastService):
             data_prevista=str(forecast.forecast_datetime),
             condicao=forecast.weather_main
         )
+        
         return forecast

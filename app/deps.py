@@ -22,37 +22,38 @@ from app.services.interfaces.forecast_info_protocol import AbstractForecastServi
 
 from app.core.config import get_settings
 
-# class Deps:
-#     USER_REPO: AbstractUserRepo = MockUserRepo()
-
 logger = get_logger().bind(module="deps")
 
 _settings = get_settings()
-
-# Singleton global, usado em modo in-memory
-# _user_repo_singleton = MockUserRepo()
-
-# def provide_user_repo() -> AbstractUserRepo:
-#     logger.debug("Injetando repositório de usuários (mock)")
-#     return Deps.USER_REPO
 
 def provide_user_repo(db: Session = Depends(get_db)) -> AbstractUserRepo:
     """
     Retorna o repositório de usuários, adaptando à origem de dados.
     """
-    # if _settings.environment == "test.inmemory":
-    from app.deps_singletons import get_in_memory_user_repo
-    logger.debug("Injetando instância global de usuários em memória (via singleton manual)")
-    return get_in_memory_user_repo()
+    if _settings.environment == "test.inmemory":
+        from app.deps_singletons import get_in_memory_user_repo
+        logger.debug("Injetando instância global de usuários em memória (via singleton manual)")
+        return get_in_memory_user_repo()
     # logger.debug("Injetando repositório de usuários (SQLAlchemy)")
     # return UserRepo(db)
+    return get_in_memory_user_repo()
 
 def provide_local_info_service() -> AbstractLocalInfoService:
-    logger.debug("Injetando serviço de local_info (mock)")
+    """
+    Retorna o serviço de localinfo.
+    """
+    if _settings.environment == "test.inmemory":
+        logger.debug("Injetando serviço de local_info (mock)")
+        return MockLocalInfoService()
     return MockLocalInfoService()
 
 def provide_forecast_service() -> AbstractForecastService:
-    logger.debug("Injetando serviço de forecast_info (mock)")
+    """
+    Retorna o serviço de forecast.
+    """
+    if _settings.environment == "test.inmemory":
+        logger.debug("Injetando serviço de forecast_info (mock)")
+        return MockForecastService()
     return MockForecastService()
 
 _redis_singleton: Redis | None = None     # conexão global reaproveitável

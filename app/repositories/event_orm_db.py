@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from structlog import get_logger
 
 from app.schemas.event_create import EventCreate, EventResponse
-from app.schemas.weather_forecast import WeatherForecast
+from app.schemas.event_update import ForecastInfoUpdate
 
 from app.repositories.event import AbstractEventRepo
 
@@ -59,7 +59,7 @@ class SQLEventRepo(AbstractEventRepo):
             return None
         return EventResponse.model_validate(db_event, from_attributes=True)
 
-    def add(self, event: EventCreate, forecast_info: WeatherForecast | None = None):
+    def add(self, event: EventCreate, forecast_info: ForecastInfoUpdate | None = None):
         """
         Cria e salva um novo evento no banco de dados.
         Também salva `local_info` e `forecast_info` se presentes.
@@ -182,7 +182,7 @@ class SQLEventRepo(AbstractEventRepo):
 #         city=event.city,
 #         participants=event.participants,
 #         local_info=LocalInfo.model_validate(event.local_info) if event.local_info else None,
-#         forecast_info=WeatherForecast.model_validate(event.forecast_info) if event.forecast_info else None,
+#         forecast_info=ForecastInfoUpdate.model_validate(event.forecast_info) if event.forecast_info else None,
 #         views=event.views
 #         # created_at=event.created_at
 #     )

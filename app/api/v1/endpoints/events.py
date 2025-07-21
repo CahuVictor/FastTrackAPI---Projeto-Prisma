@@ -1,5 +1,5 @@
 # api/v1/endpoints/eventos.py
-from fastapi import APIRouter, Depends, Query, Body, UploadFile, File
+from fastapi import APIRouter, Depends, Query, Body, UploadFile, File, BackgroundTasks
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from datetime import datetime, timezone
@@ -13,7 +13,6 @@ import json
 from app.schemas.event_create import EventCreate, EventResponse
 from app.schemas.local_info import LocalInfo
 from app.schemas.event_update import EventUpdate, LocalInfoUpdate, ForecastInfoUpdate
-from app.schemas.weather_forecast import WeatherForecast
 
 from app.utils.cache import cached_json
 from app.utils.h_events import order_and_slice, ensure_aware
@@ -23,6 +22,7 @@ from app.utils.security import require_roles, auth_dep
 
 from app.services.interfaces.local_info_protocol import AbstractLocalInfoService
 from app.services.interfaces.forecast_info_protocol import AbstractForecastService
+from app.services.forecast import atualizar_forecast_em_background
 from app.repositories.event import AbstractEventRepo
 from app.deps import provide_local_info_service, provide_forecast_service, provide_event_repo
 
@@ -33,6 +33,8 @@ from app.websockets.ws_events import (
     notify_event_viewed_update, notify_top_viewed_update
 )
 from app.websockets.ws_dashboard import notify_user_count
+
+from app.utils.patch import should_update_forecast
 
 _provide_local_info_service = Depends(provide_local_info_service)
 _provide_forecast_service = Depends(provide_forecast_service)
@@ -78,7 +80,7 @@ async def get_local_info(
 @router.get(
     "/forecast_info",
     summary="Busca previsão do tempo para uma cidade e data/hora (mock)",
-    response_model=WeatherForecast,
+    response_model=ForecastInfoUpdate,
     dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
     responses={
         200: {"description": "Previsão recebida"},
@@ -87,24 +89,23 @@ async def get_local_info(
 )
 @cached_json("forecast", ttl=1800)              # ⬅⬅️ _a “mágica” está aqui_
 async def get_forecast_info(
+    background_tasks: BackgroundTasks,
     city: str = Query(..., description="Nome da cidade"),
     date: datetime = Query(..., description="Data e hora de referência para a previsão"),
-    service: AbstractForecastService = _provide_forecast_service,
-):
+) -> dict:
     """
     Retorna a previsão do tempo simulada para a cidade e data/hora informadas.
     Cache: 30 min (1800 s)
     """
     logger.info("Consulta de clima iniciada", city=city, date=date)
-    try:
-        forecast_info = service.get_by_city_and_datetime(city, date)
-    except Exception as e:  
-        logger.error("Falha ao buscar previsão do tempo", city=city, event_date=str(date), error=str(e))
-        forecast_info = None
+    # Adiciona task em background para buscar forecast depois
+    # background_tasks.add_task(
+    #     atualizar_forecast_em_background,
+    #     event_resp.id
+    # )
     
-    if not forecast_info:
-        raise_http(logger.warning, 404, "Previsão não encontrada", city=city, date=date)
-    return forecast_info
+    # Essa função deve retornar o forecast para um range de horários no dia solicitado
+    # Pode-se pensar em pegar para dias tbm
 
 @router.get(
     "/all",
@@ -178,9 +179,10 @@ def list_events(
     },
 )
 async def get_event_by_id(
-                        event_id: int, 
-                        repo: AbstractEventRepo = _provide_event_repo,
-    ) -> EventResponse:
+    background_tasks: BackgroundTasks,
+    event_id: int,
+    repo: AbstractEventRepo = _provide_event_repo,
+) -> EventResponse:
     """
     Busca um evento pelo seu identificador único.
     """
@@ -190,6 +192,13 @@ async def get_event_by_id(
     if event is None:
         raise_http(logger.warning, 404, "Evento não encontrado", event_id=event_id)
     assert event is not None  # MyPy entende que daqui pra frente não é mais None
+    
+    
+    if should_update_forecast(event.forecast_info):
+        background_tasks.add_task(
+            atualizar_forecast_em_background,
+            event_id
+        )
     
     event.views += 1
     logger.info("Atualizado os views", event_id=event_id, views=event.views)
@@ -295,8 +304,8 @@ async def get_events_top_viewed(
     },
 )
 async def post_create_event(
+    background_tasks: BackgroundTasks,
     event: EventCreate,
-    service: AbstractForecastService = _provide_forecast_service,
     repo: AbstractEventRepo = _provide_event_repo,
 ) -> EventResponse:
     """
@@ -304,14 +313,15 @@ async def post_create_event(
     Se a previsão não puder ser obtida, o evento é criado normalmente, porém forecast_info fica vazio.
     """
     logger.info("Recebida requisição para criar evento", title=event.title, city=event.city, event_date=event.event_date)
-    try:
-        forecast_info = service.get_by_city_and_datetime(event.city, event.event_date)
-    except Exception as e:  
-        logger.error("Falha ao buscar previsão do tempo", city=event.city, event_date=str(event.event_date), error=str(e))
-        forecast_info = None
     
-    # Passa forecast_info direto na chamada do add
-    event_resp = repo.add(event, forecast_info=forecast_info)
+    # Criação normal SEM forecast
+    event_resp = repo.add(event, forecast_info=None)
+    
+    # Adiciona task em background para buscar forecast depois
+    background_tasks.add_task(
+        atualizar_forecast_em_background,
+        event_resp.id
+    )
     
     # Notifica via WebSocket
     asyncio.create_task(notify_event_created(event.title))
@@ -333,8 +343,8 @@ async def post_create_event(
     },
 )
 async def post_events_batch(
+    background_tasks: BackgroundTasks,
     events: list[EventCreate],
-    service: AbstractForecastService = _provide_forecast_service,
     repo: AbstractEventRepo = _provide_event_repo,
 ) -> list[EventResponse]:
     """
@@ -347,17 +357,15 @@ async def post_events_batch(
 
     new_events = []
     for event in events:
-        try:
-            forecast_info = service.get_by_city_and_datetime(event.city, event.event_date)
-        except Exception as e:  
-            logger.error("Falha ao buscar previsão do tempo", city=event.city, date=event.event_date, error=str(e))
-            forecast_info = None
 
-        # Passa forecast_info direto na chamada do add
-        event_resp = repo.add(event, forecast_info=forecast_info)
-
-        # TODO VERIFICAR COM JOÃO SE É UMA BOA PRÁTICA
-        new_events.append(EventResponse.model_validate(event_resp))
+        # Criação normal SEM forecast
+        event_resp = repo.add(event, forecast_info=None)
+        
+        # Adiciona task em background para buscar forecast depois
+        background_tasks.add_task(
+            atualizar_forecast_em_background,
+            event.id
+        )
         
         await notify_upload_progress(event.title)
         logger.info("Evento adicionado em lote", event_id=event_resp.id, title=event.title, city=event.city, date=event.event_date)
@@ -381,8 +389,8 @@ async def post_events_batch(
     },
 )
 async def upload_csv(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    service: AbstractForecastService = _provide_forecast_service,
     repo: AbstractEventRepo = _provide_event_repo,
 ):
     """
@@ -410,10 +418,14 @@ async def upload_csv(
                 local_info=LocalInfo(**json.loads(row["local_info"]))  # 👈 mais seguro
             )
             
-            forecast_info = service.get_by_city_and_datetime(event.city, event.event_date)
+            # Criação normal SEM forecast
+            event_resp = repo.add(event, forecast_info=None)
             
-            # Passa forecast_info direto na chamada do add
-            event_resp = repo.add(event, forecast_info=forecast_info)
+            # Adiciona task em background para buscar forecast depois
+            background_tasks.add_task(
+                atualizar_forecast_em_background,
+                event_resp.id
+            )
             
             # TODO VERIFICAR COM JOÃO SE É UMA BOA PRÁTICA
             new_events.append(EventResponse.model_validate(event_resp))
@@ -560,10 +572,11 @@ def delete_event_by_id(
     },
 )
 def patch_event_by_id(
-                    event_id: int, 
-                    update: EventUpdate,
-                    repo: AbstractEventRepo = _provide_event_repo,
-    ) -> EventResponse:
+    background_tasks: BackgroundTasks,
+    event_id: int,
+    update: EventUpdate,
+    repo: AbstractEventRepo = _provide_event_repo,
+) -> EventResponse:
     """
     Atualiza parcialmente os dados do evento informado pelo ID.
     Só os campos enviados serão alterados.
@@ -574,6 +587,14 @@ def patch_event_by_id(
 
     try:
         result = repo.update(event_id, update.model_dump(exclude_unset=True))
+        
+        if update.city or update.event_date:
+            # Adiciona task em background para buscar forecast depois
+            background_tasks.add_task(
+                atualizar_forecast_em_background,
+                event_id
+            )
+            
         logger.info("Evento atualizado com sucesso", event_id=event_id)
         return result
     except ValueError:
@@ -591,10 +612,11 @@ def patch_event_by_id(
     },
 )
 def patch_event_by_id_local_info( #async?
-                            event_id: int, 
-                            update: LocalInfoUpdate | None = Body(None),
-                            repo: AbstractEventRepo = _provide_event_repo,
-    ) -> EventResponse:
+    background_tasks: BackgroundTasks,
+    event_id: int,
+    update: LocalInfoUpdate | None = Body(None),
+    repo: AbstractEventRepo = _provide_event_repo,
+) -> EventResponse:
     """
     Atualiza o campo local_info de um evento específico.
     """
@@ -609,6 +631,14 @@ def patch_event_by_id_local_info( #async?
     assert event is not None  # MyPy entende que daqui pra frente event não é mais None
     
     update_event(event, update, attr="local_info")
+    
+    if update.city or update.event_date:
+        # Adiciona task em background para buscar forecast depois
+        background_tasks.add_task(
+            atualizar_forecast_em_background,
+            event_id
+        )
+    
     logger.info("Informações do local atualizadas com sucesso", event_id=event_id)
     return repo.replace_by_id(event_id, event)
 
@@ -624,26 +654,25 @@ def patch_event_by_id_local_info( #async?
     },
 )
 def patch_event_by_id_forecast_info(
-                            event_id: int,
-                            service: AbstractForecastService = _provide_forecast_service,
-                            repo: AbstractEventRepo = _provide_event_repo,
-) -> EventResponse:
+    background_tasks: BackgroundTasks,
+    event_id: int,
+    repo: AbstractEventRepo = _provide_event_repo,
+) -> dict:
     """
-    Atualiza o campo forecast_info de um evento específico.
+    Aciona a tarefa de reprocessamento do forecast do evento.
     """
-    logger.info("Requisição para atualizar forecast_info recebida", event_id=event_id)
+    logger.info("Requisição para reprocessar forecast_info recebida", event_id=event_id)
+    
     event = repo.get(event_id)
     if event is None:
         raise_http(logger.warning, 404, "Evento não encontrado", event_id=event_id)
     assert event is not None  # MyPy entende que daqui pra frente não é mais None
     
-    try:
-        forecast = service.get_by_city_and_datetime(event.city, event.event_date)
-        if forecast is not None:
-            update = ForecastInfoUpdate.model_validate(forecast.model_dump())
-    except Exception as e:  
-        raise_http(logger.error, 502, "Erro ao obter previsão do tempo", event_id=event_id, error=str(e))
+    # Adiciona task em background para buscar forecast depois
+    background_tasks.add_task(
+        atualizar_forecast_em_background,
+        event_id
+    )
 
-    update_event(event, update, attr="forecast_info")
-    logger.info("Forecast_info atualizado com sucesso", event_id=event_id)
-    return repo.replace_by_id(event_id, event)
+    logger.info("Tarefa de atualização de forecast agendada", event_id=event_id)
+    return {"detail": "Tarefa de atualização de forecast agendada"}

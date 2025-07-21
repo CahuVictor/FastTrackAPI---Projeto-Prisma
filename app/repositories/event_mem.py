@@ -2,7 +2,7 @@
 from structlog import get_logger
 
 from app.schemas.event_create import EventCreate, EventResponse
-from app.schemas.weather_forecast import WeatherForecast
+from app.schemas.event_update import ForecastInfoUpdate
 
 from app.repositories.event import AbstractEventRepo
 
@@ -59,7 +59,7 @@ class InMemoryEventRepo(AbstractEventRepo):
             logger.warning("Evento não encontrado", event_id=event_id)
         return event
     
-    def add(self, event: EventCreate, forecast_info: WeatherForecast | None = None) -> EventResponse:
+    def add(self, event: EventCreate, forecast_info: ForecastInfoUpdate | None = None) -> EventResponse:
         event_resp = EventResponse(
             id=self._id_counter,
             title=event.title,

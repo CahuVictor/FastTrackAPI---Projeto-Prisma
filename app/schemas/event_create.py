@@ -4,7 +4,7 @@ from typing import Annotated
 from typing import Any
 from datetime import datetime, timezone
 
-from app.schemas.weather_forecast import WeatherForecast
+from app.schemas.event_update import ForecastInfoUpdate
 from app.schemas.local_info import LocalInfo
 
 class EventCreate(BaseModel):
@@ -49,7 +49,6 @@ def _make_default_local_info() -> LocalInfo:
         venue_type=None,
         is_accessible=False,
         address=None,
-        # past_events=[],
         manually_edited=False,
     )
 
@@ -66,6 +65,6 @@ def _make_dummy_event_data() -> dict[str, Any]:
  
 class EventResponse(EventCreate):
     id: int
-    forecast_info: WeatherForecast | None = None
+    forecast_info: ForecastInfoUpdate | None = None
     views: int = 0 # (default = 0)
     
