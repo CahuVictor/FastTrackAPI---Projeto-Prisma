@@ -10,6 +10,8 @@ import csv
 import asyncio
 import json
 
+from app.main import limiter
+
 from app.schemas.event_create import EventCreate, EventResponse
 from app.schemas.local_info import LocalInfo
 from app.schemas.event_update import EventUpdate, LocalInfoUpdate
@@ -124,6 +126,7 @@ async def get_forecast_info(
         404: {"description": "Nenhum evento encontrado."}
     },
 )
+@limiter.limit("60/minute")
 def list_events_all(repo: AbstractEventRepo = _provide_event_repo) -> list[EventResponse]:
     """
     Retorna todos os eventos cadastrados.
@@ -145,6 +148,7 @@ def list_events_all(repo: AbstractEventRepo = _provide_event_repo) -> list[Event
         404: {"description": "Nenhum evento encontrado."}
     },
 )
+@limiter.limit("20/minute")
 def download_eventos(repo: AbstractEventRepo = _provide_event_repo):
     eventos = repo.list_all()
     # return JSONResponse(content=[e.model_dump() for e in eventos])
@@ -158,6 +162,7 @@ def download_eventos(repo: AbstractEventRepo = _provide_event_repo):
     response_model=list[EventResponse],
     dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
 )
+@limiter.limit("60/minute")
 def list_events(
     skip: int = Query(0, ge=0, description="Quantos registros pular"),
     limit: int = Query(20, le=100, description="Tamanho da página"),
@@ -183,6 +188,7 @@ def list_events(
         404: {"description": "Evento não encontrado."}
     },
 )
+@limiter.limit("60/minute")
 async def get_event_by_id(
     background_tasks: BackgroundTasks,
     event_id: int,
@@ -394,6 +400,7 @@ async def post_events_batch(
         400: {"description": "Lista inválida enviada."}
     },
 )
+@limiter.limit("20/minute")
 async def upload_csv(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),

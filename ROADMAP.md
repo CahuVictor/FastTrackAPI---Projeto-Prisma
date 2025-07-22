@@ -86,85 +86,12 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["Authorization", "Content-Type"],
 )
-⏳ C. Rate Limiting
-Objetivo: Evitar abusos (ataques DoS).
 
-Como fazer:
 
-Use uma lib como slowapi:
 
-bash
-Copiar
-Editar
-pip install slowapi
-python
-Copiar
-Editar
-from slowapi import Limiter
-from slowapi.util import get_remote_address
-from slowapi.middleware import SlowAPIMiddleware
 
-limiter = Limiter(key_func=get_remote_address)
-app.state.limiter = limiter
-app.add_middleware(SlowAPIMiddleware)
 
-@app.get("/rota")
-@limiter.limit("10/minute")  # Máximo 10 requisições por minuto por IP
-async def minha_rota():
-    return {"ok": True}
-🗝️ D. Segurança de Tokens JWT
-Objetivo: Garantir que tokens sejam seguros e expirem adequadamente.
 
-Como fazer:
-
-Usar chaves fortes e expiração curta.
-
-python
-Copiar
-Editar
-jwt.encode({"sub": user_id, "exp": expiration}, secret_key, algorithm="HS256")
-Valide sempre a assinatura e validade (como você já fez).
-
-🗄️ E. Banco de Dados Seguro
-Objetivo: Evitar vazamentos.
-
-Como fazer:
-
-Use ORMs (SQLAlchemy) para evitar SQL Injection.
-
-Não armazene senhas puras (já feito com passlib).
-
-🔍 F. Segurança de Headers HTTP
-Objetivo: Evitar ataques MITM (Man-in-the-middle).
-
-Como fazer:
-
-bash
-Copiar
-Editar
-pip install secure
-python
-Copiar
-Editar
-from secure import SecureHeaders
-
-secure_headers = SecureHeaders()
-
-@app.middleware("http")
-async def secure_headers_middleware(request, call_next):
-    response = await call_next(request)
-    secure_headers.fastapi(response)
-    return response
-🔐 Resumo prático de Hardening:
- Pydantic rigoroso para validar entradas
-
- Middleware CORS
-
- Middleware rate-limiting
-
- Segurança forte em JWT
-
- Headers HTTP seguros
 
 ---
 

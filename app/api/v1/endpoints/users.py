@@ -2,6 +2,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from structlog import get_logger
 
+from app.main import limiter
+
 from app.repositories.user import AbstractUserRepo
 
 from app.schemas.user import UserInDB, UserCreate
@@ -32,6 +34,7 @@ router = APIRouter(
         404: {"description": "Lista vazia"}
     },
 )
+@limiter.limit("10/minute")
 def listar_usuarios(repo: AbstractUserRepo = _provide_user_repo):
     return repo.list_all()
 
@@ -45,6 +48,7 @@ def listar_usuarios(repo: AbstractUserRepo = _provide_user_repo):
         404: {"description": "Usuário não encontrado"}
     },
 )
+@limiter.limit("20/minute")
 def buscar_usuario(username: str, repo: AbstractUserRepo = _provide_user_repo):
     user = repo.get_by_username(username)
     if not user:
@@ -62,6 +66,7 @@ def buscar_usuario(username: str, repo: AbstractUserRepo = _provide_user_repo):
     },
     status_code=status.HTTP_201_CREATED,
 )
+@limiter.limit("20/minute")
 def criar_usuario(novo: UserCreate, repo: AbstractUserRepo = _provide_user_repo):
     if repo.get_by_username(novo.username):
         raise HTTPException(status_code=400, detail="Usuário já existe")
@@ -83,6 +88,7 @@ def criar_usuario(novo: UserCreate, repo: AbstractUserRepo = _provide_user_repo)
     },
     status_code=status.HTTP_204_NO_CONTENT,
 )
+@limiter.limit("20/minute")
 def remover_usuario(username: str, repo: AbstractUserRepo = _provide_user_repo):
     if not repo.delete_by_username(username):
         raise HTTPException(status_code=404, detail="Usuário não encontrado")

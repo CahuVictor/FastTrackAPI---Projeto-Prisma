@@ -3,6 +3,8 @@ from fastapi import APIRouter, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 from structlog import get_logger
 
+from app.main import limiter
+
 from app.schemas.token import Token
 from app.deps import provide_user_repo
 from app.services.interfaces.user_protocol import AbstractUserRepo
@@ -16,6 +18,7 @@ logger = get_logger().bind(module="auth")
 router = APIRouter(tags=["auth"])
 
 @router.post("/auth/login", response_model=Token)
+@limiter.limit("10/minute")
 def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     repo: AbstractUserRepo = Depends(provide_user_repo)

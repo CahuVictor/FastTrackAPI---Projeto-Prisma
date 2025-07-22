@@ -131,7 +131,7 @@ Os serviços já estão definidos por contrato (`Protocol`) e podem ser ativados
 ## ✅ Execução de Testes
 
 ```bash
-ENVIRONMENT=test poetry run pytest --cov=app --cov-report=html
+ENVIRONMENT=test poetry run pytest
 ```
 
 - Visualize em: `htmlcov/index.html`

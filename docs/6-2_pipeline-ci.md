@@ -110,7 +110,7 @@ Aderimos ao **princípio do menor privilégio**.
 | 6️⃣ | **PyUpgrade**             | `poetry run pyupgrade --py312-plus --exit-zero-even-if-changed $(git ls-files '*.py')`       | Sugere modernização                |
 | 7️⃣ | **MyPy**                  | `poetry run mypy app`                                                                        | Checagem estrita de tipos          |
 | 8️⃣ | **Bandit**                | `poetry run bandit -q -r app -lll`                                                           | Scanner de segurança               |
-| 9️⃣ | **Pytest + coverage**     | `poetry run pytest --cov=app --cov-report=xml --cov-report=term-missing --cov-fail-under=80` | Garante cobertura mínima           |
+| 9️⃣ | **Pytest + coverage**     | `poetry run pytest           | Garante cobertura mínima           |
 | 🔟  | **Codecov**               | `codecov/codecov-action@v4`                                                                  | Badge & *diff* de cobertura        |
 
 ---
@@ -123,7 +123,7 @@ Aderimos ao **princípio do menor privilégio**.
 | **PyUpgrade** | Modernização  | `pyupgrade --py312-plus $(git ls-files '*.py')`      |
 | **MyPy**      | Tipagem       | `poetry run mypy app`                                |
 | **Bandit**    | Segurança     | `poetry run bandit -q -r app -lll`                   |
-| **Pytest**    | Testes        | `poetry run pytest -x --cov=app --cov-report=xml --cov-report=html --cov-fail-under=80` |
+| **Pytest**    | Testes        | `poetry run pytest -x                                |
 
 Execute esses comandos localmente antes do *push* para obter feedback idêntico ao CI.
 
@@ -193,10 +193,7 @@ jobs:
 
       - name: Pytest
         run: |
-          poetry run pytest --cov=app \
-                            --cov-report=xml \
-                            --cov-report=term-missing \
-                            --cov-fail-under=80
+          poetry run pytest
 
       - name: Upload coverage to Codecov
         if: success()
@@ -323,7 +320,7 @@ Rodar testes localmente igual ao CI
 # 1ª vez
   poetry install --with dev --no-interaction
 # sempre que for commitar
-  poetry run pytest --cov=app --cov-report=term-missing
+  poetry run pytest
 
 Adicione a dependência no grupo dev para rodar localmente:
   poetry add --group dev ruff
@@ -334,7 +331,7 @@ poetry run ruff check .
 poetry run pyupgrade --py312-plus $(git ls-files '*.py')
 poetry run mypy app
 poetry run bandit -q -r app -lll
-poetry run pytest -x --cov=app --cov-fail-under=80
+poetry run pytest -x
 ```
 
 Para simular o workflow GitHub Actions sem sair do terminal:

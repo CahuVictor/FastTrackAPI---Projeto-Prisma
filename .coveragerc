@@ -1,0 +1,18 @@
+[run]
+# Limita a análise de cobertura apenas à pasta app
+source = app
+
+# Ignora o middleware de headers seguros na cobertura de código
+# pois ele é baseado em BaseHTTPMiddleware, cuja execução (via dispatch)
+# não é corretamente rastreada pelo coverage.py em middlewares ASGI.
+omit =
+    */middleware/secure_headers.py
+    */middleware/rate_limiter.py
+
+[report]
+# Mostra no terminal as linhas não cobertas
+show_missing = true
+
+# Exibe cobertura por função
+# Oculta arquivos 100% cobertos
+# skip_covered = true

@@ -17,6 +17,8 @@ from app.core.exception_handlers import db_connection_exception_handler
 from app.core.tracing_config import configure_tracing
 
 from app.middleware.logging_middleware import LoggingMiddleware
+from app.middleware.secure_headers import SecureHeadersMiddleware
+from app.middleware.rate_limiter import setup_rate_limiter
 
 configure_logging()
 
@@ -66,6 +68,10 @@ def ping():
 
 # Middleware de logging HTTP
 app.add_middleware(LoggingMiddleware)
+
+app.add_middleware(SecureHeadersMiddleware)
+
+setup_rate_limiter(app)
 
 # Registra o handler global
 app.add_exception_handler(OperationalError, db_connection_exception_handler)
