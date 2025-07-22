@@ -4,7 +4,6 @@ from pydantic import ValidationError
 from datetime import datetime, timezone, timedelta
 
 from app.schemas.event_create import EventResponse
-from app.schemas.weather_forecast import WeatherForecast
 from app.schemas.event_update import EventUpdate, LocalInfoUpdate, ForecastInfoUpdate
 
 def should_update_forecast(forecast_info: ForecastInfoUpdate | None) -> bool:
@@ -60,7 +59,10 @@ def update_event(
                 setattr(event, field, value)
         else:
             if attr == "forecast_info":
-                return update_event_forecast(event, update)
+                from typing import cast
+                # cast() para informar explicitamente ao MyPy que update é do tipo ForecastInfoUpdate
+                return update_event_forecast(event, cast(ForecastInfoUpdate, update))
+                # return update_event_forecast(event, update)
             else:
                 # Atualiza um campo aninhado (ex: local_info, forecast_info)
                 objeto = getattr(event, attr)

@@ -1,7 +1,7 @@
 # app\services\forecast.py
 import asyncio
 from structlog import get_logger
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 
 from app.services.interfaces.forecast_info_protocol import AbstractForecastService
 from app.repositories.event import AbstractEventRepo

@@ -10,6 +10,8 @@ from io import BytesIO
 # from app.main import app
 from app.main import app as fastapi_app   # FastAPI já criado em app.main
 
+from app.schemas.event_update import ForecastInfoUpdate
+
 # from app.schemas.local_info import LocalInfo
 from app.services.mock_local_info import MockLocalInfoService
 
@@ -136,7 +138,8 @@ def event(request):
                 "weather_main": "Clear",
                 "weather_desc": "Céu limpo",
                 "humidity": 60,
-                "wind_speed": 3.0
+                "wind_speed": 3.0,
+                "updated_at": "2025-06-01T19:00:00Z"
             }
         }
     elif request.param == "eventos_validos_lote":
@@ -336,3 +339,17 @@ def csv_file(request):
             "Evento incompleto,,2025-07-20T19:00:00,Olinda,,\"{}\"\n"
         )
     return BytesIO(csv_content.encode('utf-8')), 'eventos.csv'
+
+# ----
+
+@pytest.fixture
+def forecast_info_update() -> ForecastInfoUpdate:
+    return ForecastInfoUpdate(
+        forecast_datetime="2025-06-01T18:00:00Z",
+        temperature=28.0,
+        weather_main="Clear",
+        weather_desc="Céu limpo",
+        humidity=60,
+        wind_speed=3.0,
+        updated_at="2025-06-01T19:00:00Z"
+    )

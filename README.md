@@ -3,10 +3,10 @@
 [![Coverage](https://codecov.io/gh/SEU_USUARIO/FastTrackAPI---Projeto-Prisma/branch/main/graph/badge.svg)](https://codecov.io/gh/SEU_USUARIO/FastTrackAPI---Projeto-Prisma)
 ---------- coverage: platform win32, python 3.12.6-final-0 -----------
 Name                                                Stmts   Miss  Cover   Missing
-TOTAL                                                1016    192    81%
+TOTAL                                                1271    232    82%
 
-Required test coverage of 80% reached. Total coverage: 82.36%
-> **Cobertura de testes:** 82,36 % (mínimo exigido ≥ 80 %)
+Required test coverage of 80% reached. Total coverage: 81.75%
+> **Cobertura de testes:** 81.75 % (mínimo exigido ≥ 80 %)
 
 Este repositório é o resultado de uma mentoria prática em desenvolvimento **Backend** com **Python 3.12 + FastAPI**, cobrindo arquitetura limpa, segurança, testes, CI/CD e observabilidade.
 
@@ -30,6 +30,7 @@ Este repositório é o resultado de uma mentoria prática em desenvolvimento **B
 |   5.4 | [WebSockets e Arquivos](docs/5-4_websockets-arquivos.md) | `docs/5-4_websockets-arquivos.md`        |
 |   5.5 | [Banco de Dados e Migrations](docs/5-5_banco-migrations.md) | `docs/5-5_banco-migrations.md`           |
 |   5.6 | [Latência em Mocks](docs/5-6_latencia-mocks.md) | `docs/5-6_latencia-mocks.md`             |
+|   5.7 | [Tarefas em Segundo Plano](docs/5-7_background_tasks.md) | `docs/5-7_background_tasks.md`          |
 | 6     | [Qualidade & Automação](docs/6_qualidade-automacao.md) | `docs/6_qualidade-automacao.md`          |
 |   6.1 | [Testes Automatizados](docs/6-1_testes-automatizados.md) | `docs/6-1_testes-automatizados.md`       |
 |   6.2 | [Pipeline de CI/CD](docs/6-2_pipeline-ci.md) | `docs/6-2_pipeline-ci.md`                |
@@ -103,6 +104,13 @@ TODO Descrição
 #### [Latência em Mocks](docs/5-6_latencia-mocks.md)
 
 Corrigimos um gargalo de 3 – 10 s por requisição: o `MockUserRepo` executava `bcrypt` a cada request. Agora o mock é **singleton** quando `ENVIRONMENT=test.inmemory`, reduzindo para ≈ 30 ms. Detalhes em `docs/5-6_latencia-mocks.md`.
+
+#### [Tarefas em Segundo Plano](docs/5-7_background_tasks.md)
+
+* Utilização do `BackgroundTasks` do FastAPI para pós-processamento assíncrono.
+* Estratégias para retries com `asyncio.sleep` parametrizado.
+* Criação de tarefas como geração de thumbnails, envio de notificações, revalidação de previsões.
+* Exemplos práticos e recomendações para uso seguro com logs e dependências externas.
 
 ### [Qualidade & Automação](docs/6_qualidade-automacao.md)
 

@@ -26,30 +26,6 @@ Criar rotas administrativas
 
 ---
 
-## 7. Background Task para Previsão do Tempo
-
-**O que é:** Execução assíncrona de tarefas.
-
-**Vantagens:**
-
-* Não bloqueia o usuário.
-* Melhor experiência de uso.
-
-**Implementação:**
-
-```python
-from fastapi import BackgroundTasks
-
-async def atualizar_forecast(evento_id):
-    forecast = await fetch_forecast()
-    eventos_db[evento_id]["forecast"] = forecast
-
-@router.post("/eventos")
-def criar_evento(evento: Evento, tasks: BackgroundTasks):
-    eventos_db[evento.id] = evento
-    tasks.add_task(atualizar_forecast, evento.id)
-```
-
 ---
 
 ## 9. Hardening de Segurança
@@ -258,11 +234,3 @@ Checklist rápido: cada arquivo deve responder “qual única responsabilidade e
 * Verificar e atualizar Dockerfile e docker-compose com Redis e PostgreSQL configurados adequadamente.
 
 ---
-
-## 14. Pontos adicionais pendentes
-
-* Aprimorar continuamente o gerenciamento de ambientes com práticas mais avançadas.
-
----
-
-Este documento é um roadmap detalhado para organizar a evolução contínua e eficiente do seu projeto backend.

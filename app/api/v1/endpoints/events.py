@@ -12,7 +12,8 @@ import json
 
 from app.schemas.event_create import EventCreate, EventResponse
 from app.schemas.local_info import LocalInfo
-from app.schemas.event_update import EventUpdate, LocalInfoUpdate, ForecastInfoUpdate
+from app.schemas.event_update import EventUpdate, LocalInfoUpdate
+from app.schemas.common import MessageResponse
 
 from app.utils.cache import cached_json
 from app.utils.h_events import order_and_slice, ensure_aware
@@ -21,7 +22,6 @@ from app.utils.patch import update_event
 from app.utils.security import require_roles, auth_dep
 
 from app.services.interfaces.local_info_protocol import AbstractLocalInfoService
-from app.services.interfaces.forecast_info_protocol import AbstractForecastService
 from app.services.forecast import atualizar_forecast_em_background
 from app.repositories.event import AbstractEventRepo
 from app.deps import provide_local_info_service, provide_forecast_service, provide_event_repo
@@ -80,7 +80,7 @@ async def get_local_info(
 @router.get(
     "/forecast_info",
     summary="Busca previsão do tempo para uma cidade e data/hora (mock)",
-    response_model=ForecastInfoUpdate,
+    response_model=MessageResponse,
     dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
     responses={
         200: {"description": "Previsão recebida"},
@@ -89,10 +89,10 @@ async def get_local_info(
 )
 @cached_json("forecast", ttl=1800)              # ⬅⬅️ _a “mágica” está aqui_
 async def get_forecast_info(
-    background_tasks: BackgroundTasks,
+    # background_tasks: BackgroundTasks,
     city: str = Query(..., description="Nome da cidade"),
     date: datetime = Query(..., description="Data e hora de referência para a previsão"),
-) -> dict:
+):
     """
     Retorna a previsão do tempo simulada para a cidade e data/hora informadas.
     Cache: 30 min (1800 s)
@@ -104,8 +104,13 @@ async def get_forecast_info(
     #     event_resp.id
     # )
     
+    # TODO
+    
     # Essa função deve retornar o forecast para um range de horários no dia solicitado
     # Pode-se pensar em pegar para dias tbm
+    
+    logger.info("Endpoint em construção")
+    return {"detail": "Endpoint em construção"}
 
 @router.get(
     "/all",
@@ -192,7 +197,6 @@ async def get_event_by_id(
     if event is None:
         raise_http(logger.warning, 404, "Evento não encontrado", event_id=event_id)
     assert event is not None  # MyPy entende que daqui pra frente não é mais None
-    
     
     if should_update_forecast(event.forecast_info):
         background_tasks.add_task(
@@ -355,7 +359,7 @@ async def post_events_batch(
     if not events:
         raise_http(logger.warning, 400, "Lista vazia enviada")
 
-    new_events = []
+    new_events: list[EventResponse] = []
     for event in events:
 
         # Criação normal SEM forecast
@@ -364,11 +368,13 @@ async def post_events_batch(
         # Adiciona task em background para buscar forecast depois
         background_tasks.add_task(
             atualizar_forecast_em_background,
-            event.id
+            event_resp.id
         )
         
         await notify_upload_progress(event.title)
         logger.info("Evento adicionado em lote", event_id=event_resp.id, title=event.title, city=event.city, date=event.event_date)
+        
+        new_events.append(event_resp)
 
     logger.info("Eventos em lote adicionados com sucesso", total_adicionados=len(new_events))
     await notify_upload_end(len(new_events))
@@ -632,7 +638,9 @@ def patch_event_by_id_local_info( #async?
     
     update_event(event, update, attr="local_info")
     
-    if update.city or update.event_date:
+    # TODO verificar se ao mudar o local info, também foi alterada a cidade
+    
+    if event.city or event.event_date:
         # Adiciona task em background para buscar forecast depois
         background_tasks.add_task(
             atualizar_forecast_em_background,
@@ -645,7 +653,7 @@ def patch_event_by_id_local_info( #async?
 @router.patch(
     "/{event_id}/forecast_info",
     summary="Atualiza a previsão do tempo de um evento.",
-    response_model=EventResponse,
+    response_model=MessageResponse,
     dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
     responses={
         200: {"description": "Previsão do tempo atualizada com sucesso."},
