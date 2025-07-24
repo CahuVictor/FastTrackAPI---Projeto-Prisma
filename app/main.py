@@ -19,6 +19,7 @@ from app.core.tracing_config import configure_tracing
 from app.middleware.logging_middleware import LoggingMiddleware
 from app.middleware.secure_headers import SecureHeadersMiddleware
 from app.middleware.rate_limiter import setup_rate_limiter
+from app.middleware.cors import init_cors
 
 configure_logging()
 
@@ -58,6 +59,8 @@ app = FastAPI(
         "email": "mentor@example.com"
     }
 )
+
+init_cors(app)
 
 app.include_router(api_router)
 

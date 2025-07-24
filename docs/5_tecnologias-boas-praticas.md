@@ -18,7 +18,10 @@ Este documento detalha as funcionalidades principais implementadas no projeto **
 
 ### ✅ Validação e Documentação Automática
 
-* Uso do **Pydantic** para validação detalhada e automática dos dados recebidos e enviados pela API.
+* Uso rigoroso do Pydantic para modelagem e validação de entradas e saídas.
+* Campos definidos com Annotated[...] + Field(...), incluindo restrições de tipo, comprimento, valores mínimos/máximos e exemplos.
+* Validações customizadas com @field_validator (ex: remoção de espaços, formatação de texto, verificação de timezone).
+* Restrições extras com extra="forbid" nos modelos Update, garantindo que apenas campos esperados sejam aceitos.
 * Documentação automática gerada via **Swagger/OpenAPI** e **ReDoc**, com exemplos e descrições claras dos endpoints e schemas.
 
 ### 🔑 Segurança

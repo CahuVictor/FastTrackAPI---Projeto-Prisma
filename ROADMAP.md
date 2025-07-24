@@ -46,53 +46,6 @@ Criar rotas administrativas
 🔐 1. Hardening de Segurança
 "Hardening" refere-se à prática de tornar uma aplicação mais segura, protegendo-a contra ataques e falhas que possam comprometer a confidencialidade, integridade ou disponibilidade dos dados.
 
-No contexto FastAPI e aplicações Python backend, isso envolve:
-
-🛡️ A. Validação e Sanitização de Entradas
-Objetivo: Prevenir ataques comuns como SQL Injection, NoSQL Injection e XSS.
-
-Como fazer:
-
-Utilize o Pydantic (já em uso) rigorosamente.
-
-Valide limites (comprimento, formato, caracteres permitidos).
-
-Exemplo:
-
-python
-Copiar
-Editar
-from pydantic import BaseModel, constr
-
-class UserInput(BaseModel):
-    username: constr(regex="^[a-zA-Z0-9_-]{3,20}$")  # Regex para sanitização básica
-    email: constr(pattern=r"^[\w\.-]+@[\w\.-]+\.\w+$")
-🚫 B. Proteção contra ataques Cross-Origin (CORS)
-Objetivo: Restringir quais sites podem acessar sua API.
-
-Como fazer:
-
-Instale o fastapi.middleware.cors.CORSMiddleware.
-
-python
-Copiar
-Editar
-from fastapi.middleware.cors import CORSMiddleware
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["https://meusite.com.br"],
-    allow_credentials=True,
-    allow_methods=["GET", "POST"],
-    allow_headers=["Authorization", "Content-Type"],
-)
-
-
-
-
-
-
-
 ---
 
 🚧 D. Middleware Global para Observabilidade

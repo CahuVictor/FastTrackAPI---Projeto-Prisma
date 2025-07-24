@@ -1,17 +1,12 @@
 # app\api\v1\endpoints\users.py
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from structlog import get_logger
 
-from app.main import limiter
-
 from app.repositories.user import AbstractUserRepo
-
 from app.schemas.user import UserInDB, UserCreate
-
 from app.core.security import get_password_hash
-
+from app.core.rate_limit_config import limiter
 from app.utils.security import require_roles, auth_dep
-
 from app.deps import provide_user_repo
 
 _provide_user_repo = Depends(provide_user_repo)
@@ -35,7 +30,10 @@ router = APIRouter(
     },
 )
 @limiter.limit("10/minute")
-def listar_usuarios(repo: AbstractUserRepo = _provide_user_repo):
+def listar_usuarios(
+    request: Request,  # ← Necessário para funcionar com @limiter.limit,
+    repo: AbstractUserRepo = _provide_user_repo
+):
     return repo.list_all()
 
 @router.get(
@@ -49,7 +47,11 @@ def listar_usuarios(repo: AbstractUserRepo = _provide_user_repo):
     },
 )
 @limiter.limit("20/minute")
-def buscar_usuario(username: str, repo: AbstractUserRepo = _provide_user_repo):
+def buscar_usuario(
+    request: Request,  # ← Necessário para funcionar com @limiter.limit,
+    username: str,
+    repo: AbstractUserRepo = _provide_user_repo
+):
     user = repo.get_by_username(username)
     if not user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
@@ -67,7 +69,11 @@ def buscar_usuario(username: str, repo: AbstractUserRepo = _provide_user_repo):
     status_code=status.HTTP_201_CREATED,
 )
 @limiter.limit("20/minute")
-def criar_usuario(novo: UserCreate, repo: AbstractUserRepo = _provide_user_repo):
+def criar_usuario(
+    request: Request,  # ← Necessário para funcionar com @limiter.limit,
+    novo: UserCreate,
+    repo: AbstractUserRepo = _provide_user_repo
+):
     if repo.get_by_username(novo.username):
         raise HTTPException(status_code=400, detail="Usuário já existe")
     user = UserInDB(
@@ -89,7 +95,11 @@ def criar_usuario(novo: UserCreate, repo: AbstractUserRepo = _provide_user_repo)
     status_code=status.HTTP_204_NO_CONTENT,
 )
 @limiter.limit("20/minute")
-def remover_usuario(username: str, repo: AbstractUserRepo = _provide_user_repo):
+def remover_usuario(
+    request: Request,  # ← Necessário para funcionar com @limiter.limit,
+    username: str,
+    repo: AbstractUserRepo = _provide_user_repo
+):
     if not repo.delete_by_username(username):
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
     return None

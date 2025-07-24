@@ -1,5 +1,5 @@
 # api/v1/endpoints/eventos.py
-from fastapi import APIRouter, Depends, Query, Body, UploadFile, File, BackgroundTasks
+from fastapi import APIRouter, Depends, Query, Body, UploadFile, File, BackgroundTasks, Request
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from datetime import datetime, timezone
@@ -10,7 +10,7 @@ import csv
 import asyncio
 import json
 
-from app.main import limiter
+from app.core.rate_limit_config import limiter
 
 from app.schemas.event_create import EventCreate, EventResponse
 from app.schemas.local_info import LocalInfo
@@ -127,7 +127,10 @@ async def get_forecast_info(
     },
 )
 @limiter.limit("60/minute")
-def list_events_all(repo: AbstractEventRepo = _provide_event_repo) -> list[EventResponse]:
+def list_events_all(
+    request: Request,  # ← Necessário para funcionar com @limiter.limit,
+    repo: AbstractEventRepo = _provide_event_repo
+) -> list[EventResponse]:
     """
     Retorna todos os eventos cadastrados.
     """
@@ -149,7 +152,10 @@ def list_events_all(repo: AbstractEventRepo = _provide_event_repo) -> list[Event
     },
 )
 @limiter.limit("20/minute")
-def download_eventos(repo: AbstractEventRepo = _provide_event_repo):
+def download_eventos(
+    request: Request,  # ← Necessário para funcionar com @limiter.limit,
+    repo: AbstractEventRepo = _provide_event_repo
+):
     eventos = repo.list_all()
     # return JSONResponse(content=[e.model_dump() for e in eventos])
     # jsonable_encoder converte datetime → ISO-8601 string
@@ -164,6 +170,7 @@ def download_eventos(repo: AbstractEventRepo = _provide_event_repo):
 )
 @limiter.limit("60/minute")
 def list_events(
+    request: Request,  # ← Necessário para funcionar com @limiter.limit,
     skip: int = Query(0, ge=0, description="Quantos registros pular"),
     limit: int = Query(20, le=100, description="Tamanho da página"),
     city: str | None = Query(None, description="Filtrar por cidade"),
@@ -190,6 +197,7 @@ def list_events(
 )
 @limiter.limit("60/minute")
 async def get_event_by_id(
+    request: Request,  # ← Necessário para funcionar com @limiter.limit,
     background_tasks: BackgroundTasks,
     event_id: int,
     repo: AbstractEventRepo = _provide_event_repo,
@@ -402,6 +410,7 @@ async def post_events_batch(
 )
 @limiter.limit("20/minute")
 async def upload_csv(
+    request: Request,  # ← Necessário para funcionar com @limiter.limit,
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     repo: AbstractEventRepo = _provide_event_repo,

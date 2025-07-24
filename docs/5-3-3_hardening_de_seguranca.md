@@ -14,20 +14,32 @@ Este documento detalha as práticas aplicadas para reforçar a segurança da apl
 
 ---
 
-### 🚫 B. Proteção contra CORS (❌ PENDENTE)
+### 🌍 B. Proteção contra CORS
 
-- 🔴 **CORS Middleware não implementado.**
+- ✅ `CORSMiddleware` adicionado via `app.middleware.cors.init_cors()`
+- ✅ Lista de origens confiáveis definida:
+  - http://localhost
+  - http://localhost:3000
+  - https://seusite.com.br
+- Middleware registrado automaticamente no `main.py`:
 
 ```python
-from fastapi.middleware.cors import CORSMiddleware
+from app.middleware.cors import init_cors
+init_cors(app)
+```
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["https://seusite.com.br"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+Arquivo de configuração:
+
+```python
+# app/middleware/cors.py
+def init_cors(app: FastAPI) -> None:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost", "http://localhost:3000", "https://seusite.com.br"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 ```
 
 ---
@@ -41,7 +53,14 @@ app.add_middleware(
   - `/events/download` e `/events/upload` – 20/min
   - `/users`, `/users/{username}` – 10-20/min
   - `/events` – 60/min
-- ✅ Testado com `test_rate_limiter.py`
+  - ✅ Testado com `test_rate_limiter.py`
+
+#### ⚠️ Observação sobre Testes
+
+Durante execução de testes com `pytest`, caso o mesmo endpoint seja chamado várias vezes (ex: login), pode ocorrer o erro `429 Too Many Requests`. Para contornar:
+
+- Utilize o decorador `@limited_route(...)` condicional ao ambiente.
+- Ou aguarde 1 minuto entre execuções dos testes mais exigentes.
 
 ---
 
@@ -69,6 +88,7 @@ app.add_middleware(
 - ✅ Middleware implementado em `secure_headers.py` com `secure.SecureHeaders`.
 - ✅ Testado em `test_secure_headers.py`.
 - ✅ Middleware adicionado via `app.add_middleware(SecureHeadersMiddleware)`.
+- ✅ Testado com `curl` e `test_secure_headers.py`.
 
 ```python
 # app/middleware/secure_headers.py
@@ -146,7 +166,7 @@ Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
 | Item                          | Status    |
 |-------------------------------|-----------|
 | Validação com Pydantic       | ✅ Feito  |
-| Middleware CORS              | ❌ Pendente |
+| Middleware CORS              | ✅ Feito  |
 | Rate Limiting (SlowAPI)      | ✅ Feito  |
 | JWT com expiração            | ✅ Feito  |
 | Headers HTTP seguros         | ✅ Feito  |
@@ -162,7 +182,6 @@ Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
 
 ## 📌 Próximos Passos
 
-- [ ] Adicionar `CORSMiddleware` com domínio confiável
 - [ ] Finalizar painel no Grafana
 - [ ] Migrar `JaegerExporter` para `OTLPSpanExporter`
 - [ ] Adicionar spans personalizados

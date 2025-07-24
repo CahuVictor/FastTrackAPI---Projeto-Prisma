@@ -1,15 +1,14 @@
 # api/v1/endpoints/auth.py
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from structlog import get_logger
-
-from app.main import limiter
 
 from app.schemas.token import Token
 from app.deps import provide_user_repo
 from app.services.interfaces.user_protocol import AbstractUserRepo
 from app.services.auth_service import authenticate
 from app.core.security import create_access_token
+from app.core.rate_limit_config import limiter
 
 from app.utils.http import raise_http
 
@@ -20,6 +19,7 @@ router = APIRouter(tags=["auth"])
 @router.post("/auth/login", response_model=Token)
 @limiter.limit("10/minute")
 def login(
+    request: Request,  # ← Necessário para funcionar com @limiter.limit
     form_data: OAuth2PasswordRequestForm = Depends(),
     repo: AbstractUserRepo = Depends(provide_user_repo)
 ):

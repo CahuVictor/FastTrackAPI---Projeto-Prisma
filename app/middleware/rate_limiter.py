@@ -1,16 +1,10 @@
 # app/middleware/rate_limiter.py
-
-from slowapi import Limiter
-from slowapi.util import get_remote_address
+from fastapi import FastAPI
 from slowapi.middleware import SlowAPIMiddleware
 
-# Função para obter IP remoto do cliente
-limiter = Limiter(
-    key_func=get_remote_address,
-    default_limits=["500/minute"]
-)
+from app.core.rate_limit_config import limiter
 
 # Middleware para habilitar controle de taxa (rate limiting)
-def setup_rate_limiter(app):
+def setup_rate_limiter(app: FastAPI):
     app.state.limiter = limiter
     app.add_middleware(SlowAPIMiddleware)
