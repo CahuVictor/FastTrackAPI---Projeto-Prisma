@@ -5,8 +5,9 @@ from datetime import datetime, timezone, timedelta
 
 from app.schemas.event_create import EventResponse
 from app.schemas.event_update import EventUpdate, LocalInfoUpdate, ForecastInfoUpdate
+from app.schemas.weather_forecast import ForecastInfoResponse
 
-def should_update_forecast(forecast_info: ForecastInfoUpdate | None) -> bool:
+def should_update_forecast(forecast_info: ForecastInfoResponse | None) -> bool:
     if not forecast_info:
         return True
     if forecast_info.updated_at:
@@ -24,14 +25,20 @@ def update_event_forecast(
     Se forecast_info estiver ausente (None), cria o objeto diretamente.
     """
     try:
-        if event.forecast_info is None:
-            # forecast_info ainda não existe → cria novo com os dados do update
-            event.forecast_info = ForecastInfoUpdate(**update.model_dump(exclude_unset=True))
+        update_data = update.model_dump(exclude_unset=True)
+        
+        if event.forecast_info is None:            
+            # Cria novo forecast_info com timestamp atual
+            update_data.setdefault("updated_at", datetime.now(timezone.utc))
+            
         else:
-            # forecast_info já existe → faz merge dos dados
-            data = event.forecast_info.model_dump()
-            data.update(update.model_dump(exclude_unset=True))
-            event.forecast_info = ForecastInfoUpdate(**data)
+            # Merge com o existente
+            base_data = event.forecast_info.model_dump()
+            base_data.update(update_data)
+            update_data = base_data
+
+        # Converte para ForecastInfoResponse antes de atribuir
+        event.forecast_info = ForecastInfoResponse(**update_data)
         
     except ValidationError as ve:
         # Você pode fazer log, print, raise HTTPException, etc

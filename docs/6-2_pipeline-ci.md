@@ -331,8 +331,11 @@ poetry run ruff check .
 poetry run pyupgrade --py312-plus $(git ls-files '*.py')
 poetry run mypy app
 poetry run bandit -q -r app -lll
+$env:ENVIRONMENT = "test.inmemory"
 poetry run pytest -x
 ```
+
+Se não ativar o test.inmemory, os testes dão erro, precisa analisar depois como corrigir, mas de momento podemos focar em habilitar este modo para o teste.
 
 Para simular o workflow GitHub Actions sem sair do terminal:
 

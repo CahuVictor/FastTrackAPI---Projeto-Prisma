@@ -14,7 +14,7 @@ from app.services.interfaces.user_protocol import AbstractUserRepo
 # from app.services.mock_users import MockUserRepo
 # from app.services.user_db import UserRepo
 
-from app.services.mock_local_info import MockLocalInfoService
+# from app.services.local_info_api import LocalInfoService
 from app.services.interfaces.local_info_protocol import AbstractLocalInfoService
 
 from app.services.mock_forecast_info import MockForecastService
@@ -43,9 +43,10 @@ def provide_local_info_service() -> AbstractLocalInfoService:
     Retorna o serviço de localinfo.
     """
     if _settings.environment == "test.inmemory":
+        from app.services.mock_local_info import MockLocalInfoService
         logger.debug("Injetando serviço de local_info (mock)")
         return MockLocalInfoService()
-    return MockLocalInfoService()
+    return MockLocalInfoService() # LocalInfoService()
 
 def provide_forecast_service() -> AbstractForecastService:
     """

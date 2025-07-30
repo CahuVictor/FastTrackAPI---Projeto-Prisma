@@ -6,10 +6,10 @@ from sqlalchemy.orm import Mapped, relationship
 
 from app.db.base import Base
 
-from app.models.models_local_info import LocalInfo
-from app.models.models_forecast_info import ForecastInfo
+from app.models.models_local_info import ModelsLocalInfo
+from app.models.models_forecast_info import ModelsForecastInfo
 
-class Event(Base):
+class ModelsEvent(Base):
     __tablename__ = 'events'
 
     id = Column(Integer, primary_key=True, index=True)
@@ -32,9 +32,9 @@ class Event(Base):
     # local_info: Mapped["LocalInfo"] = relationship(back_populates="events")
     # forecast_info: Mapped["ForecastInfo"] = relationship(back_populates="events")
     
-    local_info: Mapped["LocalInfo"] = relationship(
-        "LocalInfo", back_populates="events"  # type: ignore[assignment]
+    local_info: Mapped["ModelsLocalInfo"] = relationship(
+        "ModelsLocalInfo", back_populates="events"  # type: ignore[assignment]
     )
-    forecast_info: Mapped["ForecastInfo"] = relationship(
-        "ForecastInfo", back_populates="events"  # type: ignore[assignment]
+    forecast_info: Mapped["ModelsForecastInfo"] = relationship(
+        "ModelsForecastInfo", back_populates="events"  # type: ignore[assignment]
     )

@@ -5,6 +5,9 @@ from starlette.testclient import TestClient
 from app.middleware.rate_limiter import setup_rate_limiter, limiter
 
 def test_rate_limiter_blocks_after_limit():
+    # Habilita o rate limiter para este teste
+    limiter.enabled = True
+    
     app = FastAPI()
 
     @app.get("/ping")
@@ -25,3 +28,6 @@ def test_rate_limiter_blocks_after_limit():
     response = client.get("/ping")
     assert response.status_code == 429
     assert response.json()["detail"] == "3 per 1 minute"
+    
+    # Desabilita novamente para não afetar outros testes
+    limiter.enabled = False

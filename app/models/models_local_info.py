@@ -9,9 +9,9 @@ from app.db.base import Base
 from app.schemas.venue_type import VenueTypes
 
 if TYPE_CHECKING:
-    from app.models.models_event import Event
+    from app.models.models_event import ModelsEvent
 
-class LocalInfo(Base):
+class ModelsLocalInfo(Base):
     __tablename__ = 'local_infos'
 
     id = Column(Integer, primary_key=True, index=True)
@@ -23,6 +23,6 @@ class LocalInfo(Base):
     manually_edited = Column(Boolean, default=False)
 
     # events = relationship("Event", back_populates="local_info")  # TODO verificar se alteração funcionou
-    events: Mapped[list["Event"]] = relationship(
-        "Event", back_populates="local_info"  # type: ignore[assignment]
+    events: Mapped[list["ModelsEvent"]] = relationship(
+        "ModelsEvent", back_populates="local_info"  # type: ignore[assignment]
     )

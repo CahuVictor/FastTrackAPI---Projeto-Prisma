@@ -3,13 +3,15 @@ from sqlalchemy.orm import Session
 from structlog import get_logger
 
 from app.schemas.event_create import EventCreate, EventResponse
-from app.schemas.event_update import ForecastInfoUpdate
+# from app.schemas.weather_forecast import ForecastInfo
+
+# from app.schemas.event_update import ForecastInfoUpdate      # TODO
 
 from app.repositories.event import AbstractEventRepo
 
-from app.models.models_event import Event
-from app.models.models_local_info import LocalInfo
-from app.models.models_forecast_info import ForecastInfo
+from app.models.models_event import ModelsEvent
+from app.models.models_local_info import ModelsLocalInfo
+# from app.models.models_forecast_info import ModelsForecastInfo
 
 logger = get_logger().bind(module="repo_eventos")
 
@@ -25,7 +27,7 @@ class SQLEventRepo(AbstractEventRepo):
         Retorna todos os eventos da base de dados.
         Retorna já convertidos para o schema EventResponse.
         """
-        db_events = self.db.query(Event).all()
+        db_events = self.db.query(ModelsEvent).all()
         
         return [
             EventResponse.model_validate(e, from_attributes=True)
@@ -38,10 +40,10 @@ class SQLEventRepo(AbstractEventRepo):
         (ex: `city="Recife"` ou `title="Festival"`).
         Retorna já convertidos para o schema EventResponse.
         """
-        query = self.db.query(Event)
+        query = self.db.query(ModelsEvent)
         for attr, value in filters.items():
-            if value is not None and hasattr(Event, attr):
-                query = query.filter(getattr(Event, attr) == value)
+            if value is not None and hasattr(ModelsEvent, attr):
+                query = query.filter(getattr(ModelsEvent, attr) == value)
         
         db_events = query.offset(skip).limit(limit).all()
         
@@ -54,32 +56,33 @@ class SQLEventRepo(AbstractEventRepo):
         """
         Retorna um evento pelo seu ID ou `None` se não existir.
         """
-        db_event = self.db.query(Event).filter(Event.id == event_id).first()
+        db_event = self.db.query(ModelsEvent).filter(ModelsEvent.id == event_id).first()
         if db_event is None:
             return None
         return EventResponse.model_validate(db_event, from_attributes=True)
 
-    def add(self, event: EventCreate, forecast_info: ForecastInfoUpdate | None = None):
+    # def add(self, event: EventCreate, forecast_info: ForecastInfo | None = None):      # TODO
+    def add(self, event: EventCreate):
         """
         Cria e salva um novo evento no banco de dados.
         Também salva `local_info` e `forecast_info` se presentes.
         """
-        db_event = Event(
+        db_event = ModelsEvent(
             title=event.title,
             description=event.description,
             event_date=event.event_date,
             city=event.city,
-            # participants=event.participants,  # deve ser lista[str]
             participants=event.participants or []
         )
 
         # Associa local_info (se estiver presente no EventCreate)
         if event.local_info:
-            db_event.local_info = LocalInfo(**event.local_info.model_dump())
+            db_event.local_info = ModelsLocalInfo(**event.local_info.model_dump())
 
         # Associa forecast_info (mock ou real)
-        if forecast_info:
-            db_event.forecast_info = ForecastInfo(**forecast_info.model_dump())
+        # if forecast_info:      # TODO
+            # db_event.forecast_info = ForecastInfo(**forecast_info.model_dump())      # TODO
+        db_event.forecast_info = None
 
         # Persiste no banco
         self.db.add(db_event)
@@ -94,7 +97,7 @@ class SQLEventRepo(AbstractEventRepo):
         Substitui completamente os dados de um evento existente por novos valores, 
         aproveitando local_info/forecast_info se existentes.
         """
-        db_event = self.db.query(Event).filter(Event.id == event_id).first()
+        db_event = self.db.query(ModelsEvent).filter(ModelsEvent.id == event_id).first()
         if not db_event:
             logger.warning("Evento não encontrado", event_id=event_id)
             raise ValueError("Evento não encontrado")
@@ -105,7 +108,7 @@ class SQLEventRepo(AbstractEventRepo):
         for key, value in data.items():
             if key == "local_info" and value is not None:
                 logger.debug("Atualizando local_info", event_id=event_id)
-                db_event.local_info = LocalInfo(**value)
+                db_event.local_info = ModelsLocalInfo(**value)
             # elif key == "forecast_info":
             #     try:
             #         service: AbstractForecastService = Depends(provide_forecast_service)
@@ -129,9 +132,9 @@ class SQLEventRepo(AbstractEventRepo):
         """
         Remove todos os eventos existentes e insere os novos.
         """
-        self.db.query(Event).delete()
+        self.db.query(ModelsEvent).delete()
         simplified = [
-            Event(
+            ModelsEvent(
                 title=e.title,
                 description=e.description,
                 event_date=e.event_date,
@@ -148,7 +151,7 @@ class SQLEventRepo(AbstractEventRepo):
         """
         Remove um evento específico pelo ID.
         """
-        self.db.query(Event).filter(Event.id == event_id).delete()
+        self.db.query(ModelsEvent).filter(ModelsEvent.id == event_id).delete()
         self.db.commit()
         logger.info("Evento removido", event_id=event_id)
     
@@ -156,7 +159,7 @@ class SQLEventRepo(AbstractEventRepo):
         """
         Remove todos os eventos da base de dados.
         """
-        self.db.query(Event).delete()
+        self.db.query(ModelsEvent).delete()
         self.db.commit()
         logger.info("Todos os eventos foram apagados")
 
@@ -165,7 +168,7 @@ class SQLEventRepo(AbstractEventRepo):
         Atualiza campos específicos de um evento via dicionário (`data`).
         """
         data = _clean_update_data(data)
-        self.db.query(Event).filter(Event.id == event_id).update(data)
+        self.db.query(ModelsEvent).filter(ModelsEvent.id == event_id).update(data)
         self.db.commit()
         return self.get(event_id)
 

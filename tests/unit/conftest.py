@@ -76,6 +76,25 @@ def client_autenticado(app, access_token):
 # --------------------------------- FIXTURES -----------------------------------
 # ------------------------------------------------------------------------------
 
+@pytest.fixture(autouse=True)
+def disable_rate_limit():
+    """
+    Desativa o rate limiter (SlowAPI) durante os testes.
+    """
+    # original_limits = limiter._default_limits
+    # limiter._default_limits = []
+    
+    from app.core.rate_limit_config import limiter
+    original_enabled = limiter.enabled
+    limiter.enabled = False
+    
+    yield
+    
+    # limiter._default_limits = original_limits  # restaura após o teste
+    
+    limiter.enabled = original_enabled
+    
+
 # ---------- Eventos -----------------------------------------------------------
 
 @pytest.fixture

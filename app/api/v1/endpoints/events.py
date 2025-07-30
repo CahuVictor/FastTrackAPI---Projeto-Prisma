@@ -13,7 +13,7 @@ import json
 from app.core.rate_limit_config import limiter
 
 from app.schemas.event_create import EventCreate, EventResponse
-from app.schemas.local_info import LocalInfo
+from app.schemas.local_info import LocalInfo, LocalInfoResponse
 from app.schemas.event_update import EventUpdate, LocalInfoUpdate
 from app.schemas.common import MessageResponse
 
@@ -333,7 +333,8 @@ async def post_create_event(
     logger.info("Recebida requisição para criar evento", title=event.title, city=event.city, event_date=event.event_date)
     
     # Criação normal SEM forecast
-    event_resp = repo.add(event, forecast_info=None)
+    # event_resp = repo.add(event, forecast_info=None)           # TODO
+    event_resp = repo.add(event)
     
     # Adiciona task em background para buscar forecast depois
     background_tasks.add_task(
@@ -377,7 +378,8 @@ async def post_events_batch(
     for event in events:
 
         # Criação normal SEM forecast
-        event_resp = repo.add(event, forecast_info=None)
+        # event_resp = repo.add(event, forecast_info=None)      # TODO
+        event_resp = repo.add(event)
         
         # Adiciona task em background para buscar forecast depois
         background_tasks.add_task(
@@ -437,11 +439,12 @@ async def upload_csv(
                 city=row["city"],
                 participants=row["participants"].split(";"),
                 # local_info=LocalInfo(**eval(row["local_info"]))
-                local_info=LocalInfo(**json.loads(row["local_info"]))  # 👈 mais seguro
+                local_info=LocalInfoResponse(**json.loads(row["local_info"]))  # 👈 mais seguro
             )
             
             # Criação normal SEM forecast
-            event_resp = repo.add(event, forecast_info=None)
+            # event_resp = repo.add(event, forecast_info=None)      # TODO
+            event_resp = repo.add(event)
             
             # Adiciona task em background para buscar forecast depois
             background_tasks.add_task(

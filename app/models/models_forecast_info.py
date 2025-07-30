@@ -7,9 +7,9 @@ from typing import TYPE_CHECKING
 from app.db.base import Base
 
 if TYPE_CHECKING:
-    from app.models.models_event import Event
+    from app.models.models_event import ModelsEvent
 
-class ForecastInfo(Base):
+class ModelsForecastInfo(Base):
     __tablename__ = 'forecast_infos'
 
     id = Column(Integer, primary_key=True, index=True)
@@ -22,6 +22,6 @@ class ForecastInfo(Base):
 
     # events = relationship("Event", back_populates="forecast_info") # TODO verificar se alteração corrigiu
     # events: Mapped[list["Event"]] = relationship(back_populates="forecast_info")
-    events: Mapped[list["Event"]] = relationship(
-        "Event", back_populates="forecast_info"  # type: ignore[assignment]
+    events: Mapped[list["ModelsEvent"]] = relationship(
+        "ModelsEvent", back_populates="forecast_info"  # type: ignore[assignment]
     )

@@ -83,6 +83,9 @@ class Settings(BaseSettings):
         alias="GIT_SHA",
     )
     
+    local_info_url: str = Field("https://default.localinfo.api", validation_alias="LOCAL_INFO_URL")
+    forecast_info_url: str = Field("https://default.forecast.api", validation_alias="FORECAST_INFO_URL")
+    
     # ─────────────────────── configuração Pydantic ─────────────────
     # No Pydantic v2 a configuração do .env é feita via model_config em vez de class Config
     model_config = SettingsConfigDict(                 # ⬅️  substitui class Config

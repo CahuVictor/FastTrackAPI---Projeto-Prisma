@@ -4,8 +4,8 @@ from typing import Annotated
 from typing import Any
 from datetime import datetime, timezone
 
-from app.schemas.event_update import ForecastInfoUpdate
-from app.schemas.local_info import LocalInfo
+from app.schemas.weather_forecast import ForecastInfoResponse
+from app.schemas.local_info import LocalInfoResponse
 
 class EventCreate(BaseModel):
     @field_validator("title", "description", mode="before")
@@ -28,7 +28,7 @@ class EventCreate(BaseModel):
     event_date: Annotated[datetime, Field(description="Data e hora do evento (UTC)", json_schema_extra={"example": "2025-06-12T19:00:00Z"})]
     city: Annotated[str, Field(description="Cidade onde o evento ocorrerá", json_schema_extra={"example": "Recife"})]
     participants: Annotated[list[str], Field(description="Lista de participantes", json_schema_extra={"example": ["Alice", "Bob", "Carol"]}, default_factory=list)]
-    local_info: LocalInfo | None = None  # obsoleto Optional[dict]
+    local_info: LocalInfoResponse | None = None  # obsoleto Optional[dict]
     
     # ----------------------------------------------
     #  Permite EventCreate(...) nos testes unitários
@@ -42,8 +42,8 @@ class EventCreate(BaseModel):
             
         super().__init__(**data)
 
-def _make_default_local_info() -> LocalInfo:
-    return LocalInfo(
+def _make_default_local_info() -> LocalInfoResponse:
+    return LocalInfoResponse(
         location_name="local",
         capacity=1,
         venue_type=None,
@@ -65,6 +65,6 @@ def _make_dummy_event_data() -> dict[str, Any]:
  
 class EventResponse(EventCreate):
     id: int
-    forecast_info: ForecastInfoUpdate | None = None
+    forecast_info: ForecastInfoResponse | None = None
     views: int = 0 # (default = 0)
     

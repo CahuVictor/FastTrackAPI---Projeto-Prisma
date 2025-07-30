@@ -1,6 +1,6 @@
 # tests/test_forecast_info.py
 import pytest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 from datetime import datetime, timedelta, timezone
 
 from app.main import app
@@ -125,20 +125,53 @@ async def test_atualizar_forecast_em_background_com_sucesso(monkeypatch):
     repo.get.return_value = fake_event
     repo.replace_by_id.return_value = None
 
-    forecast = MagicMock()
-    forecast.model_dump.return_value = {"temperature": 30, "humidity": 70}
+    # forecast = MagicMock()
+    # forecast.model_dump.return_value = {"temperature": 30, "humidity": 70}
+    # forecast_data = {"temperature": 30, "humidity": 70}
+    forecast_data = {
+        "temperature": 30,
+        "humidity": 70,
+        "forecast_datetime": datetime(2025, 6, 1, 20, 0, tzinfo=timezone.utc),
+        "weather_main": "Clouds",
+        "weather_desc": "few clouds",
+        "wind_speed": 3.5,
+    }
 
     service = MagicMock()
-    service.get_by_city_and_datetime.return_value = forecast
+    # service.get_by_city_and_datetime.return_value = forecast
+    service.get_by_city_and_datetime.side_effect = [
+        MagicMock(model_dump=MagicMock(return_value=forecast_data.copy())),
+        MagicMock(model_dump=MagicMock(return_value=forecast_data.copy())),
+        MagicMock(model_dump=MagicMock(return_value=forecast_data.copy())),
+    ]
 
     monkeypatch.setattr("app.services.forecast.provide_forecast_service", lambda: service)
     monkeypatch.setattr("app.services.forecast.provide_event_repo", lambda: repo)
 
     # Executa
     await atualizar_forecast_em_background(event_id=123)
-
+    
+    # repo.get.assert_called_once_with(123)
+    
+    # expected_call = call(123)
+    expected_get_call = call(123)
+    # repo.get.assert_has_calls([expected_call, expected_call, expected_call])
+    # assert repo.get.call_count == 3
+    # repo.get.assert_has_calls([expected_get_call] * 3)
+    assert repo.get.call_count == 1
     repo.get.assert_called_once_with(123)
+
+    # service.get_by_city_and_datetime.assert_called_once_with("Recife", fake_event.event_date)
+    
+    # Verifica que foi chamado 3 vezes com os mesmos argumentos
+    # expected_call = call("Recife", fake_event.event_date)
+    # expected_forecast_call = call("Recife", fake_event.event_date)
+    # service.get_by_city_and_datetime.assert_has_calls([expected_call] * 3)
+    # assert service.get_by_city_and_datetime.call_count == 3
+    # service.get_by_city_and_datetime.assert_has_calls([expected_forecast_call] * 3)
+    assert service.get_by_city_and_datetime.call_count == 1
     service.get_by_city_and_datetime.assert_called_once_with("Recife", fake_event.event_date)
+
     repo.replace_by_id.assert_called_once()
 
 @pytest.mark.asyncio
@@ -178,7 +211,12 @@ def test_update_event_forecast_when_none(event):
     event["forecast_info"] = None
     update = ForecastInfoUpdate(
         temperature=25.0,
-        updated_at=datetime.now(timezone.utc)
+        humidity=80,
+        forecast_datetime=datetime(2025, 6, 1, 20, 0, tzinfo=timezone.utc),
+        weather_main="Clouds",
+        weather_desc="few clouds",
+        wind_speed=3.5,
+        updated_at=datetime.now(timezone.utc),
     )
     event_obj = EventResponse.model_validate(event)
     updated = update_event_forecast(event_obj, update)

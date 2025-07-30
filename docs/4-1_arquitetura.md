@@ -273,8 +273,9 @@ Os schemas representam os modelos de dados utilizados para entrada e saída de i
 - **EventResponse**: utilizado quando for requisitado um evento do banco de dados, possui os campos de `id`, `forecast_info` e `views`.
 - **EventUpdate**: utilizado para atualizar os dados de um evento após a criação. Exige os campos `local_info` e `forecast_info`, que contêm dados externos.
 - **LocalInfo**: estrutura esperada da API simulada com dados sobre o local do evento, como capacidade, tipo, acessibilidade e endereço.
+- **LocalInfoResponse**:
 - **LocalInfoUpdate**: 
-- **WeatherForecast**: estrutura que representa os dados retornados pela API pública de previsão do tempo.
+- **ForecastInfo**: estrutura que representa os dados retornados pela API pública de previsão do tempo.
 - **ForecastInfoUpdate**: 
 - **Token**: 
 - **User**:
