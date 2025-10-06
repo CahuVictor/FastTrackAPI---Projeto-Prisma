@@ -10,12 +10,12 @@ Desenvolver habilidades avançadas em desenvolvimento backend com Python utiliza
 
 ## 📌 Objetivos Específicos Detalhados
 
-- [ ] **Dominar os fundamentos e recursos avançados do FastAPI**
+- [x] **Dominar os fundamentos e recursos avançados do FastAPI**
   - [x] Criar rotas RESTful com métodos GET, POST, PUT, DELETE
   - [x] Utilizar `Depends` para injeção de dependências
   - [x] Validar dados de entrada e saída com Pydantic
   - [x] Utilizar tags, responses e exemplos para a documentação automática
-  - [ ] Implementar Background Tasks
+  - [x] Implementar Background Tasks
   - [x] Trabalhar com WebSockets
   - [x] Fazer upload e download de arquivos
 

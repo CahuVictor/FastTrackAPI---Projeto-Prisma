@@ -23,10 +23,14 @@ Este repositório é o resultado de uma mentoria prática em desenvolvimento **B
 |   4.1 | [Arquitetura do Projeto](docs/4-1_arquitetura.md) | `docs/4-1_arquitetura.md`                |
 |   4.2 | [Configuração por Ambiente + Fallback Seguro](docs/4-2_configuracao-ambiente.md) | `docs/4-2_configuracao-ambiente.md`      |
 |   4.3 | [Dependências Reutilizáveis e Testáveis](docs/4-3_dependencias-reutilizaveis.md) | `docs/4-3_dependencias-reutilizaveis.md` |
+|   4.4 | [URLs dinâmicas e configuração externa](docs/4-4_urls-dinamicas.md) | `docs/4-4_urls-dinamicas.md` |
 | 5     | [Tecnologias & Boas Práticas](docs/5_tecnologias-boas-praticas.md) | `docs/5_tecnologias-boas-praticas.md`    |
 |   5.1 | [Filtros e Paginação](docs/5-1_filtros-paginacao.md) | `docs/5-1_filtros-paginacao.md`          |
 |   5.2 | [Cache com Redis](docs/5-2_cache-redis.md)  | `docs/5-2_cache-redis.md`                |
 |   5.3 | [Observabilidade e Logs](docs/5-3_observabilidade-logs.md) | `docs/5-3_observabilidade-logs.md`       |
+|   5.3.1 | [Métricas com Prometheus + Grafana](docs/5-3-1_Métricas com Prometheus + Grafana.md) | `5-3-1_Métricas com Prometheus + Grafana.md`       |
+|   5.3.2 | [Tracing-opentelemetry](docs/5-3-2 Tracing-opentelemetry.md) | `5-3-2 Tracing-opentelemetry.md`       |
+|   5.3.3 | [hardening_de_seguranca](docs/5-3-3_hardening_de_seguranca.md) | `5-3-3_hardening_de_seguranca.md`       |
 |   5.4 | [WebSockets e Arquivos](docs/5-4_websockets-arquivos.md) | `docs/5-4_websockets-arquivos.md`        |
 |   5.5 | [Banco de Dados e Migrations](docs/5-5_banco-migrations.md) | `docs/5-5_banco-migrations.md`           |
 |   5.6 | [Latência em Mocks](docs/5-6_latencia-mocks.md) | `docs/5-6_latencia-mocks.md`             |

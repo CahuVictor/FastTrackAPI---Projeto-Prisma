@@ -9,11 +9,6 @@ Próximos passos
 Nos usuários em memória, ver estratégia para como ter o primeiro usuário para poder carregar os outros
 Carregar os outros usuários em lote -> Feito isso deletar mock_users.py
 
-Criar rotas administrativas
-    Tem mais alguma?
-    Atualizar o URL do LocalInfo, pensando que o LocalInfo está em outro servidor e possa ter sido alterado o caminho.
-    Atualizar o URL do ForecastInfo, visando que a API pode ter mudado o caminho
-
 ---
 
 ---
