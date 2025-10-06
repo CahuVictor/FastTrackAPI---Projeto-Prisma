@@ -1,14 +1,25 @@
+# app\main.py
 from fastapi import FastAPI
 from structlog import get_logger
 import os
 import logging
+from contextlib import asynccontextmanager
+from sqlalchemy.exc import OperationalError
+from prometheus_fastapi_instrumentator import Instrumentator
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
-from app.api.v1.endpoints import eventos, auth          #  ←  agora importamos auth
+from app.api.v1.api_router import router as api_router
+
 # from app.services.auth_service import get_current_user          #  ←  dependência global
 
 from app.core.logging_config import configure_logging
+from app.core.exception_handlers import db_connection_exception_handler
+from app.core.tracing_config import configure_tracing
 
 from app.middleware.logging_middleware import LoggingMiddleware
+from app.middleware.secure_headers import SecureHeadersMiddleware
+from app.middleware.rate_limiter import setup_rate_limiter
+from app.middleware.cors import init_cors
 
 configure_logging()
 
@@ -16,7 +27,6 @@ logger = get_logger().bind(app="FastTrackAPI", env="dev")
 
 uvicorn_log = logging.getLogger("uvicorn.error")   # <- o mesmo que imprime “INFO: …”
 
-from contextlib import asynccontextmanager
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 🔹 CÓDIGO DE STARTUP  (executa antes do app ficar pronto)
@@ -50,15 +60,9 @@ app = FastAPI(
     }
 )
 
-app.include_router(auth.router, prefix="/api/v1")
+init_cors(app)
 
-# app.include_router(
-#     eventos.router,
-#     prefix="/api/v1",
-#     dependencies=[Depends(get_current_user)],   #  ←  proteção em bloco
-# )
-
-app.include_router(eventos.router, prefix="/api/v1")
+app.include_router(api_router)
 
 @app.get("/ping")
 def ping():
@@ -67,3 +71,15 @@ def ping():
 
 # Middleware de logging HTTP
 app.add_middleware(LoggingMiddleware)
+
+app.add_middleware(SecureHeadersMiddleware)
+
+setup_rate_limiter(app)
+
+# Registra o handler global
+app.add_exception_handler(OperationalError, db_connection_exception_handler)
+
+instrumentator = Instrumentator().instrument(app).expose(app, endpoint="/metrics")
+
+configure_tracing(agent_host="localhost")  # "jaeger" se dentro do Docker
+FastAPIInstrumentor.instrument_app(app)

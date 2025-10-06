@@ -1,3 +1,4 @@
+# app/services/auth_service.py
 from fastapi import HTTPException, status, Depends
 from jose import JWTError, jwt
 from fastapi.security import OAuth2PasswordBearer
@@ -10,8 +11,6 @@ from app.deps import provide_user_repo
 from app.core.security import verify_password
 from app.core.config import get_settings
 from app.core.contextvars import request_user
-
-
 
 logger = get_logger().bind(module="auth_service")
 

@@ -13,19 +13,19 @@ def test_login_success(client, login_data):
     assert "access_token" in body
 
 def test_rotas_protegidas_sem_token(client):
-    resp = client.get("/api/v1/eventos")
+    resp = client.get("/api/v1/events")
     assert resp.status_code == 401
     assert resp.json()["detail"] in {"Not authenticated", "Credenciais inválidas"}
 
 def test_eventos_requires_auth(client):
-    r = client.get("/api/v1/eventos")
+    r = client.get("/api/v1/events")
     assert r.status_code == 401          # sem token → não autorizado
 
 def test_eventos_with_auth(client, auth_header):
-    r = client.get("/api/v1/eventos", headers=auth_header)
+    r = client.get("/api/v1/events", headers=auth_header)
     # pode ser 200 ou 404 (se não houver evento cadastrado ainda)
     assert r.status_code in (200, 404)          # com token → sucesso
 
 # def test_acesso_autenticado(client, auth_header):
-#     resp = client.get("/api/v1/eventos", headers=auth_header)
+#     resp = client.get("/api/v1/events", headers=auth_header)
 #     assert resp.status_code == 200

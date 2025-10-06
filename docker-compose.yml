@@ -2,40 +2,98 @@
 version: "3.9"
 
 services:
-  backend:
-    build: .
-    volumes:
-      - .:/app
-    ports:
-      - "8000:8000"
-    # Sempre lemos o .env "base" + o específico
-    env_file:
-      - .env
-      - .env.${ENV:-dev}
-    command: >
-      sh -c "uvicorn app.main:app --host 0.0.0.0 --port 8000"
-    depends_on:
-      - db
-      - redis
+  # api_prisma:
+  #   build: .
+  #   volumes:
+  #     - .:/app
+  #   ports:
+  #     - "8000:8000"
+  #   # Sempre lemos o .env "base" + o específico
+  #   env_file:
+  #     - .env
+  #     - .env.${ENV:-dev}
+  #   command: >
+  #     sh -c "uvicorn app.main:app --host 0.0.0.0 --port 8000"
+  #   # command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+  #   depends_on:
+  #     - db
+  #     - redis                  # ← espera o Redis ficar “healthy”
+  #   networks:
+  #     - backend
 
   db:
-    image: postgres:14
+    image: postgres:16-alpine
+    container_name: prisma-db
     restart: always
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: prisma
+      POSTGRES_USER: prisma
+      POSTGRES_PASSWORD: prisma123
+      POSTGRES_DB: prisma_db
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./postgres-data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+  #   networks:
+  #     - backend
 
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+    command: >
+      redis-server
+      --save 60 1             # snapshot a cada 60 s / 1 mudança
+      --loglevel warning
+  #  command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+  #  networks:
+  #     - backend
     ports:
       - "6379:6379"           # opcional em dev
-    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+  #   # opcional: volume se quiser persistir
+  #   # volumes:
+  #   #   - redis_data:/data
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: prisma-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "admin@prisma.com"
+      PGADMIN_DEFAULT_PASSWORD: "admin123"
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+  #   networks:
+  #     - backend
+
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-storage:/var/lib/grafana
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.52
+    ports:
+      - "6831:6831/udp"   # porta do agente UDP
+      - "16686:16686"     # UI do Jaeger
+
+# networks:
+#   backend:
 
 volumes:
-  postgres_data:
+  prisma_db_data:
+  grafana-storage:

@@ -1,18 +1,22 @@
 # tests/unit/conftest.py -> Verificar se pode ficar na raiz de tests/
 import pytest
-from datetime import datetime
-# from fastapi import HTTPException
-from fastapi.testclient import TestClient
+from datetime import datetime, timezone
+from starlette.testclient import TestClient
+# from fastapi.testclient import TestClient
 import fakeredis
+import asyncio
+from io import BytesIO
 
 # from app.main import app
 from app.main import app as fastapi_app   # FastAPI já criado em app.main
 
+from app.schemas.event_update import ForecastInfoUpdate
+
 # from app.schemas.local_info import LocalInfo
 from app.services.mock_local_info import MockLocalInfoService
 
-from app.repositories.evento_mem import InMemoryEventoRepo
-from app.deps import provide_evento_repo
+from app.repositories.event_mem import InMemoryEventRepo
+from app.deps import provide_event_repo
 
 from app.deps import provide_redis
 
@@ -27,7 +31,6 @@ def app():
     return fastapi_app
 
 @pytest.fixture(scope="session")
-# def client():
 def client(app) -> TestClient:
     """Client “cru”, sem header de autorização."""
     with TestClient(app) as c:
@@ -59,7 +62,7 @@ def auth_header(access_token):
     return {"Authorization": f"Bearer {access_token}"}
 
 @pytest.fixture(scope="function")
-def client_autenticado(access_token):
+def client_autenticado(app, access_token):
     """Retorna um TestClient que envia o header Authorization automaticamente."""
     class _AuthClient(TestClient):                              # noqa: D401
         def request(self, method, url, **kwargs):
@@ -73,15 +76,34 @@ def client_autenticado(access_token):
 # --------------------------------- FIXTURES -----------------------------------
 # ------------------------------------------------------------------------------
 
+@pytest.fixture(autouse=True)
+def disable_rate_limit():
+    """
+    Desativa o rate limiter (SlowAPI) durante os testes.
+    """
+    # original_limits = limiter._default_limits
+    # limiter._default_limits = []
+    
+    from app.core.rate_limit_config import limiter
+    original_enabled = limiter.enabled
+    limiter.enabled = False
+    
+    yield
+    
+    # limiter._default_limits = original_limits  # restaura após o teste
+    
+    limiter.enabled = original_enabled
+    
+
 # ---------- Eventos -----------------------------------------------------------
 
 @pytest.fixture
-def evento(request):
+def event(request):
     if request.param == "evento_valido":
         return {
             "title": "Concerto de Jazz",
             "description": "Uma apresentação musical.",
-            "event_date": "2025-06-01T20:00:00",
+            "event_date": "2025-06-01T20:00:00Z",
             "participants": ["Alice", "Bruno"],
             "city": "Recife",
             "local_info": {
@@ -90,7 +112,7 @@ def evento(request):
                 "venue_type": "Auditorio",
                 "is_accessible": True,
                 "address": "Rua Exemplo, 123",
-                "past_events": ["Feira 2023", "Hackathon"],
+                # "past_events": ["Feira 2023", "Hackathon"],
                 "manually_edited": False
             }
         }
@@ -99,7 +121,7 @@ def evento(request):
             "id": 1,
             "title": "Concerto de Jazz",
             "description": "Uma apresentação musical.",
-            "event_date": "2025-06-01T20:00:00",
+            "event_date": "2025-06-01T20:00:00Z",
             "participants": ["Alice", "Bruno"],
             "city": "fortaleza",
             "local_info": {
@@ -108,7 +130,7 @@ def evento(request):
                 "venue_type": "Auditorio",
                 "is_accessible": True,
                 "address": "Rua Exemplo, 123",
-                "past_events": ["Feira 2023", "Hackathon"],
+                # "past_events": ["Feira 2023", "Hackathon"],
                 "manually_edited": False
             }
         }
@@ -117,7 +139,7 @@ def evento(request):
             "id": 123,  # pode ser qualquer valor (a rota sobrescreve)
             "title": "Concerto de Jazz",
             "description": "Uma apresentação musical.",
-            "event_date": "2025-06-01T20:00:00",
+            "event_date": "2025-06-01T20:00:00Z",
             "city": "Recife",
             "participants": ["Alice", "Bruno"],
             "local_info": {
@@ -126,7 +148,7 @@ def evento(request):
                 "venue_type": "Auditorio",
                 "is_accessible": True,
                 "address": "Rua Exemplo, 123",
-                "past_events": ["Feira 2023", "Hackathon"],
+                # "past_events": ["Feira 2023", "Hackathon"],
                 "manually_edited": False
             },
             "forecast_info": {
@@ -135,7 +157,8 @@ def evento(request):
                 "weather_main": "Clear",
                 "weather_desc": "Céu limpo",
                 "humidity": 60,
-                "wind_speed": 3.0
+                "wind_speed": 3.0,
+                "updated_at": "2025-06-01T19:00:00Z"
             }
         }
     elif request.param == "eventos_validos_lote":
@@ -143,7 +166,7 @@ def evento(request):
             {
                 "title": "Evento 1",
                 "description": "Primeiro evento.",
-                "event_date": "2025-06-01T20:00:00",
+                "event_date": "2025-06-01T20:00:00Z",
                 "city": "Recife",
                 "participants": ["Alice", "Bruno"],
                 "local_info": {
@@ -152,14 +175,14 @@ def evento(request):
                     "venue_type": "Auditorio",
                     "is_accessible": True,
                     "address": "Rua Principal, 1",
-                    "past_events": ["Feira 2023"],
+                    # "past_events": ["Feira 2023"],
                     "manually_edited": False
                 }
             },
             {
                 "title": "Evento 2",
                 "description": "Segundo evento.",
-                "event_date": "2025-07-10T19:00:00",
+                "event_date": "2025-07-10T19:00:00Z",
                 "city": "Olinda",
                 "participants": ["Carlos", "Diana"],
                 "local_info": {
@@ -168,7 +191,7 @@ def evento(request):
                     "venue_type": "Salao",
                     "is_accessible": False,
                     "address": "Rua Secundária, 2",
-                    "past_events": [],
+                    # "past_events": [],
                     "manually_edited": False
                 }
             }
@@ -176,7 +199,7 @@ def evento(request):
     elif request.param == "evento_invalido":
         return {
             "title": "Incompleto",
-            "event_date": "2025-06-01T20:00:00",
+            "event_date": "2025-06-01T20:00:00Z",
             "participants": ["Zé"]
         }
     else:
@@ -193,7 +216,7 @@ def localinfo(request):
             "venue_type": "Auditorio",
             "is_accessible": True,
             "address": "Rua X, 1",
-            "past_events": ["Evento 2021"],
+            # "past_events": ["Evento 2021"],
             "manually_edited": False
         }
     elif request.param == "localinfo_type_error":
@@ -203,29 +226,29 @@ def localinfo(request):
             "venue_type": "Auditorio",
             "is_accessible": True,
             "address": "Rua X, 1",
-            "past_events": ["Evento 2021"],
+            # "past_events": ["Evento 2021"],
             "manually_edited": False
         }
-    elif request.param == "localinfo_past_events_type_error":
-        return {
-            "location_name": "local",
-            "capacity": 10,
-            "venue_type": "Auditorio",
-            "is_accessible": True,
-            "address": "Rua X, 1",
-            "past_events": "não é lista",  # Deve ser lista
-            "manually_edited": False
-        }
-    elif request.param == "localinfo_past_events_value_error":
-        return {
-            "location_name": "local",
-            "capacity": 10,
-            "venue_type": "Auditorio",
-            "is_accessible": True,
-            "address": "Rua X, 1",
-            "past_events": [123],  # Deve ser lista de strings
-            "manually_edited": False
-        }
+    # elif request.param == "localinfo_past_events_type_error":
+    #     return {
+    #         "location_name": "local",
+    #         "capacity": 10,
+    #         "venue_type": "Auditorio",
+    #         "is_accessible": True,
+    #         "address": "Rua X, 1",
+    #         "past_events": "não é lista",  # Deve ser lista
+    #         "manually_edited": False
+    #     }
+    # elif request.param == "localinfo_past_events_value_error":
+    #     return {
+    #         "location_name": "local",
+    #         "capacity": 10,
+    #         "venue_type": "Auditorio",
+    #         "is_accessible": True,
+    #         "address": "Rua X, 1",
+    #         "past_events": [123],  # Deve ser lista de strings
+    #         "manually_edited": False
+    #     }
     else:
         raise ValueError(f"Fixture de evento desconhecida: {request.param}")
 
@@ -238,12 +261,12 @@ def mock_local_info_service():
 
 @pytest.fixture
 def data_agora_iso():
-    return datetime.now().isoformat()
+    return datetime.now(timezone.utc).isoformat()
 
 @pytest.fixture
 def dt_now_iso() -> str:
     """ISO agora – para forecast_info."""
-    return datetime.now().isoformat()
+    return datetime.now(timezone.utc).isoformat()
 
 # ---------- Repositories --------------------------------------------------
 
@@ -254,8 +277,8 @@ def repo(app):
 
 @pytest.fixture(autouse=True)
 def _shared_repo(app):
-    repo = InMemoryEventoRepo()
-    app.dependency_overrides[provide_evento_repo] = lambda: repo
+    repo = InMemoryEventRepo()
+    app.dependency_overrides[provide_event_repo] = lambda: repo
     yield
     repo.delete_all()       # reseta entre testes
     
@@ -271,3 +294,81 @@ def fake_redis(monkeypatch):
         lambda: r
     )
     yield r
+
+@pytest.fixture(autouse=True)
+def patch_create_task(monkeypatch):
+    """
+    Substitui `asyncio.create_task` por uma versão segura para
+    handlers síncronos executados dentro do ThreadPool do FastAPI.
+
+    ── Como funciona ──────────────────────────────────────────────
+    • Se já existe um event-loop ativo, delega normalmente.
+    • Caso contrário (thread do ThreadPool), cria um loop local,
+      roda o coroutine até o fim e devolve um DummyTask.
+    """
+
+    def _safe_create_task(coro, *args, **kwargs):             # noqa: D401
+        try:
+            loop = asyncio.get_running_loop()
+            return loop.create_task(coro, *args, **kwargs)
+        except RuntimeError:
+            # estamos numa thread sem loop – roda o coroutine “inline”
+            _loop = asyncio.new_event_loop()
+            try:
+                _loop.run_until_complete(coro)
+            finally:
+                _loop.close()
+
+            class _DummyTask:          # objeto mínimo para quem, porventura,
+                def cancel(self):      # tente chamar .cancel() no retorno
+                    pass
+            return _DummyTask()
+
+    # monkeypatch.patch("asyncio.create_task", _safe_create_task)
+    # substitui a função no próprio módulo asyncio
+    monkeypatch.setattr(asyncio, "create_task", _safe_create_task, raising=True)
+
+@pytest.fixture(params=["valido", "invalido"])
+def csv_file(request):
+    if request.param == "valido":
+        # csv_content = (
+        #     "title,description,event_date,city,participants,local_info\n"
+        #     "Concerto,Um grande show,2025-06-20T19:00:00Z,Recife,Alice;Bob,"
+        #     "\"{\"\"location_name\"\": \"Teatro Santa Isabel\", \"\"capacity\"\": 300, "
+        #     "\"\"venue_type\"\": \"Teatro\", \"\"is_accessible\"\": true, "
+        #     "\"\"address\"\": \"Praça da República\", \"\"past_events\"\": [], "
+        #     "\"\"manually_edited\"\": false}\"\n"
+        # )
+        csv_content = (
+            'title,description,event_date,city,participants,local_info\n'
+            'Concerto,Um grande show,2025-06-20T19:00:00Z,Recife,"Alice;Bob",'
+            '"{' +
+            '""location_name"": ""Teatro Santa Isabel"", '
+            '""capacity"": 300, '
+            '""venue_type"": ""Auditorio"", '
+            '""is_accessible"": true, '
+            '""address"": ""Praça da República"", '
+            '""past_events"": [], '
+            '""manually_edited"": false'
+            '}"\n'
+        )
+    elif request.param == "invalido":
+        csv_content = (
+            "title,description,event_date,city,participants,local_info\n"
+            "Evento incompleto,,2025-07-20T19:00:00,Olinda,,\"{}\"\n"
+        )
+    return BytesIO(csv_content.encode('utf-8')), 'eventos.csv'
+
+# ----
+
+@pytest.fixture
+def forecast_info_update() -> ForecastInfoUpdate:
+    return ForecastInfoUpdate(
+        forecast_datetime="2025-06-01T18:00:00Z",
+        temperature=28.0,
+        weather_main="Clear",
+        weather_desc="Céu limpo",
+        humidity=60,
+        wind_speed=3.0,
+        updated_at="2025-06-01T19:00:00Z"
+    )

@@ -1,14 +1,14 @@
-# app/repositories/evento_mem.py
+# app/repositories/event_mem.py
 from structlog import get_logger
 
 from app.schemas.event_create import EventCreate, EventResponse
-# from app.schemas.weather_forecast import WeatherForecast
-# from app.schemas.local_info import LocalInfo
-from app.repositories.evento import AbstractEventoRepo
+# from app.schemas.weather_forecast import ForecastInfo      # TODO
 
-logger = get_logger().bind(module="evento_mem")
+from app.repositories.event import AbstractEventRepo
 
-class InMemoryEventoRepo(AbstractEventoRepo):
+logger = get_logger().bind(module="event_mem")
+
+class InMemoryEventRepo(AbstractEventRepo):
     def __init__(self):
         self._db: dict[int, EventResponse] = {}
         self._id_counter = 1
@@ -51,39 +51,41 @@ class InMemoryEventoRepo(AbstractEventoRepo):
         logger.info("Listagem parcial de eventos", filtros=filters, total=len(result))
         return result
 
-    def get(self, evento_id: int) -> EventResponse | None:
-        evento = self._db.get(evento_id)
-        if evento:
-            logger.info("Evento recuperado", evento_id=evento_id)
+    def get(self, event_id: int) -> EventResponse | None:
+        event = self._db.get(event_id)
+        if event:
+            logger.info("Evento recuperado", event_id=event_id)
         else:
-            logger.warning("Evento não encontrado", evento_id=evento_id)
-        return evento
-
-    def add(self, evento: EventCreate) -> EventResponse:
-        evento_resp = EventResponse(
+            logger.warning("Evento não encontrado", event_id=event_id)
+        return event
+    
+    # def add(self, event: EventCreate, forecast_info: ForecastInfo | None = None) -> EventResponse:      # TODO
+    def add(self, event: EventCreate) -> EventResponse:
+        event_resp = EventResponse(
             id=self._id_counter,
-            title=evento.title,
-            description=evento.description,
-            event_date=evento.event_date,
-            city=evento.city,
-            participants=evento.participants,
-            local_info=evento.local_info,
-            forecast_info=None  # será setado depois se necessário
+            title=event.title,
+            description=event.description,
+            event_date=event.event_date,
+            city=event.city,
+            participants=event.participants,
+            local_info=event.local_info,
+            # forecast_info=forecast_info,
+            forecast_info=None,
         )
-        self._db[self._id_counter] = evento_resp
-        logger.info("Evento adicionado", evento_id=self._id_counter, title=evento.title)
+        self._db[self._id_counter] = event_resp
+        logger.info("Evento adicionado", event_id=self._id_counter, title=event.title, city=event.city, date=event.event_date)
         self._id_counter += 1
-        return evento_resp
+        return event_resp
 
-    def replace_all(self, eventos: list[EventResponse]) -> list[EventResponse]:
-        self._db = {e.id: e for e in eventos}
-        logger.info("Todos os eventos foram substituídos", total=len(eventos))
+    def replace_all(self, events: list[EventResponse]) -> list[EventResponse]:
+        self._db = {e.id: e for e in events}
+        logger.info("Todos os eventos foram substituídos", total=len(events))
         return list(self._db.values())
 
-    def replace_by_id(self, evento_id: int, evento: EventResponse) -> EventResponse:
-        self._db[evento_id] = evento
-        logger.info("Evento substituído", evento_id=evento_id)
-        return evento
+    def replace_by_id(self, event_id: int, event: EventResponse) -> EventResponse:
+        self._db[event_id] = event
+        logger.info("Evento substituído", event_id=event_id)
+        return event
     
     # -----------------------------------------------------------------
     def clear(self) -> None:
@@ -99,21 +101,21 @@ class InMemoryEventoRepo(AbstractEventoRepo):
         self._id_counter = 1
         logger.info("Todos os eventos foram deletados")
 
-    def delete_by_id(self, evento_id: int) -> bool:
-        result = self._db.pop(evento_id, None)
+    def delete_by_id(self, event_id: int) -> bool:
+        result = self._db.pop(event_id, None)
         if result:
-            logger.info("Evento deletado", evento_id=evento_id)
+            logger.info("Evento deletado", event_id=event_id)
             return True
-        logger.warning("Tentativa de deletar evento inexistente", evento_id=evento_id)
+        logger.warning("Tentativa de deletar evento inexistente", event_id=event_id)
         return False
 
-    def update(self, evento_id: int, data: dict) -> EventResponse:
-        existing = self._db.get(evento_id)
+    def update(self, event_id: int, data: dict) -> EventResponse:
+        existing = self._db.get(event_id)
         if not existing:
-            logger.error("Erro ao atualizar: evento não encontrado", evento_id=evento_id)
+            logger.error("Erro ao atualizar: evento não encontrado", event_id=event_id)
             raise ValueError("Evento não encontrado")
         for key, value in data.items():
             setattr(existing, key, value)
-        self._db[evento_id] = existing
-        logger.info("Evento atualizado", evento_id=evento_id, campos=list(data.keys()))
+        self._db[event_id] = existing
+        logger.info("Evento atualizado", event_id=event_id, campos=list(data.keys()))
         return existing

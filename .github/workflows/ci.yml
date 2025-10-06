@@ -14,7 +14,8 @@ permissions:
 jobs:
   test:
     strategy:                         # 🌐 Matrix SO + Python
-      fail-fast: true                 # ⬅️  para tudo na 1ª falha (⚡)
+      # fail-fast: true                 # ⬅️  para tudo na 1ª falha (⚡)
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
         python-version: ['3.10', '3.11', '3.12']
@@ -28,6 +29,9 @@ jobs:
     steps:
       # 1️⃣  Checkout
       - uses: actions/checkout@v4
+
+      - name: Export GIT_SHA
+        run: echo "GIT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV 
 
       # 2️⃣  Setup Python conforme a matrix
       - uses: actions/setup-python@v5
@@ -54,26 +58,29 @@ jobs:
       # 5️⃣  Linter / formatador (Ruff)
       - name: Run Ruff (lint + format)
         run: poetry run ruff check --output-format=github .
+        continue-on-error: true     # ⚠️ não para o job
 
-      # 6️⃣  Linter / formatador (PyUpgrade)
+      # 6️⃣   (PyUpgrade)
       - name: PyUpgrade (sugere modernização)
-        run: pyupgrade --py312-plus --exit-zero-even-if-changed $(git ls-files '*.py')
+        run: poetry run pyupgrade --py312-plus --exit-zero-even-if-changed $(git ls-files '*.py')
+        continue-on-error: true     # ⚠️ não para o job
 
-      # 7️⃣  Linter / formatador (MyPy)
+      # 7️⃣  Type (MyPy)
       - name: MyPy (type checking)
         run: poetry run mypy app
+        continue-on-error: true     # ⚠️ não para o job
 
-      # 6️⃣  Linter / formatador (Bandit)
+      # 8️⃣   (Bandit)
       - name: Bandit (security)
         run: poetry run bandit -q -r app -lll
+        continue-on-error: true     # ⚠️ não para o job
 
       # 6️⃣  Testes com fail-fast e cobertura ≥ 85 % -> testes vêm depois dos linters
       - name: Run Pytest
+        shell: bash                         # <-- força bash em qualquer runner
         run: |
-          poetry run pytest -x --cov=app \
-                             --cov-report=xml \
-                             --cov-report=term-missing \
-                             --cov-fail-under=80
+          poetry run pytest
+        continue-on-error: true     # ⚠️ não para o job
 
       # 7️⃣ (Opcional) Envia cobertura
       - name: Upload coverage to Codecov

@@ -1,20 +1,24 @@
 # app/deps.py
 from redis.asyncio import Redis
 from structlog import get_logger
+from sqlalchemy.orm import Session
+from fastapi import Depends
+
+from app.db.session import get_db
+
+from app.repositories.event_orm_db import SQLEventRepo
+from app.repositories.event import AbstractEventRepo
+# from app.repositories.user import AbstractUserRepo
 
 from app.services.interfaces.user_protocol import AbstractUserRepo
-from app.services.mock_users import MockUserRepo
+# from app.services.mock_users import MockUserRepo
+# from app.services.user_db import UserRepo
 
-from app.services.mock_local_info import MockLocalInfoService
+# from app.services.local_info_api import LocalInfoService
 from app.services.interfaces.local_info_protocol import AbstractLocalInfoService
 
 from app.services.mock_forecast_info import MockForecastService
 from app.services.interfaces.forecast_info_protocol import AbstractForecastService
-
-# from app.repositories.evento import AbstractEventoRepo
-
-# from functools import lru_cache
-from app.repositories.evento_mem import InMemoryEventoRepo
 
 from app.core.config import get_settings
 
@@ -22,32 +26,49 @@ logger = get_logger().bind(module="deps")
 
 _settings = get_settings()
 
-def provide_user_repo() -> AbstractUserRepo:
-    logger.debug("Injetando repositório de usuários (mock)")
-    return MockUserRepo()
+def provide_user_repo(db: Session = Depends(get_db)) -> AbstractUserRepo:
+    """
+    Retorna o repositório de usuários, adaptando à origem de dados.
+    """
+    if _settings.environment == "test.inmemory":
+        from app.deps_singletons import get_in_memory_user_repo
+        logger.debug("Injetando instância global de usuários em memória (via singleton manual)")
+        return get_in_memory_user_repo()
+    # logger.debug("Injetando repositório de usuários (SQLAlchemy)")
+    # return UserRepo(db)
+    return get_in_memory_user_repo()
 
 def provide_local_info_service() -> AbstractLocalInfoService:
-    logger.debug("Injetando serviço de local_info (mock)")
-    return MockLocalInfoService()
+    """
+    Retorna o serviço de localinfo.
+    """
+    if _settings.environment == "test.inmemory":
+        from app.services.mock_local_info import MockLocalInfoService
+        logger.debug("Injetando serviço de local_info (mock)")
+        return MockLocalInfoService()
+    return MockLocalInfoService() # LocalInfoService()
 
 def provide_forecast_service() -> AbstractForecastService:
-    logger.debug("Injetando serviço de forecast_info (mock)")
+    """
+    Retorna o serviço de forecast.
+    """
+    if _settings.environment == "test.inmemory":
+        logger.debug("Injetando serviço de forecast_info (mock)")
+        return MockForecastService()
     return MockForecastService()
-
-# def provide_evento_repo() -> AbstractEventoRepo:
-#     return InMemoryEventoRepo()
-
-# uma instância global
-_evento_repo_singleton = InMemoryEventoRepo()
 
 _redis_singleton: Redis | None = None     # conexão global reaproveitável
 
-def provide_evento_repo() -> InMemoryEventoRepo:
+def provide_event_repo(db: Session = Depends(get_db)) -> AbstractEventRepo:
     """
-    Retorna sempre a mesma instância em memória para toda a aplicação/testes.
+    Retorna o repositório de eventos.
     """
-    logger.debug("Injetando repositório de eventos (singleton)")
-    return _evento_repo_singleton
+    if _settings.environment == "test.inmemory":
+        from app.deps_singletons import get_in_memory_event_repo
+        logger.debug("Injetando instância global de repositório em memória (via singleton manual)")
+        return get_in_memory_event_repo()
+    logger.debug("Injetando repositório de eventos (SQLAlchemy)")
+    return SQLEventRepo(db)
 
 async def provide_redis() -> Redis:
     global _redis_singleton
