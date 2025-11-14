@@ -9,7 +9,7 @@ from redis.asyncio import Redis
 from fastapi.encoders import jsonable_encoder
 from structlog import get_logger
 
-from app.deps import provide_redis
+from app.core.deps import provide_redis
 
 logger = get_logger().bind(module="cache")
 

@@ -12,8 +12,8 @@ from app.main import app
 
 from app.schemas.event_create import EventCreate
 
-from app.deps import provide_event_repo
-from app.repositories.event_mem import InMemoryEventRepo
+from app.core.deps import provide_event_repo
+from app.infra.repositories.sqlalchemy.inmemory.event_mem import InMemoryEventRepo
 
 from app.constants.routes import (
     EVENTS_PREFIX,

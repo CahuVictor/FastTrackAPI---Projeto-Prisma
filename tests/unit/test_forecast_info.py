@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, call
 from datetime import datetime, timedelta, timezone
 
 from app.main import app
-from app.deps import provide_forecast_service
+from app.core.deps import provide_forecast_service
 from app.services.forecast import atualizar_forecast_em_background
 from app.utils.patch import should_update_forecast, update_event_forecast, update_event
 from app.schemas.event_create import EventResponse

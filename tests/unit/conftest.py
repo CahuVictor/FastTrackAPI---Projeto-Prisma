@@ -15,10 +15,10 @@ from app.schemas.event_update import ForecastInfoUpdate
 # from app.schemas.local_info import LocalInfo
 from app.services.mock_local_info import MockLocalInfoService
 
-from app.repositories.event_mem import InMemoryEventRepo
-from app.deps import provide_event_repo
+from app.infra.repositories.sqlalchemy.inmemory.event_mem import InMemoryEventRepo
+from app.core.deps import provide_event_repo
 
-from app.deps import provide_redis
+from app.core.deps import provide_redis
 
 # ------------------------------------------------------------------------------
 # --------------------------- XXXX --------------------------
