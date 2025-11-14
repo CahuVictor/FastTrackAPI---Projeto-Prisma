@@ -11,26 +11,35 @@ logger = get_logger().bind(module="event_repo_inmemory")
 
 class EventRepoInMemory:
     """
-    Implementação de EventRepository inteiramente em memória.
+    In-memory implementation of EventRepository.
 
-    Mantém os mesmos comportamentos essenciais da versão SQLAlchemy:
-    - `id` gerado automaticamente
-    - `created_at` definido ao inserir
-    - `updated_at` atualizado ao modificar
-    
-    Útil para:
-    - Testes unitários.
-    - Ambiente de desenvolvimento sem depender de banco.
-    - Protótipos rápidos.
+    This repository is meant for:
+    - Unit tests.
+    - Development environments without a real database.
+    - Quick prototypes and experiments.
+
+    It keeps behavior aligned with the SQLAlchemy version:
+    - Auto-generates `id`.
+    - Sets `created_at` when inserting.
+    - Updates `updated_at` when modifying.
     """
+    
     def __init__(self):
-        # "banco" em memória: id -> Event
+        """
+        Initializes an empty in-memory store and an ID counter.
+        """
         self._storage: Dict[int, Event] = {}
         self._next_id: int = 1
 
-        logger.debug("EventRepoInMemory inicializado")
+        logger.debug("EventRepoInMemory initialized")
     
     def _generate_id(self) -> int:
+        """
+        Generates a new incremental ID for in-memory events.
+
+        Returns:
+            New integer ID.
+        """
         new_id = self._next_id
         self._next_id += 1
         return new_id
@@ -40,8 +49,16 @@ class EventRepoInMemory:
     # ----------------------------------------------------------------------
     def add(self, event: Event) -> Event:
         """
-        Adiciona um novo Event ao armazenamento em memória.
-        Preenche automaticamente id, created_at e updated_at.
+        Adds a new Event to the in-memory store.
+
+        If `event.id` is None, an incremental ID is assigned.
+        `created_at` and `updated_at` are set to the current UTC time.
+
+        Args:
+            event: Domain Event entity to be stored.
+
+        Returns:
+            The same Event entity with `id`, `created_at` and `updated_at` populated.
         """
         if event.id is None:
             event.id = self._generate_id()
@@ -67,7 +84,13 @@ class EventRepoInMemory:
     # ----------------------------------------------------------------------
     def get(self, event_id: int) -> Event | None:
         """
-        Retorna um Event pelo id ou None se não existir.
+        Retrieves an Event from the in-memory store by its ID.
+
+        Args:
+            event_id: Identifier of the event to be retrieved.
+
+        Returns:
+            The Event if found, or None if it does not exist.
         """
         event = self._storage.get(event_id)
         
@@ -89,13 +112,18 @@ class EventRepoInMemory:
     # ----------------------------------------------------------------------
     def list(self, *, skip: int = 0, limit: int = 20, city: str | None = None, **filters) -> list[Event]:
         """
-        Devolve um recorte paginado da coleção em memória, aplicando
-        dinamicamente filtros recebidos.
+        Returns a paginated slice of events with optional filters.
 
-        Exemplos de chamada:
-            repo.list_partial(skip=0, limit=10)                    # sem filtros
-            repo.list_partial(skip=0, limit=10, city="Recife")     # filtra por cidade
-            repo.list_partial(skip=0, limit=10, xyz="ABC")         # filtra por outro campo
+        Events are sorted by `event_date` in descending order.
+
+        Args:
+            skip: Number of records to skip from the beginning.
+            limit: Maximum number of records to return; if <= 0, no limit is applied.
+            city: If provided, filters events whose `city` matches exactly.
+            **filters: Reserved for future dynamic filtering support.
+
+        Returns:
+            A list of Event entities matching the filter and pagination.
         """
         events = list(self._storage.values())
         
@@ -125,8 +153,19 @@ class EventRepoInMemory:
     # ----------------------------------------------------------------------
     def update(self, event: Event) -> Event:
         """
-        Atualiza um Event já existente em memória.
-        Atualiza automaticamente updated_at.
+        Updates an existing Event in the in-memory store.
+
+        `updated_at` is automatically refreshed to the current UTC time.
+
+        Args:
+            event: Event entity containing the new state. It must have a valid `id`.
+
+        Returns:
+            The updated Event entity.
+
+        Raises:
+            ValueError: If `event.id` is None.
+            KeyError: If no record exists for the informed `id`.
         """
         if event.id is None:
             logger.error("Tentativa de update em memória sem id", event=event)
@@ -157,19 +196,6 @@ class EventRepoInMemory:
     #     logger.info("Todos os eventos foram substituídos", total=len(events))
     #     return list(self._db.values())
 
-    # def replace_by_id(self, event_id: int, event: EventResponse) -> EventResponse:
-    #     self._db[event_id] = event
-    #     logger.info("Evento substituído", event_id=event_id)
-    #     return event
-    
-    # # -----------------------------------------------------------------
-    # def clear(self) -> None:
-    #     """Remove todos os eventos e zera o contador de IDs (usado em testes)."""
-    #     self._db.clear()
-    #     self._id_counter = 1
-    #     logger.info("Repositório de eventos limpo")
-    # # -----------------------------------------------------------------
-
     # def delete_all(self) -> None:
     #     """Remove todos os eventos e zera o contador de IDs (usado em testes)."""
     #     self._db.clear()
@@ -181,13 +207,20 @@ class EventRepoInMemory:
     # ----------------------------------------------------------------------
     def delete(self, event_id: int) -> bool:
         """
-        Remove um Event do armazenamento em memória, se existir.
+        Removes an Event from the in-memory store, if it exists.
+
+        Args:
+            event_id: Identifier of the event to be removed.
+
+        Returns:
+            True if the event was removed, False if it did not exist.
         """
         if event_id in self._storage:
             del self._storage[event_id]
             logger.info("Evento removido em memória", event_id=event_id)
-        else:
-            logger.info(
-                "Tentativa de remover evento inexistente em memória",
-                event_id=event_id,
-            )
+            return True
+        logger.info(
+            "Tentativa de remover evento inexistente em memória",
+            event_id=event_id,
+        )
+        return False

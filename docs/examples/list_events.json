@@ -1,0 +1,272 @@
+[
+  {
+    "title": "Festival de Tecnologia Recife",
+    "description": "Evento sobre inovação e startups",
+    "event_date": "2025-07-01T19:00:00Z",
+    "city": "Recife",
+    "participants": ["Ana", "Bruno", "Carla"],
+    "local_id": null,
+    "forecast_id": null
+  },
+  {
+    "title": "Encontro de Devs Backend",
+    "description": "Meetup focado em APIs e microsserviços",
+    "event_date": "2025-07-02T18:30:00Z",
+    "city": "Recife",
+    "participants": ["João", "Marina"],
+    "local_id": null,
+    "forecast_id": null
+  },
+  {
+    "title": "Mostra de Cinema Independente",
+    "description": "Exibição de curtas e debate com diretores",
+    "event_date": "2025-07-03T20:00:00Z",
+    "city": "Olinda",
+    "participants": ["Pedro", "Luiza", "Rafa"],
+    "local_id": null,
+    "forecast_id": null
+  },
+  {
+    "title": "Feira de Jogos Indie",
+    "description": "Apresentação de jogos independentes de estúdio local",
+    "event_date": "2025-07-04T15:00:00Z",
+    "city": "Recife",
+    "participants": ["Caio", "Bianca"],
+    "local_id": null,
+    "forecast_id": null
+  },
+  {
+    "title": "Simpósio de IA Aplicada",
+    "description": "Palestras sobre inteligência artificial no dia a dia",
+    "event_date": "2025-07-05T09:00:00Z",
+    "city": "Recife",
+    "participants": ["Ana", "Felipe", "Joana"],
+    "local_id": null,
+    "forecast_id": null
+  },
+  {
+    "title": "Workshop de UX Design",
+    "description": "Oficina prática de experiência do usuário",
+    "event_date": "2025-07-06T14:00:00Z",
+    "city": "Olinda",
+    "participants": ["Marcos", "Tainá"],
+    "local_id": null,
+    "forecast_id": null
+  },
+  {
+    "title": "Hackathon Social",
+    "description": "Maratona de programação com foco em impacto social",
+    "event_date": "2025-07-07T08:00:00Z",
+    "city": "Recife",
+    "participants": ["Bruno", "Carla", "Diego"],
+    "local_id": null,
+    "forecast_id": null
+  },
+  {
+    "title": "Encontro de Comunidade Python",
+    "description": "Talks e lightning talks sobre Python",
+    "event_date": "2025-07-08T19:30:00Z",
+    "city": "Caruaru",
+    "participants": ["João", "Fernanda"],
+    "local_id": null,
+    "forecast_id": null
+  },
+  {
+    "title": "Festival de Cultura Digital",
+    "description": "Painéis sobre cultura, arte e tecnologia",
+    "event_date": "2025-07-09T16:00:00Z",
+    "city": "Recife",
+    "participants": ["Helena", "Igor"],
+    "local_id": null,
+    "forecast_id": null
+  },
+  {
+    "title": "Meetup DevOps e Observabilidade",
+    "description": "Discussão sobre logs, métricas e tracing",
+    "event_date": "2025-07-10T19:00:00Z",
+    "city": "Recife",
+    "participants": ["Lucas", "Marina"],
+    "local_id": null,
+    "forecast_id": null
+  },
+  {
+    "title": "Rodada de Pitch Startups",
+    "description": "Apresentação de startups para investidores",
+    "event_date": "2025-07-11T10:00:00Z",
+    "city": "Recife",
+    "participants": ["Ana", "Pedro"],
+    "local_id": null,
+    "forecast_id": null
+  },
+  {
+    "title": "Oficina de Podcasting",
+    "description": "Como gravar, editar e publicar podcasts",
+    "event_date": "2025-07-12T14:30:00Z",
+    "city": "Olinda",
+    "participants": ["Rafa", "Bianca"],
+    "local_id": null,
+    "forecast_id": null
+  },
+  {
+    "title": "Jornada de Dados e Analytics",
+    "description": "Eventos focados em ciência de dados e BI",
+    "event_date": "2025-07-13T09:30:00Z",
+    "city": "Recife",
+    "participants": ["Felipe", "Carla"],
+    "local_id": null,
+    "forecast_id": null
+  },
+  {
+    "title": "Encontro Frontend Experience",
+    "description": "Palestras sobre React, acessibilidade e UI",
+    "event_date": "2025-07-14T18:00:00Z",
+    "city": "Recife",
+    "participants": ["Tainá", "Marcos"],
+    "local_id": null,
+    "forecast_id": null
+  },
+  {
+    "title": "Mini Conferência IoT",
+    "description": "Casos de uso de IoT em cidades inteligentes",
+    "event_date": "2025-07-15T08:30:00Z",
+    "city": "Recife",
+    "participants": ["Diego", "Luiza"],
+    "local_id": null,
+    "forecast_id": null
+  },
+  {
+    "title": "Mostra de Projetos Universitários",
+    "description": "Apresentação de TCCs e projetos de pesquisa",
+    "event_date": "2025-07-16T15:30:00Z",
+    "city": "Caruaru",
+    "participants": ["João", "Helena"],
+    "local_id": null,
+    "forecast_id": null
+  },
+  {
+    "title": "Semana de Cibercultura",
+    "description": "Debates sobre cultura digital e redes sociais",
+    "event_date": "2025-07-17T19:00:00Z",
+    "city": "Recife",
+    "participants": ["Igor", "Rafa"],
+    "local_id": null,
+    "forecast_id": null
+  },
+  {
+    "title": "Game Jam 48h",
+    "description": "Criação de jogos em equipe durante 48 horas",
+    "event_date": "2025-07-18T20:00:00Z",
+    "city": "Recife",
+    "participants": ["Lucas", "Pedro"],
+    "local_id": null,
+    "forecast_id": null
+  },
+  {
+    "title": "Fórum de Transformação Digital",
+    "description": "Painéis com empresas e governo sobre transformação digital",
+    "event_date": "2025-07-19T09:00:00Z",
+    "city": "Recife",
+    "participants": ["Ana", "Bruno", "Fernanda"],
+    "local_id": null,
+    "forecast_id": null
+  },
+  {
+    "title": "Encontro de Comunidade Open Source",
+    "description": "Discussão de projetos open source e colaboração",
+    "event_date": "2025-07-20T17:00:00Z",
+    "city": "Olinda",
+    "participants": ["Helena", "Diego"],
+    "local_id": null,
+    "forecast_id": null
+  },
+  {
+    "title": "Summit de Inovação Pernambucana",
+    "description": "Encontro entre startups e investidores",
+    "event_date": "2026-03-05T09:00:00Z",
+    "city": "Recife",
+    "participants": ["Ana", "Bruno", "Rafa"],
+    "local_id": null,
+    "forecast_id": null
+  },
+  {
+    "title": "Conferência de Cidades Inteligentes",
+    "description": "Painéis sobre mobilidade e IoT urbana",
+    "event_date": "2026-03-10T10:30:00Z",
+    "city": "Olinda",
+    "participants": ["Marina", "Diego"],
+    "local_id": null,
+    "forecast_id": null
+  },
+  {
+    "title": "Festival de Realidade Aumentada",
+    "description": "Experiências imersivas e oficinas práticas",
+    "event_date": "2026-03-15T14:00:00Z",
+    "city": "Recife",
+    "participants": ["Lucas", "Tainá"],
+    "local_id": null,
+    "forecast_id": null
+  },
+  {
+    "title": "Semana de Robótica Educacional",
+    "description": "Competições, palestras e workshops",
+    "event_date": "2026-03-20T08:00:00Z",
+    "city": "Caruaru",
+    "participants": ["João", "Helena", "Bianca"],
+    "local_id": null,
+    "forecast_id": null
+  },
+  {
+    "title": "Mostra Maker Brasil",
+    "description": "Exposição de projetos DIY e eletrônica",
+    "event_date": "2026-03-25T09:30:00Z",
+    "city": "Recife",
+    "participants": ["Pedro", "Caio"],
+    "local_id": null,
+    "forecast_id": null
+  },
+  {
+    "title": "Conferência Feminina de Tecnologia",
+    "description": "Mulheres líderes em tecnologia e inovação",
+    "event_date": "2026-03-28T18:00:00Z",
+    "city": "Recife",
+    "participants": ["Luiza", "Fernanda"],
+    "local_id": null,
+    "forecast_id": null
+  },
+  {
+    "title": "Maratona de Design Estratégico",
+    "description": "Sprint intensivo de solução de problemas com design",
+    "event_date": "2026-04-02T09:00:00Z",
+    "city": "Olinda",
+    "participants": ["Marcos", "Joana"],
+    "local_id": null,
+    "forecast_id": null
+  },
+  {
+    "title": "Fórum de Tecnologia Assistiva",
+    "description": "Novas tecnologias para acessibilidade e inclusão",
+    "event_date": "2026-04-05T15:00:00Z",
+    "city": "Recife",
+    "participants": ["Igor", "Helena"],
+    "local_id": null,
+    "forecast_id": null
+  },
+  {
+    "title": "ExpoGames Nordeste",
+    "description": "Lançamentos e testes de jogos digitais",
+    "event_date": "2026-04-10T13:00:00Z",
+    "city": "Recife",
+    "participants": ["Rafa", "Diego"],
+    "local_id": null,
+    "forecast_id": null
+  },
+  {
+    "title": "Hackathon Verde",
+    "description": "Projetos de sustentabilidade e impacto ambiental",
+    "event_date": "2026-04-15T07:00:00Z",
+    "city": "Recife",
+    "participants": ["Ana", "Bruno", "Tainá"],
+    "local_id": null,
+    "forecast_id": null
+  }
+]

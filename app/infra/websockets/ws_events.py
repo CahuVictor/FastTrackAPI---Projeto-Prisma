@@ -1,5 +1,5 @@
 # app/websockets/events.py
-from app.websockets.ws_manager import manager
+from app.infra.websockets.ws_manager import manager
 
 # ───────────────────────── notificações upload ──────────────────────────
 

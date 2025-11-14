@@ -9,8 +9,11 @@ from structlog import get_logger
 
 from app.infra.db.session import get_db
 from app.repositories.event_repo import EventRepository
+from app.repositories.local_repo import LocalRepository
+from app.repositories.forecast_repo import ForecastRepository
 from app.infra.repositories.sqlalchemy.event_repo_sqlalchemy import EventRepoSQLAlchemy
 from app.infra.repositories.inmemory.event_repo_inmemory import EventRepoInMemory
+from app.services.event_service import EventService
 
 # from app.services.interfaces.user_protocol import AbstractUserRepo
 # # from app.services.mock_users import MockUserRepo
@@ -22,11 +25,13 @@ from app.infra.repositories.inmemory.event_repo_inmemory import EventRepoInMemor
 # from app.services.mock_forecast_info import MockForecastService
 # from app.services.interfaces.forecast_info_protocol import AbstractForecastService
 
-# from app.core.config import get_settings
+from app.core.config import get_settings
 
 logger = get_logger().bind(module="deps")
 
-# _settings = get_settings()
+_settings = get_settings()
+_redis_singleton: Redis | None = None     # conexão global reaproveitável
+USE_INMEMORY = True # os.getenv("EVENT_REPO_BACKEND", "sqlalchemy") == "inmemory"
 
 # def provide_user_repo(db: Session = Depends(get_db)) -> AbstractUserRepo:
 #     """
@@ -40,30 +45,6 @@ logger = get_logger().bind(module="deps")
 #     # return UserRepo(db)
 #     return get_in_memory_user_repo()
 
-# def provide_local_info_service() -> AbstractLocalInfoService:
-#     """
-#     Retorna o serviço de localinfo.
-#     """
-#     if _settings.environment == "test.inmemory":
-#         from app.services.mock_local_info import MockLocalInfoService
-#         logger.debug("Injetando serviço de local_info (mock)")
-#         return MockLocalInfoService()
-#     return MockLocalInfoService() # LocalInfoService()
-
-# def provide_forecast_service() -> AbstractForecastService:
-#     """
-#     Retorna o serviço de forecast.
-#     """
-#     if _settings.environment == "test.inmemory":
-#         logger.debug("Injetando serviço de forecast_info (mock)")
-#         return MockForecastService()
-#     return MockForecastService()
-
-# _redis_singleton: Redis | None = None     # conexão global reaproveitável
-
-# TODO COLOCAR NO ENV
-USE_INMEMORY = True # os.getenv("EVENT_REPO_BACKEND", "sqlalchemy") == "inmemory"
-
 def provide_event_repo(db: Session = Depends(get_db)) -> EventRepository:
     """
     Retorna o repositório de eventos.
@@ -76,19 +57,33 @@ def provide_event_repo(db: Session = Depends(get_db)) -> EventRepository:
     logger.debug("Injetando repositório de eventos (SQLAlchemy)")
     return EventRepoSQLAlchemy(db)
 
-# async def provide_redis() -> Redis:
-#     global _redis_singleton
-#     if _settings.redis_url is None:
-#         logger.warning("REDIS_URL ausente", environment=_settings.environment)
-#         raise RuntimeError("REDIS_URL obrigatório")
-#     if _redis_singleton is None:
-#         logger.info("Instanciando conexão Redis", url=_settings.redis_url)
-#         _redis_singleton = Redis.from_url(
-#             _settings.redis_url,
-#             decode_responses=True,        # retorna str em vez de bytes
-#             health_check_interval=30,     # pool saudável
-#         )
-#     return _redis_singleton
+def provide_local_repo(db: Session = Depends(get_db)) -> None: # LocalRepository:
+    """
+    Retorna o repositório de eventos.
+    """
+    
+    return None
+
+def provide_forecast_repo(db: Session = Depends(get_db)) -> None: # forecastRepository:
+    """
+    Retorna o repositório de eventos.
+    """
+    
+    return None
+
+async def provide_redis() -> Redis:
+    global _redis_singleton
+    if _settings.redis_url is None:
+        logger.warning("REDIS_URL ausente", environment=_settings.environment)
+        raise RuntimeError("REDIS_URL obrigatório")
+    if _redis_singleton is None:
+        logger.info("Instanciando conexão Redis", url=_settings.redis_url)
+        _redis_singleton = Redis.from_url(
+            _settings.redis_url,
+            decode_responses=True,        # retorna str em vez de bytes
+            health_check_interval=30,     # pool saudável
+        )
+    return _redis_singleton
 
 # def get_db() -> Generator[Session, None, None]:
 #     db: Session = SessionLocal()
@@ -96,9 +91,6 @@ def provide_event_repo(db: Session = Depends(get_db)) -> EventRepository:
 #         yield db
 #     finally:
 #         db.close()
-
-# TODO COLOCAR NO ENV
-USE_INMEMORY = True # os.getenv("EVENT_REPO_BACKEND", "sqlalchemy") == "inmemory"
 
 def get_event_repo(db: Session = Depends(get_db)) -> EventRepository:
     """
@@ -112,3 +104,45 @@ def get_event_repo(db: Session = Depends(get_db)) -> EventRepository:
         return EventRepoInMemory()
     
     return EventRepoSQLAlchemy(db)
+
+def provide_event_service(
+    repo: EventRepository = Depends(provide_event_repo),
+) -> EventService:
+    """
+    Factory de EventService para injeção de dependência nos controllers.
+
+    Args:
+        repo: Implementação de EventRepository (injeção automática).
+
+    Returns:
+        Instância de EventService.
+    """
+    return EventService(repo)
+
+def provide_local_service(
+    repo: LocalRepository = Depends(provide_local_repo),
+) -> None: # LocalService:
+    """
+    Factory de EventService para injeção de dependência nos controllers.
+
+    Args:
+        repo: Implementação de EventRepository (injeção automática).
+
+    Returns:
+        Instância de EventService.
+    """
+    return None # EventService(repo)
+
+def provide_forecast_service(
+    repo: ForecastRepository = Depends(provide_forecast_repo),
+) -> None: # ForecastService:
+    """
+    Factory de EventService para injeção de dependência nos controllers.
+
+    Args:
+        repo: Implementação de EventRepository (injeção automática).
+
+    Returns:
+        Instância de EventService.
+    """
+    return None # ForecastService(repo)

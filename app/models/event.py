@@ -18,8 +18,8 @@ class Event:
     local_id: int | None = None
     forecast_id: int | None = None
     
-    created_at: datetime
-    updated_at: datetime
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
     def add_view(self) -> None:
         self.views += 1

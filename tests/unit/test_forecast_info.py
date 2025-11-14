@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 
 from app.main import app
 from app.core.deps import provide_forecast_service
-from app.services.forecast import atualizar_forecast_em_background
+from app.services.forecast_service import atualizar_forecast_em_background
 from app.utils.patch import should_update_forecast, update_event_forecast, update_event
 from app.schemas.event_create import EventResponse
 from app.schemas.event_update import ForecastInfoUpdate, EventUpdate

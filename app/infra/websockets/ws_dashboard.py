@@ -1,5 +1,5 @@
 # app/websockets/dashboard.py
-from app.websockets.ws_manager import manager
+from app.infra.websockets.ws_manager import manager
 
 # ───────────────────────── usuários online ──────────────────────────────
 
