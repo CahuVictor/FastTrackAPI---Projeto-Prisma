@@ -1,0 +1,212 @@
+[
+  {
+    "location_name": "Teatro Municipal Paudalho",
+    "capacity": 450,
+    "venue_type": null,
+    "is_accessible": true,
+    "address": "Rua do Teatro 123 - Centro - Paudalho/PE"
+  },
+  {
+    "location_name": "Auditório Centro Cultural Mata Norte",
+    "capacity": 320,
+    "venue_type": null,
+    "is_accessible": true,
+    "address": "Avenida Principal 45 - Centro - Paudalho/PE"
+  },
+  {
+    "location_name": "Praça do Coreto",
+    "capacity": 800,
+    "venue_type": null,
+    "is_accessible": false,
+    "address": "Praca do Coreto - Centro - Paudalho/PE"
+  },
+  {
+    "location_name": "Ginásio Poliesportivo Paudalho",
+    "capacity": 1500,
+    "venue_type": null,
+    "is_accessible": true,
+    "address": "Rua do Esporte 200 - Bairro Novo - Paudalho/PE"
+  },
+  {
+    "location_name": "Escola Municipal Otávio Gusmão - Pátio",
+    "capacity": 300,
+    "venue_type": null,
+    "is_accessible": true,
+    "address": "Rua da Escola 10 - Centro - Paudalho/PE"
+  },
+  {
+    "location_name": "Centro de Convenções Paudalho",
+    "capacity": 2000,
+    "venue_type": null,
+    "is_accessible": true,
+    "address": "Rodovia BR-408 km 12 - Paudalho/PE"
+  },
+  {
+    "location_name": "Cine Teatro Linda Flor",
+    "capacity": 280,
+    "venue_type": null,
+    "is_accessible": true,
+    "address": "Rua das Flores 77 - Centro - Paudalho/PE"
+  },
+  {
+    "location_name": "Quadra Coberta Alto Dois Irmãos",
+    "capacity": 600,
+    "venue_type": null,
+    "is_accessible": false,
+    "address": "Rua do Alto 50 - Alto Dois Irmãos - Paudalho/PE"
+  },
+  {
+    "location_name": "Salão Paroquial Matriz",
+    "capacity": 250,
+    "venue_type": null,
+    "is_accessible": false,
+    "address": "Rua da Matriz 5 - Centro - Paudalho/PE"
+  },
+  {
+    "location_name": "Galpão de Eventos Estação",
+    "capacity": 900,
+    "venue_type": null,
+    "is_accessible": false,
+    "address": "Rua da Estacao 300 - Estacao - Paudalho/PE"
+  },
+  {
+    "location_name": "Arena de Shows Paudalho",
+    "capacity": 3000,
+    "venue_type": null,
+    "is_accessible": false,
+    "address": "Anel Viario S/N - Paudalho/PE"
+  },
+  {
+    "location_name": "Espaço Cultural 11:11 Studio",
+    "capacity": 120,
+    "venue_type": null,
+    "is_accessible": true,
+    "address": "Rua do Estudio 11 - Centro - Paudalho/PE"
+  },
+  {
+    "location_name": "Parque de Exposições Paudalho",
+    "capacity": 2200,
+    "venue_type": null,
+    "is_accessible": false,
+    "address": "Rodovia PE-027 km 3 - Paudalho/PE"
+  },
+  {
+    "location_name": "Clube Social Paudalhense",
+    "capacity": 400,
+    "venue_type": null,
+    "is_accessible": true,
+    "address": "Rua do Clube 90 - Centro - Paudalho/PE"
+  },
+  {
+    "location_name": "Sede do Maracatu Leão da Mata",
+    "capacity": 180,
+    "venue_type": null,
+    "is_accessible": false,
+    "address": "Rua da Mata 60 - Bairro Verde - Paudalho/PE"
+  },
+  {
+    "location_name": "Sítio Desterro - Campo Aberto",
+    "capacity": 700,
+    "venue_type": null,
+    "is_accessible": false,
+    "address": "Estrada de Desterro S/N - Zona Rural - Paudalho/PE"
+  },
+  {
+    "location_name": "Praça São Severino",
+    "capacity": 850,
+    "venue_type": null,
+    "is_accessible": false,
+    "address": "Praca Sao Severino - Centro - Paudalho/PE"
+  },
+  {
+    "location_name": "Auditório da UFPE Campus Mata Norte",
+    "capacity": 260,
+    "venue_type": null,
+    "is_accessible": true,
+    "address": "Av Universitaria 1000 - Campus Mata Norte - Nazaré da Mata/PE"
+  },
+  {
+    "location_name": "Teatro de Rua Loteamento Primavera",
+    "capacity": 500,
+    "venue_type": null,
+    "is_accessible": false,
+    "address": "Rua Primavera 40 - Loteamento Primavera - Paudalho/PE"
+  },
+  {
+    "location_name": "Galeria de Arte Linda Flor",
+    "capacity": 90,
+    "venue_type": null,
+    "is_accessible": true,
+    "address": "Rua das Artes 33 - Centro - Paudalho/PE"
+  },
+  {
+    "location_name": "Sede 22 de Novembro",
+    "capacity": 200,
+    "venue_type": null,
+    "is_accessible": false,
+    "address": "Rua 22 de Novembro 22 - Centro - Paudalho/PE"
+  },
+  {
+    "location_name": "Espaço Comunitário Primavera",
+    "capacity": 220,
+    "venue_type": null,
+    "is_accessible": true,
+    "address": "Rua Principal 12 - Loteamento Primavera - Paudalho/PE"
+  },
+  {
+    "location_name": "Pátio da Feira Livre",
+    "capacity": 1000,
+    "venue_type": null,
+    "is_accessible": false,
+    "address": "Rua da Feira 1 - Centro - Paudalho/PE"
+  },
+  {
+    "location_name": "Ilha do Rio Capibaribe - Margem",
+    "capacity": 600,
+    "venue_type": null,
+    "is_accessible": false,
+    "address": "Beira Rio S/N - Paudalho/PE"
+  },
+  {
+    "location_name": "Espaço Multiuso Paudalho Shopping",
+    "capacity": 350,
+    "venue_type": null,
+    "is_accessible": true,
+    "address": "Rua do Comercio 200 - Centro - Paudalho/PE"
+  },
+  {
+    "location_name": "Centro Esportivo Municipal",
+    "capacity": 1300,
+    "venue_type": null,
+    "is_accessible": true,
+    "address": "Rua do Estadio 300 - Bairro Novo - Paudalho/PE"
+  },
+  {
+    "location_name": "Anfiteatro ao Ar Livre Paudalho",
+    "capacity": 750,
+    "venue_type": null,
+    "is_accessible": false,
+    "address": "Parque Central S/N - Paudalho/PE"
+  },
+  {
+    "location_name": "Escola Rural Rusarinho - Quadra",
+    "capacity": 280,
+    "venue_type": null,
+    "is_accessible": false,
+    "address": "Estrada de Rusarinho S/N - Zona Rural - Paudalho/PE"
+  },
+  {
+    "location_name": "Biblioteca Pública Municipal - Hall",
+    "capacity": 110,
+    "venue_type": null,
+    "is_accessible": true,
+    "address": "Rua da Cultura 8 - Centro - Paudalho/PE"
+  },
+  {
+    "location_name": "Largo da Estação Ferroviária",
+    "capacity": 900,
+    "venue_type": null,
+    "is_accessible": false,
+    "address": "Largo da Estacao - Centro - Paudalho/PE"
+  }
+]

@@ -13,7 +13,9 @@ from app.repositories.local_repo import LocalRepository
 from app.repositories.forecast_repo import ForecastRepository
 from app.infra.repositories.sqlalchemy.event_repo_sqlalchemy import EventRepoSQLAlchemy
 from app.infra.repositories.inmemory.event_repo_inmemory import EventRepoInMemory
+from app.infra.repositories.inmemory.local_repo_inmemory import LocalRepoInMemory
 from app.services.event_service import EventService
+from app.services.local_service import LocalService
 
 # from app.services.interfaces.user_protocol import AbstractUserRepo
 # # from app.services.mock_users import MockUserRepo
@@ -49,8 +51,8 @@ def provide_event_repo(db: Session = Depends(get_db)) -> EventRepository:
     """
     Retorna o repositório de eventos.
     """
-    # if _settings.environment == "test.inmemory":
-    if USE_INMEMORY:
+    if _settings.environment == "test.inmemory":
+    # if USE_INMEMORY:
         from app.core.deps_singletons import get_in_memory_event_repo
         logger.debug("Injetando instância global de repositório em memória (via singleton manual)")
         return get_in_memory_event_repo()
@@ -59,8 +61,15 @@ def provide_event_repo(db: Session = Depends(get_db)) -> EventRepository:
 
 def provide_local_repo(db: Session = Depends(get_db)) -> None: # LocalRepository:
     """
-    Retorna o repositório de eventos.
+    Retorna o repositório de locais.
     """
+    if _settings.environment == "test.inmemory":
+    # if USE_INMEMORY:
+        from app.core.deps_singletons import get_in_memory_local_repo
+        logger.debug("Injetando instância global de repositório em memória (via singleton manual)")
+        return get_in_memory_local_repo()
+    logger.debug("Injetando repositório de locais (SQLAlchemy)")
+    return None # EventRepoSQLAlchemy(db)
     
     return None
 
@@ -99,11 +108,26 @@ def get_event_repo(db: Session = Depends(get_db)) -> EventRepository:
     Se EVENT_REPO_BACKEND=inmemory -> usa repositório em memória.
     Caso contrário -> usa SQLAlchemy.
     """
-    if USE_INMEMORY:
+    if _settings.environment == "test.inmemory":
+    # if USE_INMEMORY:
         # InMemory não precisa de Session
         return EventRepoInMemory()
     
     return EventRepoSQLAlchemy(db)
+
+def get_local_repo(db: Session = Depends(get_db)) -> LocalRepository:
+    """
+    Resolve a implementação concreta de LocalRepository.
+
+    Se LOCAL_REPO_BACKEND=inmemory -> usa repositório em memória.
+    Caso contrário -> usa SQLAlchemy.
+    """
+    if _settings.environment == "test.inmemory":
+    # if USE_INMEMORY:
+        # InMemory não precisa de Session
+        return LocalRepoInMemory()
+    
+    return None # LocalRepoSQLAlchemy(db)
 
 def provide_event_service(
     repo: EventRepository = Depends(provide_event_repo),
@@ -121,17 +145,17 @@ def provide_event_service(
 
 def provide_local_service(
     repo: LocalRepository = Depends(provide_local_repo),
-) -> None: # LocalService:
+) -> LocalService:
     """
     Factory de EventService para injeção de dependência nos controllers.
 
     Args:
-        repo: Implementação de EventRepository (injeção automática).
+        repo: Implementação de LocalRepository (injeção automática).
 
     Returns:
-        Instância de EventService.
+        Instância de LocalService.
     """
-    return None # EventService(repo)
+    return LocalService(repo)
 
 def provide_forecast_service(
     repo: ForecastRepository = Depends(provide_forecast_repo),

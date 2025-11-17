@@ -1,9 +1,13 @@
 # app/infra/db/tables/event_table.py
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import ARRAY
-from sqlalchemy.orm import Mapped
+from sqlalchemy.orm import Mapped, relationship
+from typing import TYPE_CHECKING
 
 from app.infra.db.base import Base
+
+if TYPE_CHECKING:
+    from app.infra.db.tables.local_table import LocalTable
 
 class EventTable(Base):
     __tablename__ = 'events'
@@ -23,3 +27,7 @@ class EventTable(Base):
     
     created_at = Column(DateTime, nullable=False)
     updated_at = Column(DateTime, nullable=False)
+    
+    local_info: Mapped["LocalTable"] = relationship(
+        "LocalTable", back_populates="events",
+    )

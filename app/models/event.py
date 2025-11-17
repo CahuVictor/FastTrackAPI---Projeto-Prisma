@@ -4,6 +4,9 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List
 
+from app.models.local import Local
+from app.models.forecast import Forecast
+
 @dataclass(slots=True, kw_only=True)
 class Event:
     id: int | None = None

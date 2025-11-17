@@ -16,6 +16,3 @@ class LocalCreate(BaseModel):
         if not isinstance(v, str):
             raise TypeError("O campo 'location_name' deve ser uma string.", location_name=v) # ("O campo 'location_name' deve ser uma string.")
         return v.strip().lower()
-
-class LocalInfoResponse(LocalInfo):
-    manually_edited: bool = Field(default=False, description="Flag indicando se os dados foram alterados manualmente pelo usuário")

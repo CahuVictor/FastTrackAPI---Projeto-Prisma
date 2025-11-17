@@ -498,9 +498,9 @@ def patch_event(
         404: {"description": "No events found."},
     },
 )
-# @limiter.limit("5/minute")
+@limiter.limit("5/minute")
 def download_events(
-    # request: Request,  # ? Necessário para funcionar com @limiter.limit,
+    request: Request,  # ? Necessário para funcionar com @limiter.limit,
     service: EventService = _provide_event_service,
 ):
     """

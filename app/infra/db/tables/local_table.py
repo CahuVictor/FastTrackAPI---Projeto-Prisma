@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from app.infra.db.tables.event_table import EventTable
 
 class LocalTable(Base):
-    __tablename__ = 'local_infos'
+    __tablename__ = 'locals'
 
     id = Column(Integer, primary_key=True, index=True)
     location_name = Column(String, nullable=False)
@@ -20,8 +20,10 @@ class LocalTable(Base):
     is_accessible = Column(Boolean, default=False)
     address = Column(String, nullable=True)
     manually_edited = Column(Boolean, default=False)
+    
+    created_at = Column(DateTime, nullable=False)
+    updated_at = Column(DateTime, nullable=False)
 
     events: Mapped[list["EventTable"]] = relationship(
-        "EventTable", back_populates="local_info"  # type: ignore[assignment]
-        # back_populates="local_info"
+        "EventTable", back_populates="locals"  # type: ignore[assignment]
     )

@@ -7,10 +7,10 @@ import json
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
 class URLUpdateRequest(BaseModel):
-    service: str  # "forecast_info_url" ou "local_info_url"
+    service: str  # "forecast_url" ou "local_url"
     url: HttpUrl
 
-ALLOWED_KEYS = {"forecast_info_url", "local_info_url"}
+ALLOWED_KEYS = {"forecast_url", "local_url"}
 RUNTIME_PATH = Path("runtime_urls.json")
 
 

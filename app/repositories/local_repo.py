@@ -1,48 +1,72 @@
-# app/repositories/local.py
+# app/repositories/local_repo.py
 from __future__ import annotations
 
 import abc
+from datetime import datetime
+from typing import List
 
 from app.models.local import Local
+from app.models.venue_type import VenueType
 
-class LocalRepository(abc.ABC):    
+
+class LocalRepository(abc.ABC):
     @abc.abstractmethod
     def list(
         self,
         *,
         skip: int = 0,
         limit: int = 20,
-        city: str | None = None,
+        location_name: str | None = None,
+        capacity: int | None = None,
+        venue_type: VenueType | None = None,
+        is_accessible: bool | None = None,
+        address: str | None = None,
+        manually_edited: bool | None = None,
+        created_at: datetime | None = None,
+        updated_at: datetime | None = None,
         # **filters
     ) -> list[Local]:
-        """."""
-    
+        """
+        List locals with pagination and optional filters.
+        """
+	
     @abc.abstractmethod
     def get(self, local_id: int) -> Local | None:
-        """."""
-    
+        """
+        Retrieve a single Local by ID.
+        """
+	
     @abc.abstractmethod
     def add(self, local: Local) -> Local:
-        """."""
-    
+        """
+        Persist a new Local entity.
+        """
+	
     @abc.abstractmethod
     def replace_all(self, locals: list[Local]) -> list[Local]:
-        """."""
-    
+        """
+        Replace all Local entries with the given list.
+        """
+	
     @abc.abstractmethod
     def replace_by_id(self, local_id: int, local: Local) -> Local:
-        """."""
+        """
+        Replace a specific Local by ID.
+        """
     
-    @abc.abstractmethod
-    def delete(self) -> None:
-        """."""
+    # @abc.abstractmethod
+    # def delete(self) -> None:
+    #     """."""
     
     @abc.abstractmethod
     def delete(self, local_id: int) -> bool:
-        """."""
-    
+        """
+        Delete a Local by ID. Returns True if an entity was deleted.
+        """
+	
     @abc.abstractmethod
-    # def update(self, local_id: int, data: dict) -> local:
     def update(self, local: Local) -> Local:
-        """."""
-    
+        """
+        Update an existing Local entity.
+        """
+

@@ -20,6 +20,6 @@ def get_service_url(service: str) -> str:
             print(f"[WARN] Falha ao ler runtime_urls.json: {e}")
 
     return {
-        "local_info_url": settings.local_info_url,
-        "forecast_info_url": settings.forecast_info_url
+        "local_url": settings.local_url,
+        "forecast_url": settings.forecast_url
     }.get(service, "")
