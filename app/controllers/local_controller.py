@@ -469,6 +469,61 @@ def delete_local(
     return {"message": f"Local with ID {local_id} successfully removed."}
 
 
+# ---------------------------------------------------------------------- #
+# DOWNLOAD ALL LOCALS
+# ---------------------------------------------------------------------- #
+@router.get(
+    "/download",
+    summary="Download all registered locals",
+    response_model=list[LocalView],
+    responses={
+        200: {"description": "Local list successfully returned."},
+        404: {"description": "No locals found."},
+    },
+)
+def download_locals(
+    service: LocalService = _provide_local_service,
+):
+    """
+    Return all Local records registered in the system, without pagination.
+
+    This is intended for:
+    - Full exports (e.g., backup or synchronization).
+    - Debugging and administration tools.
+    - Offline analysis of all known venues.
+
+    Returns:
+        A list of `LocalView` representing all persisted locals.
+
+    Raises:
+        HTTPException(404): If no locals are found.
+    """
+    logger.info("Download of all locals requested")
+
+    locals_ = service.list_all_locals()
+
+    if not locals_:
+        raise_http(logger.warning, 404, "No locals found")
+
+    payload = [
+        LocalView(
+            id=local.id,  # type: ignore[arg-type]
+            location_name=local.location_name,
+            capacity=local.capacity,
+            venue_type=local.venue_type,
+            is_accessible=local.is_accessible,
+            address=local.address,
+            manually_edited=local.manually_edited,
+            created_at=local.created_at,
+            updated_at=local.updated_at,
+        )
+        for local in locals_
+    ]
+
+    # Force JSON encoding to avoid issues with non-serializable types
+    return JSONResponse(content=jsonable_encoder(payload))
+
+
 # # ---------------------------------------------------------------------- #
 # # PATCH /{event_id}/local
 # # ---------------------------------------------------------------------- #
