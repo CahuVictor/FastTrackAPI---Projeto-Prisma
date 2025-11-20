@@ -6,10 +6,11 @@ from typing import Dict, List
 from datetime import datetime
 
 from app.models.event import Event
+from app.repositories.event_repo import EventRepository
 
 logger = get_logger().bind(module="event_repo_inmemory")
 
-class EventRepoInMemory:
+class EventRepoInMemory(): # EventRepository): # TODO TypeError: Can't instantiate abstract class EventRepoInMemory without an implementation for abstract methods 'replace_all', 'replace_by_id'
     """
     In-memory implementation of EventRepository.
 
@@ -74,7 +75,8 @@ class EventRepoInMemory:
             event_id=event.id,
             title=event.title,
             city=event.city,
-            date=event.event_date,
+            status=event.status,
+            start_time=event.start_time,
         )
 
         return event
@@ -100,7 +102,8 @@ class EventRepoInMemory:
                 event_id=event_id,
                 title=event.title,
                 city=event.city,
-                date=event.event_date,
+                status=event.status,
+                start_time=event.start_time,
             )
         else:
             logger.info("Evento não encontrado em memória", event_id=event_id)
@@ -130,7 +133,7 @@ class EventRepoInMemory:
         if city:
             events = [e for e in events if e.city == city]
 
-        events.sort(key=lambda e: e.event_date, reverse=True)
+        events.sort(key=lambda e: e.start_time, reverse=True)
 
         if skip:
             events = events[skip:]
@@ -185,7 +188,8 @@ class EventRepoInMemory:
             event_id=event.id,
             title=event.title,
             city=event.city,
-            date=event.event_date,
+            status=event.status,
+            start_time=event.start_time,
             updated=event.updated_at,
         )
 

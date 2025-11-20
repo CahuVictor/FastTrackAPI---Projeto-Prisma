@@ -6,7 +6,7 @@ from typing import Dict, List
 from datetime import datetime
 
 from app.models.local import Local
-from app.models.venue_type import VenueType
+from app.models.event_local_enums import VenueType
 from app.repositories.local_repo import LocalRepository
 
 logger = get_logger().bind(module="local_repo_inmemory")

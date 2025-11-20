@@ -14,8 +14,8 @@ import asyncio
 import json
 
 from app.core.rate_limit_config import limiter
-from app.core.deps import get_event_repo # provide_local_info_service, provide_forecast_service, provide_event_repo
-from app.core.deps import provide_event_repo, provide_event_service
+
+from app.core.deps import provide_event_repo, provide_event_service, provide_local_service
 from app.schemas.event_create import EventCreate
 from app.schemas.event_update import EventUpdate
 from app.schemas.event_view import EventView
@@ -41,6 +41,7 @@ from app.infra.websockets.ws_dashboard import notify_user_count
 # _provide_local_info_service = Depends(provide_local_info_service)
 # _provide_forecast_service = Depends(provide_forecast_service)
 _provide_event_service = Depends(provide_event_service)
+_provide_local_service = Depends(provide_local_service)
 
 logger = get_logger().bind(module="eventos")
 
@@ -95,12 +96,14 @@ def list_events(
             id=event.id,  # type: ignore[arg-type]
             title=event.title,
             description=event.description,
-            event_date=event.event_date,
+            status=event.status,
+            start_time=event.start_time,
+            end_time=event.end_time,
+            timezone=event.timezone,
             city=event.city,
+            age_restriction=event.age_restriction,
             participants=event.participants,
             views=event.views,
-            local_id=event.local_id,
-            forecast_id=event.forecast_id,
             created_at=event.created_at,
             updated_at=event.updated_at,
         )
@@ -158,12 +161,14 @@ async def get_event_by_id(
         id=event.id,  # type: ignore[arg-type]
         title=event.title,
         description=event.description,
-        event_date=event.event_date,
+        status=event.status,
+        start_time=event.start_time,
+        end_time=event.end_time,
+        timezone=event.timezone,
         city=event.city,
+        age_restriction=event.age_restriction,
         participants=event.participants,
         views=event.views,
-        local_id=event.local_id,
-        forecast_id=event.forecast_id,
         created_at=event.created_at,
         updated_at=event.updated_at,
     )
@@ -195,20 +200,22 @@ def post_create_event(
     Returns:
         An `EventView` instance representing the created event.
     """
-    logger.info("Received request to create event", title=payload.title, city=payload.city, event_date=payload.event_date)
+    logger.info("Received request to create event", title=payload.title, city=payload.city, start_time=payload.start_time, end_time=payload.end_time,)
 
-    event = service.create_event(payload)
+    event = service.create_event(payload, changed_by="anonymous")
 
     return EventView(
         id=event.id,  # type: ignore[arg-type]
         title=event.title,
         description=event.description,
-        event_date=event.event_date,
+        status=event.status,
+        start_time=event.start_time,
+        end_time=event.end_time,
+        timezone=event.timezone,
         city=event.city,
+        age_restriction=event.age_restriction,
         participants=event.participants,
         views=event.views,
-        local_id=event.local_id,
-        forecast_id=event.forecast_id,
         created_at=event.created_at,
         updated_at=event.updated_at,
     )
@@ -258,8 +265,12 @@ async def put_events(
             # id=event.id,
             title=event.title,
             description=event.description,
-            event_date=event.event_date,
+            status=event.status,
+            start_time=event.start_time,
+            end_time=event.end_time,
+            timezone=event.timezone,
             city=event.city,
+            age_restriction=event.age_restriction,
             participants=event.participants,
             # views=event.views,
             # local_id=event.local_id,
@@ -270,7 +281,7 @@ async def put_events(
         for event in events_new
     ]
 
-    events = service.replace_all_events(domain_events)
+    events = service.replace_all_events(domain_events, changed_by="anonymous")
 
     asyncio.create_task(notify_replace_done())
     asyncio.create_task(notify_user_count())
@@ -281,12 +292,14 @@ async def put_events(
             id=event.id,  # type: ignore[arg-type]
             title=event.title,
             description=event.description,
-            event_date=event.event_date,
+            status=event.status,
+            start_time=event.start_time,
+            end_time=event.end_time,
+            timezone=event.timezone,
             city=event.city,
+            age_restriction=event.age_restriction,
             participants=event.participants,
             views=event.views,
-            local_id=event.local_id,
-            forecast_id=event.forecast_id,
             created_at=event.created_at,
             updated_at=event.updated_at,
         )
@@ -331,18 +344,20 @@ def put_event_by_id(
         id=None,  # The service will enforce the correct ID
         title=new_event.title,
         description=new_event.description,
-        event_date=new_event.event_date,
+        status=new_event.status,
+        start_time=new_event.start_time,
+        end_time=new_event.end_time,
+        timezone=new_event.timezone,
         city=new_event.city,
+        age_restriction=new_event.age_restriction,
         participants=new_event.participants,
-        views=new_event.views,
-        local_id=new_event.local_id,
-        forecast_id=new_event.forecast_id,
-        created_at=new_event.created_at,
-        updated_at=new_event.updated_at,
+        # views=new_event.views,
+        # created_at=new_event.created_at,
+        # updated_at=new_event.updated_at,
     )
 
     try:
-        event = service.replace_event_by_id(event_id, domain_event)
+        event = service.replace_event_by_id(event_id, domain_event, changed_by="anonymous")
     except KeyError:
         raise HTTPException(status_code=404, detail="Event not found")
 
@@ -352,12 +367,14 @@ def put_event_by_id(
         id=event.id,  # type: ignore[arg-type]
         title=event.title,
         description=event.description,
-        event_date=event.event_date,
+        status=event.status,
+        start_time=event.start_time,
+        end_time=event.end_time,
+        timezone=event.timezone,
         city=event.city,
+        age_restriction=event.age_restriction,
         participants=event.participants,
         views=event.views,
-        local_id=event.local_id,
-        forecast_id=event.forecast_id,
         created_at=event.created_at,
         updated_at=event.updated_at,
     )
@@ -420,7 +437,7 @@ def delete_event(
     logger.info("Received request to delete event", event_id=event_id)
 
     try:
-        service.delete_event(event_id)
+        service.delete_event(event_id, changed_by="anonymous")
     except KeyError:
         raise HTTPException(status_code=404, detail="Event not found")
 
@@ -466,7 +483,7 @@ def patch_event(
     logger.info("Received partial update request", event_id=event_id)
 
     try:
-        event = service.update_event(event_id, payload)
+        event = service.update_event(event_id, payload, changed_by="anonymous")
     except KeyError:
         raise HTTPException(status_code=404, detail="Event not found")
 
@@ -474,12 +491,14 @@ def patch_event(
         id=event.id,  # type: ignore[arg-type]
         title=event.title,
         description=event.description,
-        event_date=event.event_date,
+        status=event.status,
+        start_time=event.start_time,
+        end_time=event.end_time,
+        timezone=event.timezone,
         city=event.city,
+        age_restriction=event.age_restriction,
         participants=event.participants,
         views=event.views,
-        local_id=event.local_id,
-        forecast_id=event.forecast_id,
         created_at=event.created_at,
         updated_at=event.updated_at,
     )
@@ -524,12 +543,14 @@ def download_events(
             id=event.id,  # type: ignore[arg-type]
             title=event.title,
             description=event.description,
-            event_date=event.event_date,
+            status=event.status,
+            start_time=event.start_time,
+            end_time=event.end_time,
+            timezone=event.timezone,
             city=event.city,
+            age_restriction=event.age_restriction,
             participants=event.participants,
             views=event.views,
-            local_id=event.local_id,
-            forecast_id=event.forecast_id,
             created_at=event.created_at,
             updated_at=event.updated_at,
         )
@@ -582,19 +603,21 @@ async def get_events_top_soon(
 
     return [
         EventView(
-            id=e.id,  # type: ignore[arg-type]
-            title=e.title,
-            description=e.description,
-            event_date=e.event_date,
-            city=e.city,
-            participants=e.participants,
-            views=e.views,
-            local_id=e.local_id,
-            forecast_id=e.forecast_id,
-            created_at=e.created_at,
-            updated_at=e.updated_at,
+            id=event.id,  # type: ignore[arg-type]
+            title=event.title,
+            description=event.description,
+            status=event.status,
+            start_time=event.start_time,
+            end_time=event.end_time,
+            timezone=event.timezone,
+            city=event.city,
+            age_restriction=event.age_restriction,
+            participants=event.participants,
+            views=event.views,
+            created_at=event.created_at,
+            updated_at=event.updated_at,
         )
-        for e in most_soon
+        for event in most_soon
     ]
 
 
@@ -645,19 +668,21 @@ async def get_events_top_viewed(
 
     return [
         EventView(
-            id=e.id,  # type: ignore[arg-type]
-            title=e.title,
-            description=e.description,
-            event_date=e.event_date,
-            city=e.city,
-            participants=e.participants,
-            views=e.views,
-            local_id=e.local_id,
-            forecast_id=e.forecast_id,
-            created_at=e.created_at,
-            updated_at=e.updated_at,
+            id=event.id,  # type: ignore[arg-type]
+            title=event.title,
+            description=event.description,
+            status=event.status,
+            start_time=event.start_time,
+            end_time=event.end_time,
+            timezone=event.timezone,
+            city=event.city,
+            age_restriction=event.age_restriction,
+            participants=event.participants,
+            views=event.views,
+            created_at=event.created_at,
+            updated_at=event.updated_at,
         )
-        for e in most_viewed
+        for event in most_viewed
     ]
 
 
@@ -697,7 +722,7 @@ async def post_events_batch(
     if not events:
         raise_http(logger.warning, 400, "Empty list provided")
 
-    created_events = service.create_events_batch(events)
+    created_events = service.create_events_batch(events, changed_by="anonymous")
 
     # Aqui você poderia adicionar tasks de forecast em background se tiver
     # uma função do tipo `atualizar_forecast_em_background`.
@@ -716,19 +741,21 @@ async def post_events_batch(
 
     return [
         EventView(
-            id=e.id,  # type: ignore[arg-type]
-            title=e.title,
-            description=e.description,
-            event_date=e.event_date,
-            city=e.city,
-            participants=e.participants,
-            views=e.views,
-            local_id=e.local_id,
-            forecast_id=e.forecast_id,
-            created_at=e.created_at,
-            updated_at=e.updated_at,
+            id=event.id,  # type: ignore[arg-type]
+            title=event.title,
+            description=event.description,
+            status=event.status,
+            start_time=event.start_time,
+            end_time=event.end_time,
+            timezone=event.timezone,
+            city=event.city,
+            age_restriction=event.age_restriction,
+            participants=event.participants,
+            views=event.views,
+            created_at=event.created_at,
+            updated_at=event.updated_at,
         )
-        for e in created_events
+        for event in created_events
     ]
 
 
@@ -794,13 +821,20 @@ async def upload_csv(
             payload = EventCreate(
                 title=row["title"],
                 description=row["description"],
-                event_date=row["event_date"],
+                status=row["status"],
+                
+                start_time=row["start_time"],
+                end_time=row["end_time"],
+                timezone=row["timezone"],
+        
                 city=row["city"],
+                age_restriction=row["age_restriction"],
+                
                 participants=row["participants"].split(";") if row.get("participants") else [],
                 # Se quiser suportar local_id/forecast_id no CSV, adiciona aqui
             )
 
-            event = service.create_event(payload)
+            event = service.create_event(payload, changed_by="anonymous")
             created_events.append(event)
             total += 1
             
@@ -823,3 +857,41 @@ async def upload_csv(
         raise_http(logger.warning, 400, "No valid events were imported")
 
     return {"status": "finished", "total": total}
+
+@router.post(
+    "/{event_id}/attach-local/{local_id}",
+    summary="Attach an existing local to an event",
+    responses={
+        200: {"description": "Event updated with the given local."},
+        404: {"description": "Event or Local not found."},
+    },
+)
+def attach_local_to_event(
+    event_id: int,
+    local_id: int,
+    event_service: EventService = _provide_event_service,
+    local_service: LocalService = _provide_local_service,
+) -> dict[str, str]:
+    """
+    Attach an existing Local to an Event by setting `event.local_id`.
+
+    Rules:
+    - 404 if the event does not exist.
+    - 404 if the local does not exist.
+    - Otherwise, updates `event.local_id` and persists the change.
+    """
+    logger.info("Attach local to event requested", event_id=event_id, local_id=local_id)
+
+    event = event_service.get_event(event_id)
+    if not event:
+        raise_http(logger.warning, 404, "Event not found", event_id=event_id)
+
+    local = local_service.get_local(local_id)
+    if not local:
+        raise_http(logger.warning, 404, "Local not found", local_id=local_id)
+
+    event.local_id = local_id
+    event_service.update_event_entity(event, changed_by="anonymous")  # <-- crie esse método se ainda não existir
+
+    logger.info("Local attached to event successfully", event_id=event_id, local_id=local_id)
+    return {"message": f"Local {local_id} attached to event {event_id}."}

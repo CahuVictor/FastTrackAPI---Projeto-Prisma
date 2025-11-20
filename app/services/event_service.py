@@ -6,34 +6,114 @@ from typing import List
 from structlog import get_logger
 
 from app.models.event import Event
+from app.models.event_local_enums import EventStatus
 from app.repositories.event_repo import EventRepository
 from app.schemas.event_create import EventCreate
 from app.schemas.event_update import EventUpdate
 from app.utils.h_events import order_and_slice, ensure_aware
 
-logger = get_logger().bind(module="event_service")
+from app.services.event_audit_service import EventAuditService, EventAuditAction
 
+logger = get_logger().bind(module="event_service")
 
 class EventService:
     """
-    Application service responsável pelos casos de uso relacionados a eventos.
+    Application service responsible for use cases related to Events.
 
-    Orquestra:
-    - mapeamento entre schemas e domínio (Event)
-    - regras de negócio
-    - chamadas ao repositório (EventRepository)
+    It orchestrates:
+    - mapping between HTTP schemas and the Event domain entity;
+    - business rules (status, views, time-based filters);
+    - calls to the EventRepository (SQLAlchemy, in-memory, etc.).
+    - optional audit logging (EventAuditService).
     """
 
-    def __init__(self, repo: EventRepository) -> None:
+    def __init__(
+        self,
+        repo: EventRepository,
+        audit_service: EventAuditService | None = None,
+    ) -> None:
         """
         Args:
-            repo: Implementação concreta de EventRepository
-                  (SQLAlchemy, InMemory, etc.).
+            repo:
+                Concrete implementation of EventRepository used to
+                persist and retrieve Event entities.
+                (SQLAlchemy, InMemory, etc.).
+            audit_service:
+                Optional EventAuditService used to record audit logs.
+                If None, audit logging is simply skipped.
         """
         self.repo = repo
+        self.audit_service = audit_service
+    
+    # ------------------------------------------------------------------ #
+    # Internal helpers
+    # ------------------------------------------------------------------ #
+    def _safe_log_created(self, event: Event, changed_by: str | None) -> None:
+        """
+        Internal helper to log a 'created' action if audit_service is set.
+        """
+        if not self.audit_service or event.id is None:
+            return
+        self.audit_service.log_created(
+            event=event,
+            changed_by=changed_by,
+            snapshot=self._snapshot_from_event(event),
+        )
+
+    def _safe_log_updated(
+        self,
+        event: Event,
+        changed_by: str | None,
+        changes: dict | None,
+    ) -> None:
+        """
+        Internal helper to log an 'updated' action if audit_service is set.
+        """
+        if not self.audit_service or event.id is None:
+            return
+        self.audit_service.log_updated(
+            event=event,
+            changed_by=changed_by,
+            changes=changes,
+            snapshot=self._snapshot_from_event(event),
+        )
+
+    def _safe_log_deleted(self, event: Event, changed_by: str | None) -> None:
+        """
+        Internal helper to log a 'deleted' action if audit_service is set.
+        """
+        if not self.audit_service or event.id is None:
+            return
+        self.audit_service.log_deleted(
+            event=event,
+            changed_by=changed_by,
+            snapshot=self._snapshot_from_event(event),
+        )
+
+    def _snapshot_from_event(self, event: Event) -> dict:
+        """
+        Build a simple JSON-serializable snapshot from the Event entity.
+
+        This is intentionally compact; you can adjust fields as needed.
+        """
+        return {
+            "id": event.id,
+            "title": event.title,
+            "description": event.description,
+            "status": getattr(event, "status", None),
+            "start_time": getattr(event, "start_time", None),
+            "end_time": getattr(event, "end_time", None),
+            "timezone": getattr(event, "timezone", None),
+            "city": event.city,
+            "age_restriction": getattr(event, "age_restriction", None),
+            "participants": list(event.participants),
+            "views": event.views,
+            "created_at": event.created_at,
+            "updated_at": event.updated_at,
+        }
 
     # ------------------------------------------------------------------ #
-    # CRUD básico
+    # Basic CRUD
     # ------------------------------------------------------------------ #
     def list_events(
         self,
@@ -43,19 +123,19 @@ class EventService:
         city: str | None = None,
     ) -> List[Event]:
         """
-        Lista eventos com paginação e filtro opcional por cidade.
+        List events with pagination and optional city filter.
 
         Args:
-            skip: Quantos registros pular (offset).
-            limit: Quantos registros retornar no máximo.
-            city: Se informado, filtra apenas eventos dessa cidade.
+            skip: How many records to skip (offset).
+            limit: Maximum number of records to return.
+            city: If provided, filter events by this city.
 
         Returns:
-            Lista de entidades de domínio Event.
+            A list of Event domain entities.
         """
         events = self.repo.list(skip=skip, limit=limit, city=city)
         logger.info(
-            "Eventos listados com sucesso",
+            "Events listed successfully", # "Eventos listados com sucesso",
             total=len(events),
             skip=skip,
             limit=limit,
@@ -65,147 +145,185 @@ class EventService:
 
     def list_all_events(self) -> List[Event]:
         """
-        Lista todos os eventos sem paginação.
+        List all events, without pagination.
 
         Returns:
-            Lista completa de entidades Event.
+            The complete list of Event entities.
         """
         events = self.repo.list(skip=0, limit=0, city=None)
-        logger.info("Todos os eventos listados", total=len(events))
+        logger.info("All events listed", total=len(events)) # "Todos os eventos listados"
         return events
 
     def get_event(self, event_id: int) -> Event | None:
         """
-        Recupera um evento sem alterar o número de views.
+        Retrieve a single event without changing its view count.
 
         Args:
-            event_id: Identificador do evento.
+            event_id: Identifier of the event.
 
         Returns:
-            Event se encontrado, ou None se não existir.
+            The Event entity if found, otherwise None.
         """
         event = self.repo.get(event_id)
         if event:
-            logger.info("Evento recuperado", event_id=event_id, title=event.title)
+            logger.info("Event retrieved", event_id=event_id, title=event.title) # "Evento recuperado"
         else:
-            logger.info("Evento não encontrado em get_event", event_id=event_id)
+            logger.info("Event not found in get_event", event_id=event_id) # "Evento não encontrado em get_event"
         return event
 
     def view_event(self, event_id: int) -> Event:
         """
-        Recupera um evento e incrementa o contador de visualizações.
+        Retrieve an event and increment its view counter.
 
         Args:
-            event_id: Identificador do evento.
+            event_id: Identifier of the event.
 
         Returns:
-            Entidade Event já persistida com o views incrementado.
+            The Event entity after persistence, with the incremented views.
 
         Raises:
-            KeyError: Se o evento não for encontrado.
+            KeyError: If the event does not exist.
         """
         event = self.repo.get(event_id)
         if not event:
-            logger.warning("Tentativa de visualizar evento inexistente", event_id=event_id)
+            logger.warning("Attempt to view non-existent event", event_id=event_id) # "Tentativa de visualizar evento inexistente"
             raise KeyError("Event not found")
 
         event.views += 1
-        logger.info("Incrementando views", event_id=event_id, views=event.views)
+        logger.info("Incrementing views", event_id=event_id, views=event.views) # "Incrementando views"
         updated = self.repo.update(event)
         return updated
 
-    def create_event(self, payload: EventCreate) -> Event:
+    def create_event(self, payload: EventCreate, *, changed_by: str | None = None) -> Event:
         """
-        Cria um novo evento a partir do payload de entrada.
+        Create a new event from the given payload.
 
         Args:
-            payload: Dados do evento validados via EventCreate.
+            payload:
+                Validated EventCreate data.
+            changed_by:
+                Optional user identifier who initiated the creation.
 
         Returns:
-            Entidade Event criada e persistida.
+            The created and persisted Event entity.
         """
         event = Event(
+            # Core content
             title=payload.title,
             description=payload.description,
-            event_date=payload.event_date,
+            status=payload.status,
+            # Scheduling
+            start_time=payload.start_time,
+            end_time=payload.end_time,
+            timezone=payload.timezone,
+            # Context / classification
             city=payload.city,
+            age_restriction=payload.age_restriction,
+            # Engagement
             participants=payload.participants,
-            local_id=payload.local_id,
-            forecast_id=payload.forecast_id,
             # created_at/updated_at ficam a cargo do repo
         )
         created = self.repo.add(event)
-        logger.info("Evento criado com sucesso", event_id=created.id, title=created.title)
+        logger.info("Event created successfully", event_id=created.id, title=created.title) # "Evento criado com sucesso"
+        
+        # audit
+        self._safe_log_created(created, changed_by=changed_by)
+        
         return created
 
-    def update_event(self, event_id: int, payload: EventUpdate) -> Event:
+    def update_event(
+        self,
+        event_id: int,
+        payload: EventUpdate,
+        *,
+        changed_by: str | None = None,
+    ) -> Event:
         """
-        Aplica um patch parcial em um evento existente.
+        Apply a partial update (patch) to an existing event.
 
         Args:
-            event_id: Identificador do evento a ser atualizado.
-            payload: Campos opcionais com as alterações desejadas.
+            event_id: Identifier of the event to update.
+            payload: Partial data with fields to modify.
+            changed_by: Optional user identifier who initiated the update.
 
         Returns:
-            Entidade Event atualizada e persistida.
+            The updated and persisted Event entity.
 
         Raises:
-            KeyError: Se o evento não for encontrado.
+            KeyError: If the event does not exist.
         """
         event = self.repo.get(event_id)
         if not event:
-            logger.warning("Tentativa de atualizar evento inexistente", event_id=event_id)
+            logger.warning("Attempt to update non-existent event", event_id=event_id) # "Tentativa de atualizar evento inexistente"
             raise KeyError("Event not found")
+
+        # build a simple changes diff
+        changes: dict[str, dict[str, object]] = {}
+
+        def _track_change(field: str, old, new) -> None:
+            if old != new:
+                changes[field] = {"old": old, "new": new}
 
         if payload.title is not None:
+            _track_change("title", event.title, payload.title)
             event.title = payload.title
         if payload.description is not None:
+            _track_change("description", event.description, payload.description)
             event.description = payload.description
         if payload.event_date is not None:
+            _track_change("event_date", event.event_date, payload.event_date)
             event.event_date = payload.event_date
         if payload.city is not None:
+            _track_change("city", event.city, payload.city)
             event.city = payload.city
         if payload.participants is not None:
+            _track_change("participants", event.participants, payload.participants)
             event.participants = payload.participants
-        if payload.local_id is not None:
-            event.local_id = payload.local_id
-        if payload.forecast_id is not None:
-            event.forecast_id = payload.forecast_id
 
         updated = self.repo.update(event)
-        logger.info("Evento atualizado com sucesso", event_id=updated.id)
+        logger.info("Event updated successfully", event_id=updated.id) # "Evento atualizado com sucesso"
+        
+        # audit only if something really changed
+        if changes:
+            self._safe_log_updated(updated, changed_by=changed_by, changes=changes)
+            
         return updated
 
-    def delete_event(self, event_id: int) -> None:
+    def delete_event(self, event_id: int, *, changed_by: str | None = None) -> None:
         """
-        Remove um evento existente.
+        Remove an existing event.
 
         Args:
-            event_id: Identificador do evento a ser removido.
+            event_id: Identifier of the event to remove.
+            changed_by: Optional user identifier who initiated the deletion.
 
         Raises:
-            KeyError: Se o evento não for encontrado.
+            KeyError: If the event does not exist.
         """
         event = self.repo.get(event_id)
         if not event:
-            logger.warning("Tentativa de deletar evento inexistente", event_id=event_id)
+            logger.warning("Attempt to delete non-existent event", event_id=event_id) # "Tentativa de deletar evento inexistente"
             raise KeyError("Event not found")
+        
+        # capture snapshot before deletion
+        self._safe_log_deleted(event, changed_by=changed_by)
 
         self.repo.delete(event_id)
-        logger.info("Evento deletado com sucesso", event_id=event_id)
+        logger.info("Event deleted successfully", event_id=event_id) # "Evento deletado com sucesso"
     
     # ------------------------------------------------------------------ #
-    # Casos de uso avançados (top soon, top viewed, download, batch, etc.)
+    # Advanced use cases (top soon, top viewed, batch, etc.)
     # ------------------------------------------------------------------ #
     def get_top_soon_events(self, limit: int) -> List[Event]:
         """
-        Retorna os `limit` eventos com data mais próxima a partir de agora.
+        Return the `limit` future events with the closest start times
+        from now.
 
         Args:
-            limit: Quantidade máxima de eventos a retornar.
+            limit: Maximum number of events to return.
 
         Returns:
-            Lista de eventos futuros ordenados por data/hora (mais próximos primeiro).
+            List of future events ordered by `start_time` ascending.
         """
         # ✅ aware - retorna um datetime aware (com fuso horário)
         #     naive - não usar datetime naive (sem fuso horário), pois irá dificultar a ordenação depois na consulta
@@ -224,7 +342,7 @@ class EventService:
         )
 
         logger.info(
-            "Eventos mais próximos calculados",
+            "Top soon events calculated", # "Eventos mais próximos calculados"
             total=len(most_soon),
             limit=limit,
         )
@@ -232,17 +350,17 @@ class EventService:
 
     def get_top_viewed_events(self, limit: int) -> List[Event]:
         """
-        Retorna os `limit` eventos mais vistos.
+        Return the `limit` most viewed events.
 
-        Critério de ordenação:
-        - `views` desc (mais visualizados primeiro);
-        - `event_date` asc em caso de empate.
+        Sorting criteria:
+        - `views` descending (most viewed first);
+        - `start_time` ascending in case of ties.
 
         Args:
-            limit: Quantidade máxima de eventos a retornar.
+            limit: Maximum number of events to return.
 
         Returns:
-            Lista de eventos ordenados por popularidade.
+            List of events ordered by popularity.
         """
         events = self.list_all_events()
 
@@ -253,7 +371,7 @@ class EventService:
         )
 
         logger.info(
-            "Eventos mais vistos calculados",
+            "Top viewed events calculated", # "Eventos mais vistos calculados",
             total=len(most_viewed),
             limit=limit,
         )
@@ -261,13 +379,13 @@ class EventService:
 
     def create_events_batch(self, payloads: List[EventCreate]) -> List[Event]:
         """
-        Cria múltiplos eventos em lote.
+        Create multiple events in a single batch operation.
 
         Args:
-            payloads: Lista de payloads EventCreate.
+            payloads: List of EventCreate payloads.
 
         Returns:
-            Lista de entidades Event recém-criadas.
+            List of newly created Event entities.
         """
         created_events: List[Event] = []
         for payload in payloads:
@@ -275,31 +393,40 @@ class EventService:
             created_events.append(created)
 
         logger.info(
-            "Eventos criados em lote",
+            "Events created in batch", # "Eventos criados em lote",
             total=len(created_events),
         )
         return created_events
 
-    def replace_all_events(self, new_events: List[Event]) -> List[Event]:
+    def replace_all_events(
+        self,
+        new_events: List[Event],
+        *,
+        changed_by: str | None = None,
+    ) -> List[Event]:
         """
-        Substitui completamente a coleção de eventos.
+        Completely replace the event collection with a new list.
 
-        Implementação simples:
-        - lista todos os eventos atuais;
-        - deleta um por um;
-        - insere os novos eventos.
+        Naive implementation:
+        - delete all existing events;
+        - insert all new events.
 
         Args:
-            new_events: Lista de entidades Event que passarão a representar
-                        o estado completo do repositório.
+            new_events: List of Event entities representing the desired
+                        final state.
+            changed_by: Optional user identifier who initiated the 
+                        replacement.
 
         Returns:
-            Lista de eventos que foram persistidos.
+            List of events that were persisted.
         """
         # remove todos
         existing = self.list_all_events()
         for ev in existing:
+            # audit delete per event
+            self._safe_log_deleted(ev, changed_by=changed_by)
             self.repo.delete(ev.id)  # type: ignore[arg-type]
+
 
         # adiciona todos novamente
         persisted: List[Event] = []
@@ -308,39 +435,58 @@ class EventService:
             # o repo é responsável por setar esses campos.
             ev.id = None  # garante que serão recriados
             persisted.append(self.repo.add(ev))
+            # audit created per event
+            self._safe_log_created(created, changed_by=changed_by)
 
         logger.info(
-            "Todos os eventos foram substituídos",
+            "All events replaced", # "Todos os eventos foram substituídos",
             total=len(persisted),
         )
         return persisted
 
-    def replace_event_by_id(self, event_id: int, new_event: Event) -> Event:
+    def replace_event_by_id(
+        self,
+        event_id: int,
+        new_event: Event,
+        *,
+        changed_by: str | None = None,
+    ) -> Event:
         """
-        Substitui completamente os dados de um evento existente.
+        Completely replace the data of a single event.
 
         Args:
-            event_id: ID do evento a ser substituído.
-            new_event: Entidade Event contendo o novo estado (exceto id).
+            event_id: ID of the event to replace.
+            new_event: Event entity containing the new data (except id).
+            changed_by: Optional user identifier who initiated the replacement.
 
         Returns:
-            Entidade Event após a substituição/persistência.
+            Event entity after replacement.
 
         Raises:
-            KeyError: Se o evento não for encontrado.
+            KeyError: If the event does not exist.
         """
         existing = self.repo.get(event_id)
         if not existing:
-            logger.warning("Tentativa de substituir evento inexistente", event_id=event_id)
+            logger.warning("Attempt to replace non-existent event", event_id=event_id) # "Tentativa de substituir evento inexistente"
             raise KeyError("Event not found")
 
+        # Build a diff between existing and new_event if you want
+        changes: dict[str, dict[str, object]] = {
+            # Example: fill as desired
+            # "title": {"old": existing.title, "new": new_event.title},
+        }
+        
         # preserva o id, mas deixa created_at/updated_at a cargo do repo
         new_event.id = event_id
         replaced = self.repo.update(new_event)
 
         logger.info(
-            "Evento substituído por completo",
+            "Event fully replaced", # "Evento substituído por completo",
             event_id=event_id,
             title=replaced.title,
         )
+        
+        # log as UPDATED (or a custom action if you prefer)
+        self._safe_log_updated(replaced, changed_by=changed_by, changes=changes or None)
+        
         return replaced
