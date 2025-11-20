@@ -8,8 +8,9 @@ import httpx
 import re
 import unicodedata
 
-from app.models.venue_type import VenueType
+from app.models.event_local_enums import VenueType
 from app.models.local import Local
+from app.models.local import LocalSource
 from app.repositories.local_repo import LocalRepository
 from app.schemas.local_create import LocalCreate
 from app.schemas.local_update import LocalUpdate
@@ -157,7 +158,12 @@ class LocalService:
             * accents are ignored;
             * non-alphanumeric characters are ignored.
         - Every Local created here is considered a manual override.
+        
+        Any Local created through this service is considered a manual override
+        unless a specific source is explicitly provided.
         """
+        source = payload.source or LocalSource.MANUAL
+        
         if self._is_duplicate_local(
             location_name=payload.location_name,
             venue_type=payload.venue_type,
@@ -181,9 +187,18 @@ class LocalService:
             is_accessible=payload.is_accessible,
             address=payload.address,
             manually_edited=True,
+            external_id=payload.external_id,
+            source=source,
+            is_indoor=payload.is_indoor,
+            has_cover=payload.has_cover,
+            capacity_seated=payload.capacity_seated,
+            capacity_standing=payload.capacity_standing,
+            latitude=payload.latitude,
+            longitude=payload.longitude,
+            timezone=payload.timezone,
         )
         created = self.repo.add(local)
-        logger.info("Local created successfully", local_id=created.id, location_name=created.location_name)
+        logger.info("Local created successfully", local_id=created.id, location_name=created.location_name, source=created.source,)
         return created
 
     def update_local(self, local_id: int, payload: LocalUpdate) -> Local:
@@ -200,6 +215,9 @@ class LocalService:
         Raises:
             KeyError: If the Local is not found.
             DuplicateLocalError: If the update would violate the uniqueness rule.
+        
+        Any update performed through this service marks the Local as a
+        manual override (unless explicitly configured otherwise).
         """
         local = self.repo.get(local_id)
         if not local:
@@ -216,6 +234,26 @@ class LocalService:
             local.is_accessible = payload.is_accessible
         if payload.address is not None:
             local.address = payload.address
+        
+        if payload.external_id is not None:
+            local.external_id = payload.external_id
+        if payload.source is not None:
+            local.source = payload.source
+        if payload.is_indoor is not None:
+            local.is_indoor = payload.is_indoor
+        if payload.has_cover is not None:
+            local.has_cover = payload.has_cover
+        if payload.capacity_seated is not None:
+            local.capacity_seated = payload.capacity_seated
+        if payload.capacity_standing is not None:
+            local.capacity_standing = payload.capacity_standing
+        if payload.latitude is not None:
+            local.latitude = payload.latitude
+        if payload.longitude is not None:
+            local.longitude = payload.longitude
+        if payload.timezone is not None:
+            local.timezone = payload.timezone
+        
         if payload.manually_edited is not None:
             # The caller can force the flag, but we also ensure it becomes True
             local.manually_edited = payload.manually_edited
@@ -242,7 +280,7 @@ class LocalService:
             )
 
         updated = self.repo.update(local)
-        logger.info("Local updated successfully", local_id=updated.id)
+        logger.info("Local updated successfully", local_id=updated.id, source=updated.source)
         return updated
 
     def delete_local(self, local_id: int) -> None:
@@ -530,3 +568,154 @@ class LocalService:
             return True
 
         return False
+    
+    async def sync_local_from_external(self, local_id: int) -> Local:
+        """
+        Synchronize a single Local with the external LocalInfo API.
+
+        Flow (to be implemented when the API contract is known):
+        - Load the Local by ID.
+        - If it has no `external_id`, decide whether to:
+            - error (404 / bad request), or
+            - infer an external identifier based on internal data.
+        - Call the external LocalInfo API.
+        - Map the response payload to the Local domain model.
+        - Apply update rules:
+            - If local.source == MANUAL or local.manually_edited == True,
+              only update "safe" fields (e.g. latitude/longitude).
+            - Otherwise, allow a broader overwrite.
+        - Persist and return the updated Local.
+        """
+        local = self.repo.get(local_id)
+        if not local:
+            logger.warning("Attempt to sync non-existing Local", local_id=local_id)
+            raise KeyError("Local not found")
+
+        # Placeholder for now
+        logger.info(
+            "sync_local_from_external called but not implemented",
+            local_id=local_id,
+            external_id=local.external_id,
+        )
+        raise NotImplementedError("External LocalInfo API sync not implemented yet")
+
+    async def import_locals_from_external(
+        self,
+        *,
+        location_name: str | None = None,
+        capacity_min: int | None = None,
+        capacity_max: int | None = None,
+        venue_types: list[VenueType] | None = None,
+        is_accessible: bool | None = None,
+        address: str | None = None,
+        limit: int = 50,
+    ) -> list[Local]:
+        """
+        Import Locals from the external LocalInfo API into the internal repository.
+
+        Flow (to be implemented):
+        - Build a payload with the given filters.
+        - Call the external LocalInfo API.
+        - For each result, map it to a Local entity.
+        - Decide whether to:
+            - create new Local (source=INTERNAL_SYNC),
+            - update existing ones based on external_id,
+            - or skip duplicates.
+        - Return the list of persisted Local entities.
+        """
+        logger.info(
+            "import_locals_from_external called but not implemented",
+            location_name=location_name,
+            capacity_min=capacity_min,
+            capacity_max=capacity_max,
+            venue_types=[str(v) for v in venue_types] if venue_types else None,
+            is_accessible=is_accessible,
+            address=address,
+            limit=limit,
+        )
+        raise NotImplementedError("External LocalInfo bulk import not implemented yet")
+    
+    def _build_conflict_key(self, local: Local) -> str:
+        """
+        Build a normalized key used to detect possible duplicate Locals.
+
+        The key combines normalized location_name, address and venue_type.
+        """
+        name_norm = normalize_text(local.location_name or "")
+        addr_norm = normalize_text(local.address or "")
+        venue_norm = (
+            normalize_text(local.venue_type.value) if local.venue_type is not None else ""
+        )
+        return "|".join([name_norm, addr_norm, venue_norm])
+
+    def find_conflicting_locals(self) -> list[list[Local]]:
+        """
+        Find groups of Locals that are likely duplicates of each other.
+
+        Two Locals are considered in conflict if they share the same
+        normalized (location_name, address, venue_type) key.
+        """
+        all_locals = self.list_all_locals()
+        buckets: Dict[str, List[Local]] = defaultdict(list)
+
+        for local in all_locals:
+            key = self._build_conflict_key(local)
+            buckets[key].append(local)
+
+        conflict_groups = [group for group in buckets.values() if len(group) > 1]
+
+        logger.info(
+            "Conflicting locals computed",
+            total_groups=len(conflict_groups),
+            total_locals=sum(len(g) for g in conflict_groups),
+        )
+        return conflict_groups
+
+    def merge_locals(self, target_id: int, source_ids: list[int]) -> Local:
+        """
+        Merge multiple Local records into a single target Local.
+
+        Current behavior:
+        - Ensures all source Locals exist.
+        - Does NOT update events or other references yet (TODO).
+        - Deletes source Locals from the repository.
+        - Returns the target Local.
+
+        Args:
+            target_id: The Local that will remain after the merge.
+            source_ids: List of Local IDs to be merged into the target.
+                        The target_id must not appear in this list.
+
+        Raises:
+            KeyError: If the target or any source Local does not exist.
+            ValueError: If target_id is included in source_ids.
+        """
+        if target_id in source_ids:
+            raise ValueError("target_id must not be included in source_ids")
+
+        target = self.repo.get(target_id)
+        if not target:
+            logger.warning("Target Local for merge not found", target_id=target_id)
+            raise KeyError("Target Local not found")
+
+        # validate existence of sources
+        sources: list[Local] = []
+        for sid in source_ids:
+            local = self.repo.get(sid)
+            if not local:
+                logger.warning("Source Local for merge not found", local_id=sid)
+                raise KeyError(f"Source Local not found: {sid}")
+            sources.append(local)
+
+        # TODO: in the future, update events referencing source_ids to target_id
+
+        # remove sources
+        for src in sources:
+            self.repo.delete(src.id)  # type: ignore[arg-type]
+
+        logger.info(
+            "Locals merged",
+            target_id=target_id,
+            source_ids=source_ids,
+        )
+        return target

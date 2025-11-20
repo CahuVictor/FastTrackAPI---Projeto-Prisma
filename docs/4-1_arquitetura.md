@@ -280,7 +280,7 @@ Os schemas representam os modelos de dados utilizados para entrada e saída de i
 - **Token**: 
 - **User**:
 - **UserinDB**: 
-- **VenueTypes**:
+- **VenueType**:
 
 Todos esses modelos estão localizados na pasta `app/schemas/` e são essenciais para garantir a validação de dados, a integridade da aplicação e a geração automática da documentação da API via OpenAPI/Swagger.
 

@@ -1,0 +1,85 @@
+# app/models/event_local_enums.py
+from enum import Enum
+
+
+class EventStatus(str, Enum):
+    """
+    Lifecycle status for an Event.
+
+    Values:
+        DRAFT:
+            The event is being prepared and is not visible to the public yet.
+        PUBLISHED:
+            The event is active and visible to users.
+        CANCELLED:
+            The event was created but later cancelled.
+    """
+    DRAFT = "draft"
+    PUBLISHED = "published"
+    CANCELLED = "cancelled"
+
+
+class LocalSource(str, Enum):
+    """
+    Describes where the Local (venue) data comes from and how it should be managed.
+
+    Values:
+        INTERNAL_SYNC:
+            The venue is fully managed and synchronized by an internal API
+            (e.g. LocalInfo service). Manual changes should be avoided.
+        MANUAL:
+            The venue was created and is maintained manually inside this service.
+            Automatic sync should never overwrite it blindly.
+        MIXED:
+            The venue was originally imported or synced from an external source,
+            but important fields were manually overridden and must be preserved.
+    """
+    INTERNAL_SYNC = "internal_sync"
+    MANUAL = "manual"
+    MIXED = "mixed"
+
+
+class VenueType(str, Enum):
+    """
+    High-level classification of the physical (or virtual) venue type.
+
+    Values:
+        AUDITORIO:
+            Auditorium style venue (usually seated, indoor).
+        SALAO:
+            Large multi-purpose room or ballroom.
+        THEATER:
+            Theater-style venue, stage + audience.
+        STADIUM:
+            Large open/semiclosed stadium, typically for sports/shows.
+        HALL:
+            Generic hall, lobby or event hall.
+        OPEN_AIR:
+            Open-air venue, usually outdoor without full coverage.
+    """
+    AUDITORIO = "Auditorio"
+    SALAO = "Salao"
+    THEATER = "theater"
+    STADIUM = "stadium"
+    HALL = "hall"
+    OPEN_AIR = "open_air"
+
+class EventEnvironment(str, Enum):
+    """
+    Constraints about where the event must take place in terms of
+    indoor/outdoor requirements.
+
+    Values:
+        INDOOR:
+            Event must be held indoors (covered, controlled environment).
+        OUTDOOR:
+            Event must be held outdoors.
+        HYBRID:
+            Event can mix indoor and outdoor segments by design.
+        UNRESTRICTED:
+            No specific constraint; indoor or outdoor is acceptable.
+    """
+    INDOOR = "indoor"
+    OUTDOOR = "outdoor"
+    HYBRID = "hybrid"
+    UNRESTRICTED = "unrestricted"

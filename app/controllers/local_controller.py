@@ -11,6 +11,7 @@ import inspect
 import csv
 import asyncio
 import json
+from pathlib import Path
 
 # from app.core.rate_limit_config import limiter
 from app.core.deps import provide_event_service, provide_local_service
@@ -18,6 +19,8 @@ from app.core.deps import provide_event_repo, provide_event_service, provide_loc
 from app.schemas.local_create import LocalCreate
 from app.schemas.local_update import LocalUpdate
 from app.schemas.local_view import LocalView
+from app.schemas.local_conflict_group import LocalConflictGroup
+from app.schemas.local_merge_request import LocalMergeRequest
 from app.models.local import Local
 from app.services.event_service import EventService
 from app.services.local_service import LocalService, DuplicateLocalError
@@ -382,7 +385,7 @@ async def upload_locals_csv(
             except ValueError:
                 raise ValueError("Invalid capacity value")
 
-            from app.models.venue_type import VenueType  # import here to avoid cycles
+            from app.models.event_local_enums import VenueType  # import here to avoid cycles
             venue_type = None
             if venue_type_str:
                 venue_type = VenueType(venue_type_str)
@@ -522,6 +525,125 @@ def download_locals(
 
     # Force JSON encoding to avoid issues with non-serializable types
     return JSONResponse(content=jsonable_encoder(payload))
+
+
+@router.get(
+    "/conflicts",
+    summary="List groups of locals that are probably duplicates",
+    response_model=list[LocalConflictGroup],
+    responses={200: {"description": "Conflicting locals returned."}},
+)
+def get_local_conflicts(
+    service: LocalService = _provide_local_service,
+) -> list[LocalConflictGroup]:
+    """
+    Return groups of Locals that are likely duplicates according to
+    the same normalization used to enforce uniqueness on creation.
+
+    Each group contains at least two Locals.
+    """
+    groups = service.find_conflicting_locals()
+
+    return [
+        LocalConflictGroup(
+            conflict_key=service._build_conflict_key(group[0]),  # type: ignore[attr-defined]
+            locals=[LocalView.model_validate(local) for local in group],
+        )
+        for group in groups
+    ]
+
+
+@router.post(
+    "/merge",
+    summary="Merge several Locals into a single target local",
+    response_model=LocalView,
+    responses={
+        200: {"description": "Locals merged successfully."},
+        400: {"description": "Invalid merge request."},
+        404: {"description": "Target or source Local not found."},
+    },
+)
+def post_merge_locals(
+    payload: LocalMergeRequest,
+    service: LocalService = _provide_local_service,
+) -> LocalView:
+    """
+    Merge multiple Locals into a single target Local.
+
+    This operation currently only deletes the source Locals and keeps
+    the target intact. It does not yet update Events or other references.
+    """
+    try:
+        merged = service.merge_locals(
+            target_id=payload.target_id,
+            source_ids=payload.source_ids,
+        )
+    except ValueError as exc:
+        raise_http(logger.warning, 400, str(exc))
+    except KeyError as exc:
+        raise_http(logger.warning, 404, str(exc))
+
+    return LocalView.model_validate(merged)
+
+
+@router.get(
+    "/suggestions-for-event/{event_id}",
+    summary="Suggest locals for a given event",
+    response_model=list[LocalView],
+    responses={
+        200: {"description": "Suggested locals returned."},
+        404: {"description": "Event not found."},
+    },
+)
+def suggest_locals_for_event(
+    event_id: int, # = Path(..., description="Event identifier"),
+    max_results: int = Query(
+        10, ge=1, le=50, description="Maximum number of suggestions to return"
+    ),
+    local_service: LocalService = _provide_local_service,
+    event_service: EventService = _provide_event_service,
+) -> list[LocalView]:
+    """
+    Suggest locals for a given event.
+
+    Current heuristic (simple placeholder):
+    - Ensures the event exists.
+    - Returns up to `max_results` locals, ordered by capacity (when available)
+      and location_name.
+
+    This can be improved later to take into account city, expected audience,
+    indoor/outdoor, etc.
+    """
+    event = event_service.get_event(event_id)
+    if not event:
+        raise_http(logger.warning, 404, "Event not found", event_id=event_id)
+
+    locals_ = local_service.list_locals(
+        skip=0,
+        limit=0,  # fetch all, we'll slice manually
+        location_name=None,
+        capacity=None,
+        venue_type=None,
+        is_accessible=None,
+        address=None,
+        manually_edited=None,
+        created_at=None,
+        updated_at=None,
+    )
+
+    # simple ordering: by capacity (None last) then by name
+    locals_sorted = sorted(
+        locals_,
+        key=lambda l: (
+            l.capacity is None,
+            l.capacity if l.capacity is not None else 0,
+            (l.location_name or "").lower(),
+        ),
+    )
+
+    locals_sorted = locals_sorted[:max_results]
+
+    return [LocalView.model_validate(local) for local in locals_sorted]
 
 
 # # ---------------------------------------------------------------------- #

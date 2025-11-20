@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import List
 
 from app.models.local import Local
-from app.models.venue_type import VenueType
+from app.models.event_local_enums import VenueType
 
 
 class LocalRepository(abc.ABC):

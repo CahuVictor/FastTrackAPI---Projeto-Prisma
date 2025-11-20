@@ -10,7 +10,7 @@ engine = create_engine(str(settings.db_url))  # TODO verificar se alteração co
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-def get_db():
+def get_db(): #  -> Generator[Session, None, None]: # from typing import Generator
     db = SessionLocal()
     try:
         yield db

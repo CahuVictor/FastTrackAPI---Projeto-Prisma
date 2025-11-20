@@ -3,7 +3,7 @@ from typing import Annotated
 from datetime import datetime, timezone
 
 from app.schemas.local_create import LocalCreate
-from app.models.venue_type import VenueType
+from app.models.event_local_enums import VenueType
 
 class LocalView(LocalCreate):
     id: int
