@@ -15,7 +15,7 @@ import json
 
 from app.core.rate_limit_config import limiter
 
-from app.core.deps import provide_event_repo, provide_event_service, provide_local_service
+from app.core.deps import provide_event_service, provide_local_service
 from app.schemas.event_create import EventCreate
 from app.schemas.event_update import EventUpdate
 from app.schemas.event_view import EventView
@@ -38,10 +38,9 @@ from app.infra.websockets.ws_events import (
 )
 from app.infra.websockets.ws_dashboard import notify_user_count
 
-# _provide_local_info_service = Depends(provide_local_info_service)
-# _provide_forecast_service = Depends(provide_forecast_service)
 _provide_event_service = Depends(provide_event_service)
 _provide_local_service = Depends(provide_local_service)
+# _provide_forecast_service = Depends(provide_forecast_service)
 
 logger = get_logger().bind(module="eventos")
 
@@ -50,6 +49,78 @@ router = APIRouter(
     tags=["events"],
     # dependencies=[auth_dep]
 )
+
+
+# ------------------------------------------------------------------ #
+# Helper methods for common actions
+# ------------------------------------------------------------------ #
+def _to_event_view(event: Event) -> EventView:
+    """
+    Map a domain `Event` entity into an `EventView` schema.
+
+    This helper is used by the controller layer to ensure a single,
+    centralized mapping between the domain model and the HTTP response
+    schema, avoiding duplication and keeping the mapping consistent
+    across all endpoints.
+
+    Args:
+        event: Domain `Event` instance.
+
+    Returns:
+        An `EventView` instance populated with data from the given event.
+    """
+    return EventView(
+        id=event.id,  # type: ignore[arg-type]
+        title=event.title,
+        description=event.description,
+        status=event.status,
+        start_time=event.start_time,
+        end_time=event.end_time,
+        timezone=event.timezone,
+        city=event.city,
+        age_restriction=event.age_restriction,
+        participants=event.participants,
+        views=event.views,
+        created_at=event.created_at,
+        updated_at=event.updated_at,
+    )
+    
+def _from_event_view(view: EventView) -> Event:
+    """
+    Map an `EventView` schema into a domain `Event` entity.
+
+    This helper is intended for specific use cases where the API needs to
+    accept a full event representation (e.g., replace endpoints) and
+    convert it back into the domain model.
+
+    Important:
+        - The `id` field is intentionally set to `None` here; the service
+          layer is responsible for enforcing or overriding the actual ID.
+        - Audit-related fields such as `created_at` and `updated_at`
+          should normally be controlled by the repository / infrastructure
+          layer and not blindly trusted from the client.
+
+    Args:
+        view: An `EventView` instance received from the API layer.
+
+    Returns:
+        A domain `Event` entity built from the given view.
+    """
+    return Event(
+        # id=None,  # ID will be enforced by the service/repository layer.
+        title=view.title,
+        description=view.description,
+        status=view.status,
+        start_time=view.start_time,
+        end_time=view.end_time,
+        timezone=view.timezone,
+        city=view.city,
+        age_restriction=view.age_restriction,
+        participants=view.participants,
+        # views=view.views,
+        # created_at=view.created_at,
+        # updated_at=view.updated_at,
+    )
 
 
 # ----------------------------------------------------------------------
@@ -91,24 +162,7 @@ def list_events(
     if not events:
         raise_http(logger.warning, 404, "No events found", skip=skip, limit=limit, city=city)
 
-    return [
-        EventView(
-            id=event.id,  # type: ignore[arg-type]
-            title=event.title,
-            description=event.description,
-            status=event.status,
-            start_time=event.start_time,
-            end_time=event.end_time,
-            timezone=event.timezone,
-            city=event.city,
-            age_restriction=event.age_restriction,
-            participants=event.participants,
-            views=event.views,
-            created_at=event.created_at,
-            updated_at=event.updated_at,
-        )
-        for event in events
-    ]
+    return [_to_event_view(event) for event in events]
 
 
 # ----------------------------------------------------------------------
@@ -157,21 +211,7 @@ async def get_event_by_id(
         raise_http(logger.warning, 404, "Event not found", event_id=event_id)
     assert event is not None  # MyPy entende que daqui pra frente não é mais None
 
-    return EventView(
-        id=event.id,  # type: ignore[arg-type]
-        title=event.title,
-        description=event.description,
-        status=event.status,
-        start_time=event.start_time,
-        end_time=event.end_time,
-        timezone=event.timezone,
-        city=event.city,
-        age_restriction=event.age_restriction,
-        participants=event.participants,
-        views=event.views,
-        created_at=event.created_at,
-        updated_at=event.updated_at,
-    )
+    return _to_event_view(event)
 
 
 # ----------------------------------------------------------------------
@@ -204,21 +244,7 @@ def post_create_event(
 
     event = service.create_event(payload, changed_by="anonymous")
 
-    return EventView(
-        id=event.id,  # type: ignore[arg-type]
-        title=event.title,
-        description=event.description,
-        status=event.status,
-        start_time=event.start_time,
-        end_time=event.end_time,
-        timezone=event.timezone,
-        city=event.city,
-        age_restriction=event.age_restriction,
-        participants=event.participants,
-        views=event.views,
-        created_at=event.created_at,
-        updated_at=event.updated_at,
-    )
+    return _to_event_view(event)
 
 
 # ----------------------------------------------------------------------
@@ -260,26 +286,7 @@ async def put_events(
     asyncio.create_task(notify_replace_started())
 
     # Convert input schemas to domain entities
-    domain_events: List[Event] = [
-        Event(
-            # id=event.id,
-            title=event.title,
-            description=event.description,
-            status=event.status,
-            start_time=event.start_time,
-            end_time=event.end_time,
-            timezone=event.timezone,
-            city=event.city,
-            age_restriction=event.age_restriction,
-            participants=event.participants,
-            # views=event.views,
-            # local_id=event.local_id,
-            # forecast_id=event.forecast_id,
-            # created_at=event.created_at,
-            # updated_at=event.updated_at,
-        )
-        for event in events_new
-    ]
+    domain_events: List[Event] = [_from_event_view(event) for event in events_new]
 
     events = service.replace_all_events(domain_events, changed_by="anonymous")
 
@@ -287,24 +294,7 @@ async def put_events(
     asyncio.create_task(notify_user_count())
     logger.info("All events have been successfully replaced", total=len(events))
 
-    return [
-        EventView(
-            id=event.id,  # type: ignore[arg-type]
-            title=event.title,
-            description=event.description,
-            status=event.status,
-            start_time=event.start_time,
-            end_time=event.end_time,
-            timezone=event.timezone,
-            city=event.city,
-            age_restriction=event.age_restriction,
-            participants=event.participants,
-            views=event.views,
-            created_at=event.created_at,
-            updated_at=event.updated_at,
-        )
-        for event in events
-    ]
+    return [_to_event_view(event) for event in events]
 
 
 # ----------------------------------------------------------------------
@@ -340,21 +330,7 @@ def put_event_by_id(
     """
     logger.info("Received request to replace event by ID", event_id=event_id)
 
-    domain_event = Event(
-        id=None,  # The service will enforce the correct ID
-        title=new_event.title,
-        description=new_event.description,
-        status=new_event.status,
-        start_time=new_event.start_time,
-        end_time=new_event.end_time,
-        timezone=new_event.timezone,
-        city=new_event.city,
-        age_restriction=new_event.age_restriction,
-        participants=new_event.participants,
-        # views=new_event.views,
-        # created_at=new_event.created_at,
-        # updated_at=new_event.updated_at,
-    )
+    domain_event = _from_event_view(new_event)
 
     try:
         event = service.replace_event_by_id(event_id, domain_event, changed_by="anonymous")
@@ -363,21 +339,7 @@ def put_event_by_id(
 
     logger.info("Event successfully replaced", event_id=event_id)
 
-    return EventView(
-        id=event.id,  # type: ignore[arg-type]
-        title=event.title,
-        description=event.description,
-        status=event.status,
-        start_time=event.start_time,
-        end_time=event.end_time,
-        timezone=event.timezone,
-        city=event.city,
-        age_restriction=event.age_restriction,
-        participants=event.participants,
-        views=event.views,
-        created_at=event.created_at,
-        updated_at=event.updated_at,
-    )
+    return _to_event_view(event)
 
 # @router.delete(
 #     "/",
@@ -487,21 +449,7 @@ def patch_event(
     except KeyError:
         raise HTTPException(status_code=404, detail="Event not found")
 
-    return EventView(
-        id=event.id,  # type: ignore[arg-type]
-        title=event.title,
-        description=event.description,
-        status=event.status,
-        start_time=event.start_time,
-        end_time=event.end_time,
-        timezone=event.timezone,
-        city=event.city,
-        age_restriction=event.age_restriction,
-        participants=event.participants,
-        views=event.views,
-        created_at=event.created_at,
-        updated_at=event.updated_at,
-    )
+    return _to_event_view(event)
 
 
 # ----------------------------------------------------------------------
@@ -538,24 +486,7 @@ def download_events(
     if not events:
         raise_http(logger.warning, 404, "No events found")
 
-    payload = [
-        EventView(
-            id=event.id,  # type: ignore[arg-type]
-            title=event.title,
-            description=event.description,
-            status=event.status,
-            start_time=event.start_time,
-            end_time=event.end_time,
-            timezone=event.timezone,
-            city=event.city,
-            age_restriction=event.age_restriction,
-            participants=event.participants,
-            views=event.views,
-            created_at=event.created_at,
-            updated_at=event.updated_at,
-        )
-        for event in events
-    ]
+    payload = [_to_event_view(event) for event in events]
     
     # Se você quiser forçar JSONResponse com jsonable_encoder:
     return JSONResponse(content=jsonable_encoder(payload))
@@ -601,24 +532,7 @@ async def get_events_top_soon(
 
     logger.info("Query for soonest events finished", quantity=len(most_soon))
 
-    return [
-        EventView(
-            id=event.id,  # type: ignore[arg-type]
-            title=event.title,
-            description=event.description,
-            status=event.status,
-            start_time=event.start_time,
-            end_time=event.end_time,
-            timezone=event.timezone,
-            city=event.city,
-            age_restriction=event.age_restriction,
-            participants=event.participants,
-            views=event.views,
-            created_at=event.created_at,
-            updated_at=event.updated_at,
-        )
-        for event in most_soon
-    ]
+    return [_to_event_view(event) for event in most_soon]
 
 
 # ----------------------------------------------------------------------
@@ -666,24 +580,7 @@ async def get_events_top_viewed(
 
     logger.info("Query for most viewed events finished", quantity=len(most_viewed))
 
-    return [
-        EventView(
-            id=event.id,  # type: ignore[arg-type]
-            title=event.title,
-            description=event.description,
-            status=event.status,
-            start_time=event.start_time,
-            end_time=event.end_time,
-            timezone=event.timezone,
-            city=event.city,
-            age_restriction=event.age_restriction,
-            participants=event.participants,
-            views=event.views,
-            created_at=event.created_at,
-            updated_at=event.updated_at,
-        )
-        for event in most_viewed
-    ]
+    return [_to_event_view(event) for event in most_viewed]
 
 
 # ----------------------------------------------------------------------
@@ -739,24 +636,7 @@ async def post_events_batch(
     await notify_upload_end(len(created_events))
     await notify_user_count()
 
-    return [
-        EventView(
-            id=event.id,  # type: ignore[arg-type]
-            title=event.title,
-            description=event.description,
-            status=event.status,
-            start_time=event.start_time,
-            end_time=event.end_time,
-            timezone=event.timezone,
-            city=event.city,
-            age_restriction=event.age_restriction,
-            participants=event.participants,
-            views=event.views,
-            created_at=event.created_at,
-            updated_at=event.updated_at,
-        )
-        for event in created_events
-    ]
+    return [_to_event_view(event) for event in created_events]
 
 
 # ----------------------------------------------------------------------
@@ -857,41 +737,3 @@ async def upload_csv(
         raise_http(logger.warning, 400, "No valid events were imported")
 
     return {"status": "finished", "total": total}
-
-@router.post(
-    "/{event_id}/attach-local/{local_id}",
-    summary="Attach an existing local to an event",
-    responses={
-        200: {"description": "Event updated with the given local."},
-        404: {"description": "Event or Local not found."},
-    },
-)
-def attach_local_to_event(
-    event_id: int,
-    local_id: int,
-    event_service: EventService = _provide_event_service,
-    local_service: LocalService = _provide_local_service,
-) -> dict[str, str]:
-    """
-    Attach an existing Local to an Event by setting `event.local_id`.
-
-    Rules:
-    - 404 if the event does not exist.
-    - 404 if the local does not exist.
-    - Otherwise, updates `event.local_id` and persists the change.
-    """
-    logger.info("Attach local to event requested", event_id=event_id, local_id=local_id)
-
-    event = event_service.get_event(event_id)
-    if not event:
-        raise_http(logger.warning, 404, "Event not found", event_id=event_id)
-
-    local = local_service.get_local(local_id)
-    if not local:
-        raise_http(logger.warning, 404, "Local not found", local_id=local_id)
-
-    event.local_id = local_id
-    event_service.update_event_entity(event, changed_by="anonymous")  # <-- crie esse método se ainda não existir
-
-    logger.info("Local attached to event successfully", event_id=event_id, local_id=local_id)
-    return {"message": f"Local {local_id} attached to event {event_id}."}
