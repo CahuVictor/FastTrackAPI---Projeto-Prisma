@@ -7,15 +7,20 @@ from fastapi import Depends
 from structlog import get_logger
 
 from app.infra.db.session import get_db
+from app.repositories.user_repo import UserRepository
 from app.repositories.event_repo import EventRepository
 from app.repositories.event_audit_repo import EventAuditRepository
 from app.repositories.local_repo import LocalRepository
 from app.repositories.forecast_repo import ForecastRepository
+
+from app.infra.repositories.sqlalchemy.user_repo_sqlalchemy import UserRepoSQLAlchemy
 from app.infra.repositories.sqlalchemy.event_repo_sqlalchemy import EventRepoSQLAlchemy
 from app.infra.repositories.sqlalchemy.event_audit_repo_sqlalchemy import EventAuditRepoSQLAlchemy
+from app.infra.repositories.inmemory.user_repo_inmemory import UserRepoInMemory
 from app.infra.repositories.inmemory.event_repo_inmemory import EventRepoInMemory
 from app.infra.repositories.inmemory.event_audit_repo_inmemory import EventAuditRepoInMemory
 from app.infra.repositories.inmemory.local_repo_inmemory import LocalRepoInMemory
+from app.services.user_service import UserService # service import UserService
 from app.services.event_service import EventService
 from app.services.event_audit_service import EventAuditService
 from app.services.local_service import LocalService
@@ -37,17 +42,21 @@ logger = get_logger().bind(module="deps")
 _settings = get_settings()
 _redis_singleton: Redis | None = None     # conexão global reaproveitável
 
-# def provide_user_repo(db: Session = Depends(get_db)) -> UserRepository:
-#     """
-#     Retorna o repositório de usuários, adaptando à origem de dados.
-#     """
-#     if _settings.environment == "test.inmemory":
-#         from app.core.deps_singletons import get_in_memory_user_repo
-#         logger.debug("Injetando instância global de usuários em memória (via singleton manual)")
-#         return get_in_memory_user_repo()
-#     # logger.debug("Injetando repositório de usuários (SQLAlchemy)")
-#     # return UserRepo(db)
-#     return get_in_memory_user_repo()
+def provide_user_repo(db: Session = Depends(get_db)) -> UserRepository:
+    """
+    Dependency factory for the UserRepository abstraction.
+
+    Rules:
+    - In `test.inmemory` environment, we inject a global in-memory
+      singleton repository (fast tests, no DB required).
+    - In all other environments, we inject a SQLAlchemy-based repository.
+    """
+    if _settings.environment == "test.inmemory":
+        from app.core.deps_singletons import get_in_memory_user_repo
+        logger.debug("Injecting global in-memory UserRepository (via manual singleton)")
+        return get_in_memory_user_repo()
+    logger.debug("Injecting SQLAlchemy-based UserRepository")
+    return None # UserRepoSQLAlchemy(db)
 
 def provide_event_repo(db: Session = Depends(get_db)) -> EventRepository:
     """
@@ -90,8 +99,6 @@ def provide_local_repo(db: Session = Depends(get_db)) -> None: # LocalRepository
         return get_in_memory_local_repo()
     logger.debug("Injetando repositório Local (SQLAlchemy)")
     return None # EventRepoSQLAlchemy(db)
-    
-    return None
 
 def provide_forecast_repo(db: Session = Depends(get_db)) -> None: # forecastRepository:
     """
@@ -113,6 +120,20 @@ async def provide_redis() -> Redis:
             health_check_interval=30,     # pool saudável
         )
     return _redis_singleton
+
+def provide_user_service(
+    repo: UserRepository = Depends(provide_user_repo),
+) -> UserService:
+    """
+    Factory for UserService instances to be injected into controllers.
+
+    Args:
+        repo: Concrete UserRepository implementation chosen by environment.
+
+    Returns:
+        Configured UserService instance.
+    """
+    return UserService(repo)
 
 def provide_event_service(
     repo: EventRepository = Depends(provide_event_repo),

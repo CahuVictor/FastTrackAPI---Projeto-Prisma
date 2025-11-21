@@ -1,7 +1,7 @@
 # app\middleware\cors.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-# from app.core.config import get_settings
+from app.core.config import get_settings
 
 def init_cors(app: FastAPI) -> None:
     # settings = get_settings()
