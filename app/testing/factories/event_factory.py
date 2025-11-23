@@ -2,7 +2,7 @@
 from datetime import datetime, timezone
 from typing import Any
 
-from app.schemas.event_create import EventCreate
+from app.schemas.event.event_create import EventCreate
 
 def make_dummy_event_create(**overrides: Any) -> EventCreate:
     """

@@ -9,7 +9,7 @@ from structlog import get_logger
 
 from app.core.deps import provide_local_service
 from app.models.event_local_enums import VenueType
-from app.schemas.local_view import LocalView
+from app.schemas.local.local_view import LocalView
 from app.services.local_service import LocalService
 from app.utils.http import raise_http
 

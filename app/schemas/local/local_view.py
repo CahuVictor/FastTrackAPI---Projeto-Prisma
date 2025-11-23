@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field, field_validator
 from typing import Annotated
 from datetime import datetime, timezone
 
-from app.schemas.local_create import LocalCreate
+from app.schemas.local.local_create import LocalCreate
 from app.models.event_local_enums import VenueType
 
 class LocalView(LocalCreate):

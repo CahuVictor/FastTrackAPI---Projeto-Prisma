@@ -9,7 +9,7 @@ from structlog import get_logger
 
 from app.core.rate_limit_config import limiter
 from app.core.deps import provide_event_audit_service
-from app.schemas.event_audit_view import EventAuditView
+from app.schemas.event.event_audit_view import EventAuditView
 from app.services.event_audit_service import EventAuditService
 
 logger = get_logger().bind(module="event_audit")

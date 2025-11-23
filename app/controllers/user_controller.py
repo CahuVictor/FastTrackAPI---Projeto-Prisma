@@ -7,9 +7,9 @@ from structlog import get_logger
 from app.core.rate_limit_config import limiter
 
 from app.core.deps import provide_user_service
-from app.schemas.user_create import UserCreate
-from app.schemas.user_update import UserUpdate
-from app.schemas.user_view import UserView
+from app.schemas.user.user_create import UserCreate
+from app.schemas.user.user_update import UserUpdate
+from app.schemas.user.user_view import UserView
 from app.schemas.common import MessageResponse
 from app.models.user import User
 from app.services.user_service import ( # user_service
@@ -18,7 +18,7 @@ from app.services.user_service import ( # user_service
     UserNotFoundError,
 )
 
-# from app.utils.security import require_roles, auth_dep
+from app.utils.security import require_roles, auth_dep # TODO Utilizar auth_service
 
 _provide_user_service = Depends(provide_user_service)
 
@@ -74,7 +74,7 @@ def _from_user_view(view: UserView) -> User:
     "/",
     summary="Lista todos os usuários",
     response_model=list[UserView],
-    # dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
     responses={
         200: {"description": "Usuários encontrados"},
         404: {"description": "Lista vazia"},
@@ -102,7 +102,7 @@ def listar_usuarios(
     "/{username}",
     summary="Lista usuário específico",
     response_model=UserView,  # TODO Se tiver dois usuários com o mesmo nome, deveria retornar os 2?
-    # dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
     responses={
         200: {"description": "Usuário encontrado"},
         404: {"description": "Usuário não encontrado"},
@@ -132,7 +132,7 @@ def buscar_usuario(
     "/",
     summary="Adiciona usuário",
     response_model=UserView,
-    # dependencies=[auth_dep, Depends(require_roles("admin"))],
+    dependencies=[auth_dep, Depends(require_roles("admin"))],
     responses={
         201: {"description": "Usuário adicionado"},
         400: {"description": "Usuário já existe"},
@@ -161,7 +161,7 @@ def criar_usuario(
 @router.delete(
     "/{username}",
     summary="Remove usuário",
-    # dependencies=[auth_dep, Depends(require_roles("admin"))],
+    dependencies=[auth_dep, Depends(require_roles("admin"))],
     responses={
         204: {"description": "Usuário deletado"},
         404: {"description": "Usuário não encontrado"},

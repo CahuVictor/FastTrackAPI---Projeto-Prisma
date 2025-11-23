@@ -8,8 +8,8 @@ from structlog import get_logger
 from app.models.event import Event
 from app.models.event_local_enums import EventStatus
 from app.repositories.event_repo import EventRepository
-from app.schemas.event_create import EventCreate
-from app.schemas.event_update import EventUpdate
+from app.schemas.event.event_create import EventCreate
+from app.schemas.event.event_update import EventUpdate
 from app.utils.h_events import order_and_slice, ensure_aware
 
 from app.services.event_audit_service import EventAuditService, EventAuditAction
@@ -270,12 +270,33 @@ class EventService:
         if payload.description is not None:
             _track_change("description", event.description, payload.description)
             event.description = payload.description
-        if payload.event_date is not None:
-            _track_change("event_date", event.event_date, payload.event_date)
-            event.event_date = payload.event_date
+        if payload.status is not None:
+            _track_change("status", event.status, payload.status)
+            event.status = payload.status
+            
+        if payload.start_time is not None:
+            _track_change("start_time", event.start_time, payload.start_time)
+            event.start_time = payload.start_time
+        if payload.end_time is not None:
+            _track_change("end_time", event.end_time, payload.end_time)
+            event.end_time = payload.end_time
+        if payload.timezone is not None:
+            _track_change("timezone", event.timezone, payload.timezone)
+            event.timezone = payload.timezone
+            
         if payload.city is not None:
             _track_change("city", event.city, payload.city)
             event.city = payload.city
+        if payload.age_restriction is not None:
+            _track_change("age_restriction", event.age_restriction, payload.age_restriction)
+            event.age_restriction = payload.age_restriction
+        if payload.expected_audience is not None:
+            _track_change("expected_audience", event.expected_audience, payload.expected_audience)
+            event.expected_audience = payload.expected_audience
+        if payload.environment is not None:
+            _track_change("environment", event.environment, payload.environment)
+            event.environment = payload.environment
+            
         if payload.participants is not None:
             _track_change("participants", event.participants, payload.participants)
             event.participants = payload.participants

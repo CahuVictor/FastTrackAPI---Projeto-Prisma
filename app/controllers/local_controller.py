@@ -16,16 +16,17 @@ from pathlib import Path
 # from app.core.rate_limit_config import limiter
 from app.core.deps import provide_event_service, provide_local_service
 from app.core.deps import provide_event_repo, provide_event_service, provide_local_service, provide_forecast_service
-from app.schemas.local_create import LocalCreate
-from app.schemas.local_update import LocalUpdate
-from app.schemas.local_view import LocalView
-from app.schemas.local_conflict_group import LocalConflictGroup
-from app.schemas.local_merge_request import LocalMergeRequest
+from app.schemas.local.local_create import LocalCreate
+from app.schemas.local.local_update import LocalUpdate
+from app.schemas.local.local_view import LocalView
+from app.schemas.local.local_conflict_group import LocalConflictGroup
+from app.schemas.local.local_merge_request import LocalMergeRequest
 from app.models.local import Local
 from app.services.event_service import EventService
 from app.services.local_service import LocalService, DuplicateLocalError
 from app.infra.cache.cache import cached_json
 from app.utils.http import raise_http
+from app.utils.security import require_roles, auth_dep # TODO Utilizar auth_service
 
 logger = get_logger().bind(module="local")
 
@@ -48,7 +49,7 @@ router = APIRouter(
     "/list",
     summary="List locals with filters and pagination",
     response_model=list[LocalView],
-    # dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
     responses={
         200: {"description": "Locals listed successfully."},
         404: {"description": "No locals found."},
@@ -126,6 +127,7 @@ def list_locals(
     "/by-id/{local_id}",
     summary="Get a local by ID",
     response_model=LocalView,
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
     responses={
         200: {"description": "Local found."},
         404: {"description": "Local not found."},
@@ -164,6 +166,7 @@ def get_local_by_id(
     "/create-local",
     summary="Create a new local (manual override)",
     response_model=LocalView,
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
     status_code=201,
     responses={
         201: {"description": "Local successfully created."},
@@ -223,6 +226,7 @@ def post_create_local(
     "/update/by-id/{local_id}",
     summary="Partially update a local (manual override)",
     response_model=LocalView,
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
     responses={
         200: {"description": "Local successfully updated."},
         404: {"description": "Local not found."},
@@ -269,6 +273,7 @@ def patch_local(
     "/batch",
     summary="Create multiple locals in a single request (manual override)",
     response_model=list[LocalView],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
     status_code=201,
     responses={
         201: {"description": "Locals successfully created."},
@@ -326,6 +331,7 @@ def post_locals_batch(
     "/upload",
     summary="Create locals from a CSV file (manual override)",
     response_model=dict,
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
     status_code=201,
     responses={
         201: {"description": "Locals successfully imported."},
@@ -449,6 +455,7 @@ async def upload_locals_csv(
     "/delete/by-id/{local_id}",
     summary="Delete a local by ID",
     response_model=dict,
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
     responses={
         200: {"description": "Local successfully removed."},
         404: {"description": "Local not found."},
@@ -479,6 +486,7 @@ def delete_local(
     "/download",
     summary="Download all registered locals",
     response_model=list[LocalView],
+    dependencies=[auth_dep, Depends(require_roles("admin"))],
     responses={
         200: {"description": "Local list successfully returned."},
         404: {"description": "No locals found."},
@@ -531,6 +539,7 @@ def download_locals(
     "/conflicts",
     summary="List groups of locals that are probably duplicates",
     response_model=list[LocalConflictGroup],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
     responses={200: {"description": "Conflicting locals returned."}},
 )
 def get_local_conflicts(
@@ -557,6 +566,7 @@ def get_local_conflicts(
     "/merge",
     summary="Merge several Locals into a single target local",
     response_model=LocalView,
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
     responses={
         200: {"description": "Locals merged successfully."},
         400: {"description": "Invalid merge request."},
@@ -590,6 +600,7 @@ def post_merge_locals(
     "/suggestions-for-event/{event_id}",
     summary="Suggest locals for a given event",
     response_model=list[LocalView],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
     responses={
         200: {"description": "Suggested locals returned."},
         404: {"description": "Event not found."},
@@ -653,7 +664,7 @@ def suggest_locals_for_event(
 #     "/{event_id}/local",
 #     summary="Update the local associated with an event (manual override)",
 #     response_model=LocalView,
-#     # dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
+#     dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
 #     responses={
 #         200: {"description": "Event local information successfully updated."},
 #         404: {"description": "Event or local not found."},

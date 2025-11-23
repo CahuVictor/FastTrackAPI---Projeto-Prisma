@@ -4,7 +4,7 @@ from __future__ import annotations
 from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 
-from app.schemas.event_create import EventCreate
+from app.schemas.event.event_create import EventCreate
 from app.models.event_local_enums import EventStatus, EventEnvironment
  
 class EventView(EventCreate):

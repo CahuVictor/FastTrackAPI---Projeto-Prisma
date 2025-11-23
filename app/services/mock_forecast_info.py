@@ -2,7 +2,7 @@
 from datetime import datetime, timedelta
 from structlog import get_logger
 
-from app.schemas.forecast_create import ForecastInfo
+from app.schemas.forecast.forecast_create import ForecastInfo
 from app.services.interfaces.forecast_info_protocol import AbstractForecastService
 
 logger = get_logger().bind(module="mock_forecast_info")

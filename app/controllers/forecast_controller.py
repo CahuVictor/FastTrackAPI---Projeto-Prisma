@@ -14,9 +14,9 @@ import json
 
 from app.core.rate_limit_config import limiter
 from app.core.deps import provide_event_repo, provide_event_service, provide_local_service, provide_forecast_service
-from app.schemas.forecast_create import ForecastCreate
-from app.schemas.forecast_update import ForecastUpdate
-from app.schemas.forecast_view import ForecastView
+from app.schemas.forecast.forecast_create import ForecastCreate
+from app.schemas.forecast.forecast_update import ForecastUpdate
+from app.schemas.forecast.forecast_view import ForecastView
 from app.models.forecast import Forecast
 from app.schemas.common import MessageResponse
 from app.services.forecast_service import ForecastService

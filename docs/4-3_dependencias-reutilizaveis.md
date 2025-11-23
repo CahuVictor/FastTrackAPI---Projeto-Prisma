@@ -45,7 +45,7 @@ Cada serviÃ§o tem um protocolo definido explicitamente que determina suas operaÃ
 ```python
 # app/repositories/evento.py
 from typing import Protocol
-from app.schemas.event_create import EventCreate, EventResponse
+from app.schemas.event.event_create import EventCreate, EventResponse
 
 class AbstractEventRepo(Protocol):
     def list_all(self) -> list[EventResponse]: ...

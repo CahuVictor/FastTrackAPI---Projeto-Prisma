@@ -12,8 +12,8 @@ from app.models.event_local_enums import VenueType
 from app.models.local import Local
 from app.models.local import LocalSource
 from app.repositories.local_repo import LocalRepository
-from app.schemas.local_create import LocalCreate
-from app.schemas.local_update import LocalUpdate
+from app.schemas.local.local_create import LocalCreate
+from app.schemas.local.local_update import LocalUpdate
 from app.utils.text_normalization import normalize_text
 
 class DuplicateLocalError(Exception):

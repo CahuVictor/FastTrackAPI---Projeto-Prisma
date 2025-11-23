@@ -16,9 +16,9 @@ import json
 from app.core.rate_limit_config import limiter
 
 from app.core.deps import provide_event_service, provide_local_service
-from app.schemas.event_create import EventCreate
-from app.schemas.event_update import EventUpdate
-from app.schemas.event_view import EventView
+from app.schemas.event.event_create import EventCreate
+from app.schemas.event.event_update import EventUpdate
+from app.schemas.event.event_view import EventView
 from app.models.event import Event
 from app.schemas.common import MessageResponse
 from app.services.event_service import EventService
@@ -26,7 +26,7 @@ from app.services.event_service import EventService
 from app.infra.cache.cache import cached_json
 from app.utils.http import raise_http
 # from app.utils.patch import update_event, should_update_forecast
-# from app.utils.security import require_roles, auth_dep
+from app.utils.security import require_roles, auth_dep # TODO Utilizar auth_service
 
 # # from app.services.forecast import atualizar_forecast_em_background
 
@@ -130,7 +130,7 @@ def _from_event_view(view: EventView) -> Event:
     "/list",
     summary="List events with filters and pagination",
     response_model=list[EventView],
-    # dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
 )
 @limiter.limit("60/minute")
 def list_events(
@@ -172,7 +172,7 @@ def list_events(
     "/by-id/{event_id}",
     summary="Get an event by ID and increment views",
     response_model=EventView,
-    # dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
     responses={
         200: {"description": "Event found."},
         404: {"description": "Event not found."},
@@ -222,7 +222,7 @@ async def get_event_by_id(
     summary="Create a new event",
     response_model=EventView,
     status_code=201,
-    # dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
     responses={201: {"description": "Event successfully created."}},
 )
 # async def post_create_event(
@@ -254,7 +254,7 @@ def post_create_event(
     "/replace",
     summary="Replace all existing events with a new list",
     response_model=list[EventView],
-    # dependencies=[auth_dep, Depends(require_roles("admin"))],
+    dependencies=[auth_dep, Depends(require_roles("admin"))],
     responses={
         200: {"description": "All events have been replaced successfully."},
         400: {"description": "Invalid list sent."},
@@ -304,7 +304,7 @@ async def put_events(
     "/replace/by-id/{event_id}",
     summary="Replace an existing event by ID",
     response_model=EventView,
-    # dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
     responses={
         200: {"description": "Event successfully replaced."},
         404: {"description": "Event not found."},
@@ -373,7 +373,7 @@ def put_event_by_id(
     "/delete/by-id/{event_id}",
     summary="Delete a specific event by ID",
     response_model=dict,
-    # dependencies=[auth_dep, Depends(require_roles("admin"))],
+    dependencies=[auth_dep, Depends(require_roles("admin"))],
     responses={
         200: {"description": "Event successfully removed."},
         404: {"description": "Event not found."},
@@ -414,7 +414,7 @@ def delete_event(
     "/update/by-id/{event_id}",
     summary="Partially update event information",
     response_model=EventView,
-    # dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
     responses={
         200: {"description": "Event successfully updated."},
         400: {"description": "No valid field provided for update."},
@@ -459,7 +459,7 @@ def patch_event(
     "/download",
     summary="Download all registered events",
     response_model=list[EventView],
-    # dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor"))],
     responses={
         200: {"description": "Event list successfully returned."},
         404: {"description": "No events found."},
@@ -499,7 +499,7 @@ def download_events(
     "/top/soon",
     summary="Get the soonest upcoming events",
     response_model=list[EventView],
-    # dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
     responses={
         200: {"description": "List of upcoming events."},
         404: {"description": "No future events found."},
@@ -542,7 +542,7 @@ async def get_events_top_soon(
     "/top/most-viewed",
     summary="Get the most viewed events",
     response_model=list[EventView],
-    # dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
+    dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
     responses={
         200: {"description": "List of most viewed events."},
         404: {"description": "No events found."},
@@ -591,7 +591,7 @@ async def get_events_top_viewed(
     summary="Adiciona uma lista de novos eventos, atribuindo novos IDs.",
     response_model=list[EventView],
     status_code=201,
-    # dependencies=[auth_dep, Depends(require_roles("admin"))],
+    dependencies=[auth_dep, Depends(require_roles("admin"))],
     responses={
         201: {"description": "Eventos adicionados com sucesso."},
         400: {"description": "Lista inválida enviada."},
@@ -647,7 +647,7 @@ async def post_events_batch(
     summary="Create events from a CSV file",
     response_model=dict,
     status_code=201,
-    # dependencies=[auth_dep, Depends(require_roles("admin"))],
+    dependencies=[auth_dep, Depends(require_roles("admin"))],
     responses={
         201: {"description": "Events successfully imported."},
         400: {"description": "Invalid file or no events imported."},

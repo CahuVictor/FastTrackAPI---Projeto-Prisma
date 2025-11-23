@@ -10,9 +10,9 @@ from io import BytesIO
 # from app.main import app
 from app.main import app as fastapi_app   # FastAPI já criado em app.main
 
-from app.schemas.event_update import ForecastInfoUpdate
+from app.schemas.event.event_update import ForecastInfoUpdate
 
-# from app.schemas.local_info import LocalInfo
+# from app.schemas.local.local_info import LocalInfo
 from app.services.mock_local_info import MockLocalInfoService
 
 from app.infra.repositories.sqlalchemy.inmemory.event_mem import InMemoryEventRepo

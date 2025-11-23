@@ -7,8 +7,8 @@ from structlog import get_logger
 
 from app.models.user import User
 from app.repositories.user_repo import UserRepository
-from app.schemas.user_create import UserCreate
-from app.schemas.user_update import UserUpdate
+from app.schemas.user.user_create import UserCreate
+from app.schemas.user.user_update import UserUpdate
 from app.core.security import get_password_hash
 
 logger = get_logger().bind(module="user_service")
@@ -31,8 +31,8 @@ class UserService:
     - persistence layer (UserRepository implementations);
     - security helpers (password hashing, etc.).
 
-    It should *not* depend on FastAPI or HTTP concepts directly
-    (no HTTPException here).
+    It is also used by AuthService to fetch users during login and token
+    validation flows.
     """
 
     def __init__(self, repo: UserRepository) -> None:

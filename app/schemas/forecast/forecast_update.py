@@ -1,7 +1,7 @@
 # app\schemas\event_update.py
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Annotated
-from app.models.venue_type import VenueType
+from app.models.event_local_enums import VenueType
 from datetime import datetime
 
 class ForecastUpdate(BaseModel):

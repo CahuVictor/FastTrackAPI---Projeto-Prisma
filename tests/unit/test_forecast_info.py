@@ -7,8 +7,8 @@ from app.main import app
 from app.core.deps import provide_forecast_service
 from app.services.forecast_service import atualizar_forecast_em_background
 from app.utils.patch import should_update_forecast, update_event_forecast, update_event
-from app.schemas.event_create import EventResponse
-from app.schemas.event_update import ForecastInfoUpdate, EventUpdate
+from app.schemas.event.event_create import EventResponse
+from app.schemas.event.event_update import ForecastInfoUpdate, EventUpdate
 
 # TODO Corrigir endpoint para habilitar os testes
 # def test_get_forecast_info(client, auth_header, dt_now_iso):

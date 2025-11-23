@@ -7,6 +7,7 @@ from fastapi import Depends
 from structlog import get_logger
 
 from app.infra.db.session import get_db
+from app.repositories.auth_session_repo import AuthSessionRepository
 from app.repositories.user_repo import UserRepository
 from app.repositories.event_repo import EventRepository
 from app.repositories.event_audit_repo import EventAuditRepository
@@ -16,11 +17,13 @@ from app.repositories.forecast_repo import ForecastRepository
 from app.infra.repositories.sqlalchemy.user_repo_sqlalchemy import UserRepoSQLAlchemy
 from app.infra.repositories.sqlalchemy.event_repo_sqlalchemy import EventRepoSQLAlchemy
 from app.infra.repositories.sqlalchemy.event_audit_repo_sqlalchemy import EventAuditRepoSQLAlchemy
+from app.infra.repositories.inmemory.auth_session_repo_inmemory import AuthSessionRepoInMemory
 from app.infra.repositories.inmemory.user_repo_inmemory import UserRepoInMemory
 from app.infra.repositories.inmemory.event_repo_inmemory import EventRepoInMemory
 from app.infra.repositories.inmemory.event_audit_repo_inmemory import EventAuditRepoInMemory
 from app.infra.repositories.inmemory.local_repo_inmemory import LocalRepoInMemory
-from app.services.user_service import UserService # service import UserService
+# from app.services.auth_service import AuthService # TODO Corrigir para habilitar
+from app.services.user_service import UserService
 from app.services.event_service import EventService
 from app.services.event_audit_service import EventAuditService
 from app.services.local_service import LocalService
@@ -42,6 +45,27 @@ logger = get_logger().bind(module="deps")
 _settings = get_settings()
 _redis_singleton: Redis | None = None     # conexão global reaproveitável
 
+# def provide_auth_session_repo(
+#     db: Session = Depends(get_db),
+# ) -> AuthSessionRepository:
+#     """
+#     Dependency factory for AuthSessionRepository.
+
+#     In test.inmemory environment we use a global in-memory singleton.
+#     For other environments, you may later plug a SQLAlchemy-based repo.
+#     """
+#     if _settings.environment == "test.inmemory":
+#         from app.core.deps_singletons import get_in_memory_auth_session_repo
+#         logger.debug(
+#             "Injecting global in-memory AuthSessionRepository (via manual singleton)"
+#         )
+#         return get_in_memory_auth_session_repo()
+
+#     # TODO: Implement SQLAlchemy-based AuthSessionRepository and wire it here.
+#     logger.debug("AuthSession SQL repository not implemented; using in-memory repo")
+#     # logger.debug("Injecting SQLAlchemy-based AuthSessionRepository")
+#     return AuthSessionRepoInMemory()
+
 def provide_user_repo(db: Session = Depends(get_db)) -> UserRepository:
     """
     Dependency factory for the UserRepository abstraction.
@@ -55,7 +79,10 @@ def provide_user_repo(db: Session = Depends(get_db)) -> UserRepository:
         from app.core.deps_singletons import get_in_memory_user_repo
         logger.debug("Injecting global in-memory UserRepository (via manual singleton)")
         return get_in_memory_user_repo()
-    logger.debug("Injecting SQLAlchemy-based UserRepository")
+    
+    # TODO: create SQLAlchemy-based UserRepository when needed.
+    logger.debug("User SQL repository not implemented yet; using in-memory repo")
+    # logger.debug("Injecting SQLAlchemy-based UserRepository")
     return None # UserRepoSQLAlchemy(db)
 
 def provide_event_repo(db: Session = Depends(get_db)) -> EventRepository:
@@ -121,6 +148,21 @@ async def provide_redis() -> Redis:
         )
     return _redis_singleton
 
+# def provide_auth_service(
+#     user_service: UserService = Depends(provide_user_service),
+#     session_repo: AuthSessionRepository = Depends(provide_auth_session_repo),
+# ) -> AuthService:
+#     """
+#     Factory for AuthService instances to be injected into controllers
+#     and security helpers.
+#     """
+#     service = AuthService(
+#         user_service=user_service,
+#         session_repo=session_repo,
+#     )
+#     logger.debug("AuthService instance created and wired with dependencies")
+#     return service
+
 def provide_user_service(
     repo: UserRepository = Depends(provide_user_repo),
 ) -> UserService:
@@ -133,7 +175,9 @@ def provide_user_service(
     Returns:
         Configured UserService instance.
     """
-    return UserService(repo)
+    service = UserService(repo=repo)
+    logger.debug("UserService instance created and wired with UserRepository")
+    return service
 
 def provide_event_service(
     repo: EventRepository = Depends(provide_event_repo),

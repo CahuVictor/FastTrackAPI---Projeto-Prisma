@@ -3,7 +3,7 @@ from pydantic import Field
 from typing import Annotated
 from datetime import datetime
 
-from app.schemas.forecast_create import ForecastCreate
+from app.schemas.forecast.forecast_create import ForecastCreate
 
 class ForecastView(ForecastCreate):
     id: int

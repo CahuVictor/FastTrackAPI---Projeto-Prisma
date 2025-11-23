@@ -11,7 +11,7 @@ import pytest
 from app.main import app
 from app.core.deps import provide_local_info_service
 
-from app.schemas.local_create import LocalInfo
+from app.schemas.local.local_create import LocalInfo
 from app.services.mock_local_info import MockLocalInfoService
 
 from app.constants.routes import (

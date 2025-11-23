@@ -3,9 +3,9 @@ from fastapi import HTTPException
 from pydantic import ValidationError
 from datetime import datetime, timezone, timedelta
 
-from app.schemas.event_create import EventResponse
-from app.schemas.event_update import EventUpdate, LocalInfoUpdate, ForecastInfoUpdate
-from app.schemas.forecast_create import ForecastInfoResponse
+from app.schemas.event.event_create import EventResponse
+from app.schemas.event.event_update import EventUpdate, LocalInfoUpdate, ForecastInfoUpdate
+from app.schemas.forecast.forecast_create import ForecastInfoResponse
 
 def should_update_forecast(forecast_info: ForecastInfoResponse | None) -> bool:
     if not forecast_info:
