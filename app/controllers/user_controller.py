@@ -18,7 +18,7 @@ from app.services.user_service import ( # user_service
     UserNotFoundError,
 )
 
-from app.utils.security import require_roles, auth_dep # TODO Utilizar auth_service
+from app.utils.security import require_roles, auth_dep # TODO Essas funções deveriam estar em úteis, elas usam classes da camada service
 
 _provide_user_service = Depends(provide_user_service)
 

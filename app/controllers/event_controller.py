@@ -15,7 +15,7 @@ import json
 
 from app.core.rate_limit_config import limiter
 
-from app.core.deps import provide_event_service, provide_local_service
+from app.core.deps import provide_event_service
 from app.schemas.event.event_create import EventCreate
 from app.schemas.event.event_update import EventUpdate
 from app.schemas.event.event_view import EventView
@@ -26,7 +26,7 @@ from app.services.event_service import EventService
 from app.infra.cache.cache import cached_json
 from app.utils.http import raise_http
 # from app.utils.patch import update_event, should_update_forecast
-from app.utils.security import require_roles, auth_dep # TODO Utilizar auth_service
+from app.utils.security import require_roles, auth_dep # TODO Essas funções deveriam estar em úteis, elas usam classes da camada service
 
 # # from app.services.forecast import atualizar_forecast_em_background
 
@@ -39,8 +39,6 @@ from app.infra.websockets.ws_events import (
 from app.infra.websockets.ws_dashboard import notify_user_count
 
 _provide_event_service = Depends(provide_event_service)
-_provide_local_service = Depends(provide_local_service)
-# _provide_forecast_service = Depends(provide_forecast_service)
 
 logger = get_logger().bind(module="eventos")
 
@@ -621,7 +619,7 @@ async def post_events_batch(
 
     created_events = service.create_events_batch(events, changed_by="anonymous")
 
-    # Aqui você poderia adicionar tasks de forecast em background se tiver
+    # Aqui poderia adicionar tasks de forecast em background se tiver
     # uma função do tipo `atualizar_forecast_em_background`.
     # for ev in created_events:
     #     background_tasks.add_task(atualizar_forecast_em_background, ev.id)

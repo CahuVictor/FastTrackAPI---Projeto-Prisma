@@ -22,7 +22,7 @@ from app.infra.repositories.inmemory.user_repo_inmemory import UserRepoInMemory
 from app.infra.repositories.inmemory.event_repo_inmemory import EventRepoInMemory
 from app.infra.repositories.inmemory.event_audit_repo_inmemory import EventAuditRepoInMemory
 from app.infra.repositories.inmemory.local_repo_inmemory import LocalRepoInMemory
-# from app.services.auth_service import AuthService # TODO Corrigir para habilitar
+from app.services.auth_service import AuthService
 from app.services.user_service import UserService
 from app.services.event_service import EventService
 from app.services.event_audit_service import EventAuditService
@@ -45,26 +45,36 @@ logger = get_logger().bind(module="deps")
 _settings = get_settings()
 _redis_singleton: Redis | None = None     # conexão global reaproveitável
 
-# def provide_auth_session_repo(
-#     db: Session = Depends(get_db),
-# ) -> AuthSessionRepository:
-#     """
-#     Dependency factory for AuthSessionRepository.
+def provide_auth_session_repo(
+    db: Session = Depends(get_db),
+) -> AuthSessionRepository:
+    """
+    Dependency factory for AuthSessionRepository.
 
-#     In test.inmemory environment we use a global in-memory singleton.
-#     For other environments, you may later plug a SQLAlchemy-based repo.
-#     """
-#     if _settings.environment == "test.inmemory":
-#         from app.core.deps_singletons import get_in_memory_auth_session_repo
-#         logger.debug(
-#             "Injecting global in-memory AuthSessionRepository (via manual singleton)"
-#         )
-#         return get_in_memory_auth_session_repo()
+    In test.inmemory environment we use a global in-memory singleton.
+    For other environments, you may later plug a SQLAlchemy-based repo.
+    
+    Rules:
+    - If ENVIRONMENT=test.inmemory → use global in-memory singleton repo.
+    - Otherwise, a real SQLAlchemy-based implementation should be used
+      (not implemented yet, we raise an explicit error for now).
+    """
+    if _settings.environment == "test.inmemory":
+        from app.core.deps_singletons import get_in_memory_auth_session_repo
+        logger.debug(
+            "Injecting global in-memory AuthSessionRepository (via manual singleton)"
+        )
+        return get_in_memory_auth_session_repo()
 
-#     # TODO: Implement SQLAlchemy-based AuthSessionRepository and wire it here.
-#     logger.debug("AuthSession SQL repository not implemented; using in-memory repo")
-#     # logger.debug("Injecting SQLAlchemy-based AuthSessionRepository")
-#     return AuthSessionRepoInMemory()
+    # TODO: Implement AuthSessionRepoSQLAlchemy when persistence is needed.
+    logger.error(
+        "AuthSession SQLAlchemy repository not implemented for this environment",
+        environment=_settings.environment,
+    )
+    raise RuntimeError("AuthSession SQL repository not implemented yet")
+    logger.debug("AuthSession SQL repository not implemented; using in-memory repo")
+    # logger.debug("Injecting SQLAlchemy-based AuthSessionRepository")
+    return AuthSessionRepoInMemory()
 
 def provide_user_repo(db: Session = Depends(get_db)) -> UserRepository:
     """
@@ -148,37 +158,6 @@ async def provide_redis() -> Redis:
         )
     return _redis_singleton
 
-# def provide_auth_service(
-#     user_service: UserService = Depends(provide_user_service),
-#     session_repo: AuthSessionRepository = Depends(provide_auth_session_repo),
-# ) -> AuthService:
-#     """
-#     Factory for AuthService instances to be injected into controllers
-#     and security helpers.
-#     """
-#     service = AuthService(
-#         user_service=user_service,
-#         session_repo=session_repo,
-#     )
-#     logger.debug("AuthService instance created and wired with dependencies")
-#     return service
-
-def provide_user_service(
-    repo: UserRepository = Depends(provide_user_repo),
-) -> UserService:
-    """
-    Factory for UserService instances to be injected into controllers.
-
-    Args:
-        repo: Concrete UserRepository implementation chosen by environment.
-
-    Returns:
-        Configured UserService instance.
-    """
-    service = UserService(repo=repo)
-    logger.debug("UserService instance created and wired with UserRepository")
-    return service
-
 def provide_event_service(
     repo: EventRepository = Depends(provide_event_repo),
     audit_repo: EventAuditRepository = Depends(provide_event_audit_repo),
@@ -238,3 +217,37 @@ def provide_forecast_service(
         Instância de EventService.
     """
     return None # ForecastService(repo)
+
+def provide_user_service(
+    repo: UserRepository = Depends(provide_user_repo),
+) -> UserService:
+    """
+    Factory for UserService instances to be injected into controllers.
+
+    Args:
+        repo: Concrete UserRepository implementation chosen by environment.
+
+    Returns:
+        Configured UserService instance.
+    """
+    service = UserService(repo=repo)
+    logger.debug("UserService instance created and wired with UserRepository")
+    return service
+
+def provide_auth_service(
+    user_service: UserService = Depends(provide_user_service),
+    session_repo: AuthSessionRepository = Depends(provide_auth_session_repo),
+) -> AuthService:
+    """
+    Factory for AuthService for dependency injection in controllers and utilities.
+
+    Wires:
+    - UserService (for user lookup and validation).
+    - AuthSessionRepository (for refresh token/session management).
+    """
+    service = AuthService(
+        user_service=user_service,
+        session_repo=session_repo,
+    )
+    logger.debug("AuthService instance created and wired with dependencies")
+    return service

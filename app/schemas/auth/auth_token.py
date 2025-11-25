@@ -19,9 +19,11 @@ class AuthToken(BaseModel):
         description="Type of the token. Usually 'bearer'.",
     )
     # expires_in: int = Field(
-    #     description="Number of seconds before the access token expires.",
-    #     examples=[900],
-    # )
+    expires_in: int | None = Field(
+        default=None,
+        description="Number of seconds before the access token expires.",
+        examples=[900],
+    )
     refresh_token: str | None = Field(
         default=None,
         description="Optional refresh token used to obtain a new access token.",

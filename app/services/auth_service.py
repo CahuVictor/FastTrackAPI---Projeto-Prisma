@@ -1,93 +1,24 @@
 # app/services/auth_service.py
 from __future__ import annotations
 
-from fastapi import HTTPException, status, Depends
-from jose import JWTError, jwt
-from fastapi.security import OAuth2PasswordBearer
+from datetime import datetime, timedelta
 from structlog import get_logger
-
-from app.repositories.user_repo import UserRepository
-from app.core.deps import provide_user_repo
 
 from app.core.config import get_settings
 from app.core.security import (
     verify_password,
-    create_access_token,
-    create_refresh_token,
-    decode_token,
+    create_access_token as create_access_token_jwt,
+    create_refresh_token as create_refresh_token_jwt,
+    decode_token as decode_token_jwt,
 )
 from app.models.auth_session import AuthSession
 from app.models.user import User
 from app.repositories.auth_session_repo import AuthSessionRepository
 from app.services.user_service import UserService
 
-from app.core.contextvars import request_user
-
 logger = get_logger().bind(module="auth_service")
-
 _settings = get_settings()
 
-_UserRepository = Depends(provide_user_repo)
-# pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
-
-def authenticate( # TODO desabilitar e usar a classe AuthService
-    username: str,
-    password: str,
-    repo: UserRepository = _UserRepository
-):
-    user = repo.get_by_username(username)
-    if not user:
-        logger.warning("Usuário não encontrado", username=username)
-        return None
-
-    if not verify_password(password, user.hashed_password):
-        logger.warning("Senha inválida", username=username)
-        return None
-
-    logger.info("Usuário autenticado com sucesso", username=username)
-    return user
-
-def get_current_user( # TODO desabilitar e usar a classe AuthService
-    token: str = Depends(oauth2_scheme),
-    repo: UserRepository = _UserRepository
-) -> User:
-    """
-    FastAPI dependency that resolves the current authenticated user.
-
-    It expects an Authorization header in the form:
-        Authorization: Bearer <access_token>
-    """
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Credenciais inválidas",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    try:
-        if _settings.auth_secret_key is None:
-            logger.error("AUTH_SECRET_KEY ausente na configuração", environment=_settings.environment)
-            raise RuntimeError("AUTH_SECRET_KEY não configurada")
-        payload = jwt.decode(
-            token, _settings.auth_secret_key, [_settings.auth_algorithm]
-        )
-        username: str | None = payload.get("sub")
-        if username is None:
-            logger.warning("Token JWT sem campo 'sub'")
-            raise credentials_exception
-    except JWTError as e:
-        logger.warning("Token JWT inválido", error=str(e))
-        raise credentials_exception
-
-    user = repo.get_by_username(username)
-    if user is None:
-        logger.warning("Usuário do token não encontrado", username=username)
-        raise credentials_exception
-    logger.info("Usuário autenticado via token", username=username)
-    
-    # 💡 Aqui salvamos o usuário no contexto da requisiçãorevise o logging
-    request_user.set(user.username)
-    
-    return user
 
 class InvalidCredentialsError(Exception):
     """Raised when username or password are invalid."""
@@ -125,9 +56,31 @@ class AuthService:
         self._session_repo = session_repo
 
     # ------------------------------------------------------------------ #
+    # Helpers for expiration configuration
+    # ------------------------------------------------------------------ #
+    def _get_access_token_expires_delta(self) -> timedelta:
+        """
+        Returns the timedelta for access token expiration.
+
+        Uses Settings.auth_access_token_expire (in minutes) as source.
+        """
+        minutes = getattr(_settings, "auth_access_token_expire", 60 * 24)
+        return timedelta(minutes=minutes)
+
+    def _get_refresh_token_expires_delta(self) -> timedelta:
+        """
+        Returns the timedelta for refresh token expiration.
+
+        You can later move this to Settings (e.g. auth_refresh_token_expire).
+        For now, we keep a default of 7 days in minutes.
+        """
+        minutes = getattr(_settings, "auth_refresh_token_expire", 60 * 24 * 7)
+        return timedelta(minutes=minutes)
+
+    # ------------------------------------------------------------------ #
     # Login / authenticate
     # ------------------------------------------------------------------ #
-    def authenticate_user(self, username: str, password: str) -> User: # , repo: UserRepository = _UserRepository
+    def authenticate_user(self, username: str, password: str) -> User:
         """
         Validate user credentials and return the user if successful.
 
@@ -136,7 +89,7 @@ class AuthService:
         """
         try:
             user = self._user_service.get_user_by_username(username)
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.info("Authentication failed: user not found", username=username)
             raise InvalidCredentialsError("Invalid username or password")
 
@@ -144,9 +97,101 @@ class AuthService:
             logger.info("Authentication failed: bad password", username=username)
             raise InvalidCredentialsError("Invalid username or password")
 
-        logger.info("Usuário autenticado com sucesso", username=username)
+        logger.info("User authenticated successfully", username=username)
         return user
 
+    def create_access_token(self, user: User) -> tuple[str, int]:
+        """
+        Create a signed JWT access token for the given user.
+
+        Returns:
+            (access_token, expires_in_seconds)
+        """
+        expires_delta = self._get_access_token_expires_delta()
+        expires_in = int(expires_delta.total_seconds())
+
+        access_token = create_access_token_jwt(
+            subject=str(user.username),
+            expires_delta=expires_delta,
+            extra_claims={"roles": user.roles},
+        )
+        return access_token, expires_in
+
+    def create_session(
+        self,
+        user: User,
+        *,
+        user_agent: str | None = None,
+        ip_address: str | None = None,
+    ) -> str:
+        """
+        Create a new AuthSession and return the refresh token.
+
+        The session is stored via AuthSessionRepository.
+        """
+        refresh_expires_delta = self._get_refresh_token_expires_delta()
+
+        refresh_token = create_refresh_token_jwt(
+            subject=str(user.username),
+            expires_delta=refresh_expires_delta,
+        )
+
+        now = datetime.utcnow()
+        session = AuthSession(
+            user_id=user.id or 0,  # For in-memory users without DB ID
+            refresh_token=refresh_token,
+            jti=None,  # You can wire a JTI generator here in the future
+            created_at=now,
+            expires_at=now + refresh_expires_delta,
+            user_agent=user_agent,
+            ip_address=ip_address,
+        )
+        self._session_repo.create(session)
+
+        logger.info(
+            "Auth session created",
+            username=user.username,
+            user_id=user.id,
+        )
+
+        return refresh_token
+
+    def authenticate_and_issue_token(
+        self,
+        *,
+        username: str,
+        password: str,
+        user_agent: str | None = None,
+        ip_address: str | None = None,
+    ) -> tuple[str, str | None, int]:
+        """
+        High-level login operation.
+
+        Steps:
+        1. Authenticate user credentials.
+        2. Create access token.
+        3. Create refresh token + session.
+
+        Returns:
+            (access_token, refresh_token, access_expires_in_seconds)
+        """
+        user = self.authenticate_user(username, password)
+        access_token, access_expires_in = self.create_access_token(user)
+        refresh_token = self.create_session(
+            user,
+            user_agent=user_agent,
+            ip_address=ip_address,
+        )
+
+        logger.info(
+            "User logged in",
+            username=user.username,
+            user_id=user.id,
+        )
+
+        return access_token, refresh_token, access_expires_in
+
+    # Optional: alias to keep backward compatibility with previous name
     def login(
         self,
         *,
@@ -156,58 +201,14 @@ class AuthService:
         ip_address: str | None = None,
     ) -> tuple[str, str | None, int]:
         """
-        Perform login and return (access_token, refresh_token, expires_in).
-
-        This method:
-        - validates credentials;
-        - creates access and refresh tokens;
-        - persists an AuthSession for the refresh token.
+        Backwards-compatible alias for authenticate_and_issue_token.
         """
-        user = self.authenticate_user(username, password)
-
-        # Access token expiration
-        access_minutes = getattr(
-            _settings, "jwt_access_token_expires_minutes", 15
-        )
-        access_expires_delta = timedelta(minutes=access_minutes)
-        access_expires_in = int(access_expires_delta.total_seconds())
-
-        # Refresh token expiration
-        refresh_minutes = getattr(
-            _settings, "jwt_refresh_token_expires_minutes", 60 * 24 * 7
-        )
-        refresh_expires_delta = timedelta(minutes=refresh_minutes)
-
-        access_token = create_access_token(
-            subject=str(user.username),
-            expires_delta=access_expires_delta,
-            extra_claims={"roles": user.roles},
-        )
-        refresh_token = create_refresh_token(
-            subject=str(user.username),
-            expires_delta=refresh_expires_delta,
-        )
-
-        # Create auth session for refresh token
-        now = datetime.utcnow()
-        session = AuthSession(
-            user_id=user.id or 0,  # if no ID in memory, 0 as placeholder
-            refresh_token=refresh_token,
-            jti=None,
-            created_at=now,
-            expires_at=now + refresh_expires_delta,
+        return self.authenticate_and_issue_token(
+            username=username,
+            password=password,
             user_agent=user_agent,
             ip_address=ip_address,
         )
-        self._session_repo.create(session)
-
-        logger.info(
-            "User logged in",
-            username=user.username,
-            user_id=user.id,
-        )
-
-        return access_token, refresh_token, access_expires_in
 
     # ------------------------------------------------------------------ #
     # Token / session validation
@@ -220,7 +221,7 @@ class AuthService:
             InvalidTokenError: if token cannot be decoded or user not found.
         """
         try:
-            payload = decode_token(token)
+            payload = decode_token_jwt(token)
         except Exception as exc:  # noqa: BLE001
             logger.info("Failed to decode token", error=str(exc))
             raise InvalidTokenError("Invalid access token") from exc
@@ -254,6 +255,7 @@ class AuthService:
         Raises:
             SessionNotFoundError: if no session found.
             SessionInactiveError: if session is expired or revoked.
+            InvalidTokenError: if refresh token has invalid payload.
         """
         session = self._session_repo.get_by_refresh_token(refresh_token)
         if session is None:
@@ -281,45 +283,19 @@ class AuthService:
         self._session_repo.revoke(session_id=session.id)
 
         # Issue new tokens
-        access_minutes = getattr(
-            _settings, "jwt_access_token_expires_minutes", 15
-        )
-        access_expires_delta = timedelta(minutes=access_minutes)
-        access_expires_in = int(access_expires_delta.total_seconds())
-
-        refresh_minutes = getattr(
-            _settings, "jwt_refresh_token_expires_minutes", 60 * 24 * 7
-        )
-        refresh_expires_delta = timedelta(minutes=refresh_minutes)
-
-        new_access_token = create_access_token(
-            subject=str(user.username),
-            expires_delta=access_expires_delta,
-            extra_claims={"roles": user.roles},
-        )
-        new_refresh_token = create_refresh_token(
-            subject=str(user.username),
-            expires_delta=refresh_expires_delta,
-        )
-
-        now = datetime.utcnow()
-        new_session = AuthSession(
-            user_id=user_id,
-            refresh_token=new_refresh_token,
-            jti=None,
-            created_at=now,
-            expires_at=now + refresh_expires_delta,
+        access_token, access_expires_in = self.create_access_token(user)
+        new_refresh_token = self.create_session(
+            user,
             user_agent=user_agent,
             ip_address=ip_address,
         )
-        self._session_repo.create(new_session)
 
         logger.info(
             "Tokens refreshed",
-            user_id=user_id,
+            user_id=session.user_id,
         )
 
-        return new_access_token, new_refresh_token, access_expires_in
+        return access_token, new_refresh_token, access_expires_in
 
     # ------------------------------------------------------------------ #
     # Logout helpers

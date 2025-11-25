@@ -15,7 +15,6 @@ from pathlib import Path
 
 # from app.core.rate_limit_config import limiter
 from app.core.deps import provide_event_service, provide_local_service
-from app.core.deps import provide_event_repo, provide_event_service, provide_local_service, provide_forecast_service
 from app.schemas.local.local_create import LocalCreate
 from app.schemas.local.local_update import LocalUpdate
 from app.schemas.local.local_view import LocalView
@@ -26,7 +25,7 @@ from app.services.event_service import EventService
 from app.services.local_service import LocalService, DuplicateLocalError
 from app.infra.cache.cache import cached_json
 from app.utils.http import raise_http
-from app.utils.security import require_roles, auth_dep # TODO Utilizar auth_service
+from app.utils.security import require_roles, auth_dep # TODO Essas funções deveriam estar em úteis, elas usam classes da camada service
 
 logger = get_logger().bind(module="local")
 
@@ -40,6 +39,70 @@ router = APIRouter(
     tags=["local"],
     # dependencies=[auth_dep]
 )
+
+
+# ------------------------------------------------------------------ #
+# Helper methods for common actions
+# ------------------------------------------------------------------ #
+def _to_local_view(local: Local) -> LocalView:
+    """
+    Map a domain `Local` entity into an `LocalView` schema.
+
+    This helper is used by the controller layer to ensure a single,
+    centralized mapping between the domain model and the HTTP response
+    schema, avoiding duplication and keeping the mapping consistent
+    across all endpoints.
+
+    Args:
+        local: Domain `Local` instance.
+
+    Returns:
+        An `LocalView` instance populated with data from the given local.
+    """
+    return LocalView(
+        id=local.id,  # type: ignore[arg-type]
+        location_name=local.location_name,
+        capacity=local.capacity,
+        venue_type=local.venue_type,
+        is_accessible=local.is_accessible,
+        address=local.address,
+        manually_edited=local.manually_edited,
+        created_at=local.created_at,
+        updated_at=local.updated_at,
+    )
+    
+def _from_local_view(view: LocalView) -> Local:
+    """
+    Map an `LocalView` schema into a domain `Local` entity.
+
+    This helper is intended for specific use cases where the API needs to
+    accept a full local representation (e.g., replace endpoints) and
+    convert it back into the domain model.
+
+    Important:
+        - The `id` field is intentionally set to `None` here; the service
+          layer is responsible for enforcing or overriding the actual ID.
+        - Audit-related fields such as `created_at` and `updated_at`
+          should normally be controlled by the repository / infrastructure
+          layer and not blindly trusted from the client.
+
+    Args:
+        view: An `LocalView` instance received from the API layer.
+
+    Returns:
+        A domain `Local` entity built from the given view.
+    """
+    return Local(
+        # id=view.id,  # type: ignore[arg-type]
+        location_name=view.location_name,
+        capacity=view.capacity,
+        venue_type=view.venue_type,
+        is_accessible=view.is_accessible,
+        address=view.address,
+        # manually_edited=view.manually_edited,
+        # created_at=view.created_at,
+        # updated_at=view.updated_at,
+    )
 
 
 # ---------------------------------------------------------------------- #
@@ -104,20 +167,7 @@ def list_locals(
     if not locals_:
         raise_http(logger.warning, 404, "No locals found")
 
-    return [
-        LocalView(
-            id=local.id,  # type: ignore[arg-type]
-            location_name=local.location_name,
-            capacity=local.capacity,
-            venue_type=local.venue_type,
-            is_accessible=local.is_accessible,
-            address=local.address,
-            manually_edited=local.manually_edited,
-            created_at=local.created_at,
-            updated_at=local.updated_at,
-        )
-        for local in locals_
-    ]
+    return [_to_local_view(local) for local in locals_]
 
 
 # ---------------------------------------------------------------------- #
@@ -146,17 +196,7 @@ def get_local_by_id(
     if not local:
         raise_http(logger.warning, 404, "Local not found", local_id=local_id)
 
-    return LocalView(
-        id=local.id,  # type: ignore[arg-type]
-        location_name=local.location_name,
-        capacity=local.capacity,
-        venue_type=local.venue_type,
-        is_accessible=local.is_accessible,
-        address=local.address,
-        manually_edited=local.manually_edited,
-        created_at=local.created_at,
-        updated_at=local.updated_at,
-    )
+    return _to_local_view(local)
 
 
 # ---------------------------------------------------------------------- #
@@ -206,17 +246,7 @@ def post_create_local(
         )
 
 
-    return LocalView(
-        id=local.id,  # type: ignore[arg-type]
-        location_name=local.location_name,
-        capacity=local.capacity,
-        venue_type=local.venue_type,
-        is_accessible=local.is_accessible,
-        address=local.address,
-        manually_edited=local.manually_edited,
-        created_at=local.created_at,
-        updated_at=local.updated_at,
-    )
+    return _to_local_view(local)
 
 
 # ---------------------------------------------------------------------- #
@@ -253,17 +283,7 @@ def patch_local(
     except KeyError:
         raise_http(logger.warning, 404, "Local not found", local_id=local_id)
 
-    return LocalView(
-        id=local.id,  # type: ignore[arg-type]
-        location_name=local.location_name,
-        capacity=local.capacity,
-        venue_type=local.venue_type,
-        is_accessible=local.is_accessible,
-        address=local.address,
-        manually_edited=local.manually_edited,
-        created_at=local.created_at,
-        updated_at=local.updated_at,
-    )
+    return _to_local_view(local)
 
 
 # ---------------------------------------------------------------------- #
@@ -308,20 +328,7 @@ def post_locals_batch(
             str(exc),
         )
 
-    return [
-        LocalView(
-            id=local.id,  # type: ignore[arg-type]
-            location_name=local.location_name,
-            capacity=local.capacity,
-            venue_type=local.venue_type,
-            is_accessible=local.is_accessible,
-            address=local.address,
-            manually_edited=local.manually_edited,
-            created_at=local.created_at,
-            updated_at=local.updated_at,
-        )
-        for local in locals_
-    ]
+    return [_to_local_view(local) for local in locals_]
 
 
 # ---------------------------------------------------------------------- #
@@ -516,20 +523,7 @@ def download_locals(
     if not locals_:
         raise_http(logger.warning, 404, "No locals found")
 
-    payload = [
-        LocalView(
-            id=local.id,  # type: ignore[arg-type]
-            location_name=local.location_name,
-            capacity=local.capacity,
-            venue_type=local.venue_type,
-            is_accessible=local.is_accessible,
-            address=local.address,
-            manually_edited=local.manually_edited,
-            created_at=local.created_at,
-            updated_at=local.updated_at,
-        )
-        for local in locals_
-    ]
+    payload = [_to_local_view(local) for local in locals_]
 
     # Force JSON encoding to avoid issues with non-serializable types
     return JSONResponse(content=jsonable_encoder(payload))
