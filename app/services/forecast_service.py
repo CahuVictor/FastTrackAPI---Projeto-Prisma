@@ -6,8 +6,8 @@ from structlog import get_logger
 
 from app.models.forecast import Forecast
 from app.repositories.forecast_repo import ForecastRepository
-from app.schemas.forecast_create import ForecastCreate
-from app.schemas.forecast_update import ForecastUpdate
+from app.schemas.forecast.forecast_create import ForecastCreate
+from app.schemas.forecast.forecast_update import ForecastUpdate
 
 from app.core.deps import provide_forecast_service, provide_event_repo
 
@@ -50,7 +50,7 @@ class ForecastService:
 #             logger.debug("Forecast retornado pelo serviço", event_id=event_id, forecast=forecast)
             
 #             if forecast is not None:
-#                 from app.schemas.event_update import ForecastInfoUpdate
+#                 from app.schemas.event.event_update import ForecastInfoUpdate
 #                 from app.utils.patch import update_event
                 
 #                 data = forecast.model_dump()

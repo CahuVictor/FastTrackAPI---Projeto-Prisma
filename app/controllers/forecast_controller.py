@@ -18,7 +18,7 @@ from app.schemas.forecast.forecast_create import ForecastCreate
 from app.schemas.forecast.forecast_update import ForecastUpdate
 from app.schemas.forecast.forecast_view import ForecastView
 from app.models.forecast import Forecast
-from app.schemas.common import MessageResponse
+from app.schemas.common.common import MessageResponse
 from app.services.forecast_service import ForecastService
 from app.utils.http import raise_http
 
