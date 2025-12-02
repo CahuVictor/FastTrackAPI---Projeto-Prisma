@@ -183,12 +183,22 @@ def provide_event_service(
     return service
 
 def provide_event_audit_service(
-    repo: EventRepository = Depends(provide_event_audit_repo),
+    repo: EventAuditRepository = Depends(provide_event_audit_repo),
 ) -> EventAuditService:
     """
-    ???
+    Dependency factory for EventAuditService.
+
+    It wires:
+    - the chosen EventAuditRepository implementation (in-memory or SQLAlchemy),
+      selected by `provide_event_audit_repo` according to the current
+      environment.
+
+    Returns:
+        Configured EventAuditService instance.
     """
-    return EventAuditService(repo)
+    service = EventAuditService(repo=repo)
+    logger.debug("EventAuditService instance created and wired with EventAuditRepository")
+    return service
 
 def provide_local_service(
     repo: LocalRepository = Depends(provide_local_repo),

@@ -11,22 +11,27 @@ from app.infra.db.tables.event_audit_table import (
     EventAuditAction,
 )
 from app.models.event import Event
+from app.models.event_audit_filters import EventAuditFilterCriteria
 from app.repositories.event_audit_repo import EventAuditRepository
 
 logger = get_logger().bind(module="event_audit_service")
 
+
 class EventAuditService:
     """
     Application service responsible for handling audit-related use cases
-    for events.
+    for Events.
 
     It encapsulates how audit records are created and retrieved, and
     provides dedicated helper methods for common actions (created,
-    updated, deleted, restored).
+    updated, deleted, restored), plus query helpers used by the HTTP
+    layer (controllers).
     """
 
     def __init__(self, repo: EventAuditRepository) -> None:
         """
+        Initialize the service with a concrete EventAuditRepository.
+
         Args:
             repo:
                 Concrete implementation of the audit repository, such as a
@@ -35,7 +40,7 @@ class EventAuditService:
         self.repo = repo
 
     # ------------------------------------------------------------------ #
-    # Core logging method
+    # Core logging method                                                #
     # ------------------------------------------------------------------ #
     def log_action(
         self,
@@ -48,7 +53,7 @@ class EventAuditService:
         changed_at: datetime | None = None,
     ) -> EventAuditTable:
         """
-        Persist a generic audit log entry for the given event.
+        Persist a generic audit log entry for the given Event.
 
         Args:
             event_id:
@@ -62,7 +67,7 @@ class EventAuditService:
             snapshot:
                 Optional snapshot of the current event state.
             changed_at:
-                Timestamp of the change; defaults to now if not provided.
+                Timestamp of the change; defaults to now (UTC) if not provided.
 
         Returns:
             The persisted `EventAuditTable` instance.
@@ -88,7 +93,7 @@ class EventAuditService:
         return saved
 
     # ------------------------------------------------------------------ #
-    # Helper methods for common actions
+    # Helper methods for common actions                                  #
     # ------------------------------------------------------------------ #
     def log_created(
         self,
@@ -98,7 +103,7 @@ class EventAuditService:
         snapshot: dict[str, Any] | None = None,
     ) -> EventAuditTable:
         """
-        Shortcut to register a 'created' audit entry for the given event.
+        Shortcut to register a 'created' audit entry for the given Event.
         """
         return self.log_action(
             event_id=event.id,  # type: ignore[arg-type]
@@ -177,15 +182,15 @@ class EventAuditService:
         )
 
     # ------------------------------------------------------------------ #
-    # Query helpers
+    # Query helpers (used by controllers)                                #
     # ------------------------------------------------------------------ #
     def list_by_event(self, event_id: int) -> List[EventAuditTable]:
         """
-        Return the full audit trail for a given event.
+        Return the full audit trail for a given Event, without pagination.
 
         Args:
             event_id:
-                ID of the event whose audit logs should be returned.
+                ID of the Event whose audit logs should be returned.
 
         Returns:
             A list of `EventAuditTable` ordered according to repository
@@ -195,9 +200,95 @@ class EventAuditService:
         logger.info("Event audit logs fetched", event_id=event_id, total=len(logs))
         return logs
 
+    def list_for_event(
+        self,
+        event_id: int,
+        *,
+        skip: int = 0,
+        limit: int = 50,
+    ) -> List[EventAuditTable]:
+        """
+        Return the audit trail for a given Event, with simple pagination.
+
+        Args:
+            event_id:
+                ID of the Event whose audit logs should be returned.
+            skip:
+                How many records to skip (offset).
+            limit:
+                Maximum number of records to return.
+
+        Returns:
+            A list of `EventAuditTable` entries ordered by `changed_at`
+            according to the repository implementation.
+        """
+        logs = self.repo.list_by_event(event_id)
+
+        sliced = logs[skip : skip + limit]
+
+        logger.info(
+            "Audit logs fetched for single event",
+            event_id=event_id,
+            returned=len(sliced),
+            skip=skip,
+            limit=limit,
+        )
+        return sliced
+
+    def list_all(
+        self,
+        *,
+        skip: int = 0,
+        limit: int = 50,
+        action: Optional[EventAuditAction] = None,
+        changed_by: Optional[str] = None,
+    ) -> List[EventAuditTable]:
+        """
+        List all logs, optionally filtering by action or user.
+
+        This method is mainly used by legacy or simpler endpoints that
+        don't require the full filter DTO.
+
+        Args:
+            skip:
+                How many records to skip (offset).
+            limit:
+                Maximum number of records to return.
+            action:
+                Optional filter by action enum.
+            changed_by:
+                Optional substring filter by `changed_by`.
+
+        Returns:
+            A paginated list of audit entries.
+        """
+        logs = self.repo.list_all()
+
+        def _match(log: EventAuditTable) -> bool:
+            if action and log.action != action:
+                return False
+            if changed_by and changed_by.lower() not in (log.changed_by or "").lower():
+                return False
+            return True
+
+        filtered = [log for log in logs if _match(log)]
+        sliced = filtered[skip : skip + limit]
+
+        logger.info(
+            "Audit logs fetched (all)",
+            total=len(filtered),
+            returned=len(sliced),
+            skip=skip,
+            limit=limit,
+            action=action.value if action else None,
+            changed_by=changed_by,
+        )
+
+        return sliced
+
     def list_recent(self, limit: int = 50) -> List[EventAuditTable]:
         """
-        Return the most recent audit entries across all events.
+        Return the most recent audit entries across all Events.
 
         Args:
             limit:
@@ -213,13 +304,7 @@ class EventAuditService:
     def list_logs(
         self,
         *,
-        skip: int = 0,
-        limit: int = 50,
-        event_id: int | None = None,
-        action: str | None = None,
-        changed_by: str | None = None,
-        date_from: datetime | None = None,
-        date_to: datetime | None = None,
+        filters: EventAuditFilterCriteria,
     ) -> List[EventAuditTable]:
         """
         List audit logs with optional filters and pagination.
@@ -227,59 +312,72 @@ class EventAuditService:
         All filters are optional and combined using AND semantics.
 
         Args:
-            skip:
-                How many records to skip (offset).
-            limit:
-                Maximum number of records to return.
-            event_id:
-                If provided, return only logs for this event id.
-            action:
-                If provided, return only logs with this action name.
-            changed_by:
-                If provided, filter logs whose `changed_by` contains this
-                value (case-insensitive substring match).
-            date_from:
-                If provided, include only logs with `changed_at` greater
-                than or equal to this value.
-            date_to:
-                If provided, include only logs with `changed_at` less
-                than or equal to this value.
+            filters:
+                Domain-level filter criteria including pagination
+                (skip, limit) and optional fields:
+                - event_id
+                - action (EventAuditAction)
+                - changed_by (substring match, case-insensitive)
+                - date_from (inclusive, UTC)
+                - date_to   (inclusive, UTC)
 
         Returns:
             A list of audit entries that match the filters, sliced
-            according to `skip` and `limit`.
+            according to `filters.skip` and `filters.limit`.
+
+        Notes:
+            For now, this implementation loads all records from the
+            repository and applies filtering in Python. When a SQL-backed
+            repository is in use, this logic can be pushed down to SQL
+            (WHERE / ORDER BY / LIMIT).
         """
         # For now, we keep a simple in-memory style implementation
         # built on top of `repo.list_all()`. If you later move to a
         # SQL-backed repo, this filtering can be pushed down to SQL.
-        all_logs = self.repo.list_recent(limit=limit) # list_all()
+        logs = self.repo.list_recent(limit=limit)
 
         def _matches(log: EventAuditTable) -> bool:
-            if event_id is not None and log.event_id != event_id:
+            # Event filter
+            if filters.event_id is not None and log.event_id != filters.event_id:
                 return False
-            if action is not None and str(log.action) != action and log.action != action:
-                # supports both enum value and raw string comparisons
+
+            # Action filter
+            if filters.action is not None and log.action != filters.action:
+            	# supports both enum value and raw string comparisons
                 return False
-            if changed_by is not None and changed_by.lower() not in (log.changed_by or "").lower():
+
+            # changed_by substring (case-insensitive)
+            if filters.changed_by is not None:
+                needle = filters.changed_by.lower()
+                haystack = (log.changed_by or "").lower()
+                if needle not in haystack:
+                    return False
+
+            # Date range filters
+            if filters.date_from is not None and log.changed_at < filters.date_from:
                 return False
-            if date_from is not None and log.changed_at < date_from:
+            if filters.date_to is not None and log.changed_at > filters.date_to:
                 return False
-            if date_to is not None and log.changed_at > date_to:
-                return False
+
             return True
 
-        filtered = [log for log in all_logs if _matches(log)]
-        paginated = filtered[skip : skip + limit]
+        filtered = [log for log in logs if _matches(log)]
+
+        # Paginação: mesmo espírito dos outros filtros (0 = sem limite).
+        skip = filters.skip or 0
+        limit = filters.limit or 0
+
+        if limit > 0:
+            paginated = filtered[skip : skip + limit]
+        else:
+            paginated = filtered[skip:]
 
         logger.info(
             "Audit logs filtered",
-            total=len(all_logs),
+            total=len(logs),
             matched=len(filtered),
             returned=len(paginated),
-            skip=skip,
-            limit=limit,
-            event_id=event_id,
-            action=action,
-            changed_by=changed_by,
+            filters=filters,
         )
+
         return paginated

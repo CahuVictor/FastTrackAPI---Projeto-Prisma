@@ -6,11 +6,94 @@ from typing import Dict, List
 from datetime import datetime
 
 from app.models.local import Local
+from app.models.local_filters import LocalFilterCriteria
 from app.models.event_local_enums import VenueType
 from app.repositories.local_repo import LocalRepository
 
 logger = get_logger().bind(module="local_repo_inmemory")
 
+def _apply_filter_and_sort(
+    locals_list: list[Local],
+    filter: LocalFilterCriteria,
+) -> list[Local]:
+    """
+    Apply the in-memory filtering and sorting logic over a list of Locals.
+
+    This helper keeps the `list` method smaller and centralizes all
+    filter conditions in one place. It also documents the fact that,
+    in this in-memory implementation, all data is loaded into memory
+    before applying filters — which is different from a future SQL
+    implementation, where filters should be translated to WHERE clauses.
+    """
+    # Filtros básicos de string / igualdade
+    if filter.name is not None:
+        needle = filter.name.lower()
+        locals_list = [l for l in locals_list if needle in l.name.lower()]
+
+    if filter.capacity is not None:
+        locals_list = [l for l in locals_list if l.capacity == filter.capacity]
+
+    if filter.is_accessible is not None:
+        locals_list = [l for l in locals_list if l.is_accessible == filter.is_accessible]
+
+    if filter.parking_available is not None:
+        locals_list = [l for l in locals_list if l.parking_available == filter.parking_available]
+
+    if filter.latitude is not None:
+        locals_list = [l for l in locals_list if l.latitude == filter.latitude]
+
+    if filter.longitude is not None:
+        locals_list = [l for l in locals_list if l.longitude == filter.longitude]
+
+    if filter.external_id is not None:
+        locals_list = [l for l in locals_list if l.external_id == filter.external_id]
+
+    if filter.source is not None:
+        locals_list = [l for l in locals_list if l.source == filter.source]
+
+    if filter.is_indoor is not None:
+        locals_list = [l for l in locals_list if l.is_indoor == filter.is_indoor]
+
+    if filter.has_cover is not None:
+        locals_list = [l for l in locals_list if l.has_cover == filter.has_cover]
+
+    if filter.capacity_seated is not None:
+        locals_list = [l for l in locals_list if l.capacity_seated == filter.capacity_seated]
+
+    if filter.capacity_standing is not None:
+        locals_list = [l for l in locals_list if l.capacity_standing == filter.capacity_standing]
+
+    if filter.venue_type is not None:
+        locals_list = [l for l in locals_list if l.venue_type == filter.venue_type]
+
+    if filter.manually_edited is not None:
+        locals_list = [l for l in locals_list if l.manually_edited == filter.manually_edited]
+
+    if filter.created_at is not None:
+        locals_list = [
+            l
+            for l in locals_list
+            if l.created_at is not None and l.created_at >= filter.created_at
+        ]
+
+    if filter.updated_at is not None:
+        locals_list = [
+            l
+            for l in locals_list
+            if l.updated_at is not None and l.updated_at >= filter.updated_at
+        ]
+
+    # Ordenação determinística
+    locals_list.sort(key=lambda l: l.name.lower())
+
+    # Paginação
+    if filter.skip:
+        locals_list = locals_list[filter.skip:]
+
+    if filter.limit and filter.limit > 0:
+        locals_list = locals_list[:filter.limit]
+
+    return locals_list
 
 class LocalRepoInMemory(LocalRepository):
     """
@@ -76,9 +159,10 @@ class LocalRepoInMemory(LocalRepository):
         logger.info(
             "Local added in memory",
             local_id=local.id,
-            location_name=local.location_name,
+            name=local.name,
             capacity=local.capacity,
             is_accessible=local.is_accessible,
+            venue_type=str(local.venue_type) if local.venue_type else None,
         )
 
         return local
@@ -101,9 +185,11 @@ class LocalRepoInMemory(LocalRepository):
         if local:
             logger.info(
                 "Local found in memory",
-                local_id=local_id,
-                location_name=local.location_name,
+                local_id=local.id,
+                name=local.name,
                 capacity=local.capacity,
+                is_accessible=local.is_accessible,
+                venue_type=str(local.venue_type) if local.venue_type else None,
             )
         else:
             logger.info("Local not found in memory", local_id=local_id)
@@ -116,21 +202,16 @@ class LocalRepoInMemory(LocalRepository):
     def list(
         self,
         *,
-        skip: int = 0,
-        limit: int = 20,
-        location_name: str | None = None,
-        capacity: int | None = None,
-        venue_type: VenueType | None = None,
-        is_accessible: bool | None = None,
-        address: str | None = None,
-        manually_edited: bool | None = None,
-        created_at: datetime | None = None,
-        updated_at: datetime | None = None,
-    ) -> List[Local]:
+        filter: LocalFilterCriteria | None = None,
+    ) -> list[Local]:
         """
         Returns a paginated slice of locals with optional filters.
 
-        Locals are sorted by `location_name` in ascending order.
+        In this in-memory implementation, all entities are loaded from the
+        internal storage (a dict) and filters are applied in Python. In a
+        future SQL-backed repository, this method should instead translate
+        LocalFilterCriteria into SQL WHERE clauses so the database can apply
+        indexes and optimizations.
 
         Args:
             skip: Number of records to skip from the beginning.
@@ -151,73 +232,22 @@ class LocalRepoInMemory(LocalRepository):
         Returns:
             A list of Local entities matching the filter and pagination.
         """
+        # `self._storage` is an in-memory dict[int, Local]. We take only its
+        # values here, because we don't care about the keys for listing.
+        # NOTE:
+        # In this in-memory implementation we load all Locals from `_storage`
+        # and apply filters in Python. In a future SQL-based repository, this
+        # method should translate `LocalFilterCriteria` into SQL WHERE clauses
+        # so that the database can apply indexes and optimizations.
         locals_list = list(self._storage.values())
-
-        if location_name is not None:
-            needle = location_name.lower()
-            locals_list = [
-                l
-                for l in locals_list
-                if needle in l.location_name.lower()
-            ]
-
-        if capacity is not None:
-            locals_list = [l for l in locals_list if l.capacity == capacity]
-
-        if venue_type is not None:
-            locals_list = [l for l in locals_list if l.venue_type == venue_type]
-
-        if is_accessible is not None:
-            locals_list = [l for l in locals_list if l.is_accessible == is_accessible]
-
-        if address is not None:
-            needle_addr = address.lower()
-            locals_list = [
-                l
-                for l in locals_list
-                if l.address is not None and needle_addr in l.address.lower()
-            ]
-
-        if manually_edited is not None:
-            locals_list = [
-                l for l in locals_list if l.manually_edited == manually_edited
-            ]
-
-        if created_at is not None:
-            locals_list = [
-                l
-                for l in locals_list
-                if l.created_at is not None and l.created_at >= created_at
-            ]
-
-        if updated_at is not None:
-            locals_list = [
-                l
-                for l in locals_list
-                if l.updated_at is not None and l.updated_at >= updated_at
-            ]
-
-        # Sort by name for deterministic behavior
-        locals_list.sort(key=lambda l: l.location_name.lower())
-
-        if skip:
-            locals_list = locals_list[skip:]
-
-        if limit > 0:
-            locals_list = locals_list[:limit]
+        
+        if filter is not None:
+            locals_list = _apply_filter_and_sort(locals_list, filter)
 
         logger.info(
             "Listing locals in memory",
             total=len(locals_list),
-            skip=skip,
-            limit=limit,
-            location_name=location_name,
-            capacity=capacity,
-            venue_type=str(venue_type) if venue_type else None,
-            is_accessible=is_accessible,
-            manually_edited=manually_edited,
-            created_at=created_at,
-            updated_at=updated_at,
+            filter=filter,
         )
 
         return locals_list
@@ -258,9 +288,10 @@ class LocalRepoInMemory(LocalRepository):
         logger.info(
             "Local updated in memory",
             local_id=local.id,
-            location_name=local.location_name,
+            name=local.name,
             capacity=local.capacity,
             is_accessible=local.is_accessible,
+            venue_type=str(local.venue_type) if local.venue_type else None,
         )
 
         return local
@@ -333,9 +364,11 @@ class LocalRepoInMemory(LocalRepository):
 
         logger.info(
             "Local replaced in memory",
-            local_id=local_id,
-            location_name=local.location_name,
+            local_id=local.id,
+            name=local.name,
             capacity=local.capacity,
+            is_accessible=local.is_accessible,
+            venue_type=str(local.venue_type) if local.venue_type else None,
         )
 
         return local

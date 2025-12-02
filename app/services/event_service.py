@@ -6,6 +6,7 @@ from typing import List
 from structlog import get_logger
 
 from app.models.event import Event
+from app.models.event_filters import EventFilterCriteria
 from app.models.event_local_enums import EventStatus
 from app.repositories.event_repo import EventRepository
 from app.schemas.event.event_create import EventCreate
@@ -118,28 +119,24 @@ class EventService:
     def list_events(
         self,
         *,
-        skip: int = 0,
-        limit: int = 20,
-        city: str | None = None,
+        filters: EventFilterCriteria,
     ) -> List[Event]:
         """
         List events with pagination and optional city filter.
 
         Args:
-            skip: How many records to skip (offset).
-            limit: Maximum number of records to return.
-            city: If provided, filter events by this city.
+            filters: Domain-level filter criteria including pagination,
+                city, status and optional start_time range.
 
         Returns:
-            A list of Event domain entities.
+            List of `Event` domain entities that match the filters.
         """
-        events = self.repo.list(skip=skip, limit=limit, city=city)
+        events = self.repo.list(filter=filters) # TODO corrigir repo.list para receber filters (skip=skip, limit=limit, city=city)
+        
         logger.info(
-            "Events listed successfully", # "Eventos listados com sucesso",
+            "Events listed successfully",
             total=len(events),
-            skip=skip,
-            limit=limit,
-            city=city,
+            filters=filters,
         )
         return events
 
@@ -150,8 +147,9 @@ class EventService:
         Returns:
             The complete list of Event entities.
         """
-        events = self.repo.list(skip=0, limit=0, city=None)
-        logger.info("All events listed", total=len(events)) # "Todos os eventos listados"
+        events = self.repo.list()
+        
+        logger.info("All events listed", total=len(events))
         return events
 
     def get_event(self, event_id: int) -> Event | None:
@@ -455,7 +453,8 @@ class EventService:
             # ignoramos created_at/updated_at informados de fora:
             # o repo é responsável por setar esses campos.
             ev.id = None  # garante que serão recriados
-            persisted.append(self.repo.add(ev))
+            created = self.repo.add(ev)
+            persisted.append(created)
             # audit created per event
             self._safe_log_created(created, changed_by=changed_by)
 

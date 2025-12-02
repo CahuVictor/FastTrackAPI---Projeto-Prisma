@@ -3,12 +3,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import List
-# from enum import Enum
 
 from app.models.event_local_enums import EventStatus, EventEnvironment
-# from app.models.local import Local
-# from app.models.forecast import Forecast
 
 @dataclass(slots=True, kw_only=True)
 class Event:

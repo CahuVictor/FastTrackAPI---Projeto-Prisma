@@ -4,7 +4,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query, Body, UploadFile, File, BackgroundTasks, Request, status, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
-from typing import List
+from typing import List, Annotated
 from datetime import datetime, timezone
 from structlog import get_logger
 from io import StringIO
@@ -19,8 +19,16 @@ from app.core.deps import provide_event_service
 from app.schemas.event.event_create import EventCreate
 from app.schemas.event.event_update import EventUpdate
 from app.schemas.event.event_view import EventView
+from app.schemas.event.event_filters import EventFilters
+from app.schemas.event.event_csv_row import EventCsvRow
 from app.models.event import Event
-from app.schemas.common import MessageResponse
+from app.schemas.common.common import MessageResponse
+from app.controllers.event_controller_helpers import (
+    to_event_view,
+    from_event_view,
+    from_event_filters,
+    from_event_csv_row,
+)
 from app.services.event_service import EventService
 
 from app.infra.cache.cache import cached_json
@@ -49,78 +57,6 @@ router = APIRouter(
 )
 
 
-# ------------------------------------------------------------------ #
-# Helper methods for common actions
-# ------------------------------------------------------------------ #
-def _to_event_view(event: Event) -> EventView:
-    """
-    Map a domain `Event` entity into an `EventView` schema.
-
-    This helper is used by the controller layer to ensure a single,
-    centralized mapping between the domain model and the HTTP response
-    schema, avoiding duplication and keeping the mapping consistent
-    across all endpoints.
-
-    Args:
-        event: Domain `Event` instance.
-
-    Returns:
-        An `EventView` instance populated with data from the given event.
-    """
-    return EventView(
-        id=event.id,  # type: ignore[arg-type]
-        title=event.title,
-        description=event.description,
-        status=event.status,
-        start_time=event.start_time,
-        end_time=event.end_time,
-        timezone=event.timezone,
-        city=event.city,
-        age_restriction=event.age_restriction,
-        participants=event.participants,
-        views=event.views,
-        created_at=event.created_at,
-        updated_at=event.updated_at,
-    )
-    
-def _from_event_view(view: EventView) -> Event:
-    """
-    Map an `EventView` schema into a domain `Event` entity.
-
-    This helper is intended for specific use cases where the API needs to
-    accept a full event representation (e.g., replace endpoints) and
-    convert it back into the domain model.
-
-    Important:
-        - The `id` field is intentionally set to `None` here; the service
-          layer is responsible for enforcing or overriding the actual ID.
-        - Audit-related fields such as `created_at` and `updated_at`
-          should normally be controlled by the repository / infrastructure
-          layer and not blindly trusted from the client.
-
-    Args:
-        view: An `EventView` instance received from the API layer.
-
-    Returns:
-        A domain `Event` entity built from the given view.
-    """
-    return Event(
-        # id=None,  # ID will be enforced by the service/repository layer.
-        title=view.title,
-        description=view.description,
-        status=view.status,
-        start_time=view.start_time,
-        end_time=view.end_time,
-        timezone=view.timezone,
-        city=view.city,
-        age_restriction=view.age_restriction,
-        participants=view.participants,
-        # views=view.views,
-        # created_at=view.created_at,
-        # updated_at=view.updated_at,
-    )
-
-
 # ----------------------------------------------------------------------
 # LIST
 # ----------------------------------------------------------------------
@@ -129,23 +65,25 @@ def _from_event_view(view: EventView) -> Event:
     summary="List events with filters and pagination",
     response_model=list[EventView],
     dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
+    responses={
+        200: {"description": "Events listed successfully."},
+        404: {"description": "No events found."},
+    },
 )
-@limiter.limit("60/minute")
+# @limiter.limit("60/minute")
 def list_events(
     request: Request,  # ? Necessário para funcionar com @limiter.limit,
-    skip: int = Query(0, ge=0, description="How many records to skip"), # "Quantos registros pular"),
-    limit: int = Query(20, le=100, description="Page size"), # "Tamanho da página"),
-    city: str | None = Query(None, description="Filter by city"), # "Filtrar por cidade"),
+    filters: Annotated[EventFilters, Depends()],
     service: EventService = _provide_event_service,
 ) -> list[EventView]:
     """
-    Return a paginated slice of events, optionally filtered by city.
+    Return a paginated slice of events, optionally filtered by city,
+    status and start_time range.
 
     Args:
         request: Incoming HTTP request (required by the rate limiter).
-        skip: Number of records to skip (offset).
-        limit: Maximum number of records to return.
-        city: Optional city name to filter events.
+        filters: HTTP-level filter schema (`EventFilters`) populated
+            from query parameters.
 
     Returns:
         A list of `EventView` objects representing the events found.
@@ -153,14 +91,16 @@ def list_events(
     Raises:
         HTTPException(404): If no events are found.
     """
-    logger.info("Event list query started", skip=skip, limit=limit, city=city)
+    filter_model = from_event_filters(filters)
+    
+    logger.info("Event list query started", filters=filter_model)
 
-    events = service.list_events(skip=skip, limit=limit, city=city)
+    events = service.list_events(filters=filter_model)
 
     if not events:
-        raise_http(logger.warning, 404, "No events found", skip=skip, limit=limit, city=city)
+        raise_http(logger.warning, 404, "No events found", filters=filter_model)
 
-    return [_to_event_view(event) for event in events]
+    return [to_event_view(event) for event in events]
 
 
 # ----------------------------------------------------------------------
@@ -209,7 +149,7 @@ async def get_event_by_id(
         raise_http(logger.warning, 404, "Event not found", event_id=event_id)
     assert event is not None  # MyPy entende que daqui pra frente não é mais None
 
-    return _to_event_view(event)
+    return to_event_view(event)
 
 
 # ----------------------------------------------------------------------
@@ -242,7 +182,7 @@ def post_create_event(
 
     event = service.create_event(payload, changed_by="anonymous")
 
-    return _to_event_view(event)
+    return to_event_view(event)
 
 
 # ----------------------------------------------------------------------
@@ -284,7 +224,7 @@ async def put_events(
     asyncio.create_task(notify_replace_started())
 
     # Convert input schemas to domain entities
-    domain_events: List[Event] = [_from_event_view(event) for event in events_new]
+    domain_events: List[Event] = [from_event_view(event) for event in events_new]
 
     events = service.replace_all_events(domain_events, changed_by="anonymous")
 
@@ -292,7 +232,7 @@ async def put_events(
     asyncio.create_task(notify_user_count())
     logger.info("All events have been successfully replaced", total=len(events))
 
-    return [_to_event_view(event) for event in events]
+    return [to_event_view(event) for event in events]
 
 
 # ----------------------------------------------------------------------
@@ -328,7 +268,7 @@ def put_event_by_id(
     """
     logger.info("Received request to replace event by ID", event_id=event_id)
 
-    domain_event = _from_event_view(new_event)
+    domain_event = from_event_view(new_event)
 
     try:
         event = service.replace_event_by_id(event_id, domain_event, changed_by="anonymous")
@@ -337,7 +277,7 @@ def put_event_by_id(
 
     logger.info("Event successfully replaced", event_id=event_id)
 
-    return _to_event_view(event)
+    return to_event_view(event)
 
 # @router.delete(
 #     "/",
@@ -447,7 +387,7 @@ def patch_event(
     except KeyError:
         raise HTTPException(status_code=404, detail="Event not found")
 
-    return _to_event_view(event)
+    return to_event_view(event)
 
 
 # ----------------------------------------------------------------------
@@ -484,11 +424,10 @@ def download_events(
     if not events:
         raise_http(logger.warning, 404, "No events found")
 
-    payload = [_to_event_view(event) for event in events]
+    payload = [to_event_view(event) for event in events]
     
     # Se você quiser forçar JSONResponse com jsonable_encoder:
-    return JSONResponse(content=jsonable_encoder(payload))
-    # return payload
+    return JSONResponse(content=jsonable_encoder(payload)) # return payload
 
 # ----------------------------------------------------------------------
 # TOP SOON
@@ -530,7 +469,7 @@ async def get_events_top_soon(
 
     logger.info("Query for soonest events finished", quantity=len(most_soon))
 
-    return [_to_event_view(event) for event in most_soon]
+    return [to_event_view(event) for event in most_soon]
 
 
 # ----------------------------------------------------------------------
@@ -578,7 +517,7 @@ async def get_events_top_viewed(
 
     logger.info("Query for most viewed events finished", quantity=len(most_viewed))
 
-    return [_to_event_view(event) for event in most_viewed]
+    return [to_event_view(event) for event in most_viewed]
 
 
 # ----------------------------------------------------------------------
@@ -634,7 +573,7 @@ async def post_events_batch(
     await notify_upload_end(len(created_events))
     await notify_user_count()
 
-    return [_to_event_view(event) for event in created_events]
+    return [to_event_view(event) for event in created_events]
 
 
 # ----------------------------------------------------------------------
@@ -653,7 +592,7 @@ async def post_events_batch(
 )
 # @limiter.limit("20/minute")
 async def upload_csv(
-    # request: Request,  # ? Necessário para funcionar com @limiter.limit,
+    request: Request,  # ? Necessário para funcionar com @limiter.limit,
     # background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     service: EventService = _provide_event_service,
@@ -661,12 +600,16 @@ async def upload_csv(
     """
     Import events from a CSV file and create them in the repository.
 
-    The CSV is expected to contain at least the following columns:
-        - title
-        - description
-        - event_date (ISO-8601 string)
-        - city
-        - participants (semicolon-separated list, e.g. "Ana;Bruno;Carla")
+    Expected CSV columns:
+        - title (required)
+        - description (required)
+        - status (optional, must match EventStatus values)
+        - start_time (required, ISO-8601, preferably UTC)
+        - end_time (required, ISO-8601, preferably UTC)
+        - timezone (required, IANA timezone name)
+        - city (required)
+        - age_restriction (optional, e.g. 'Livre', '16+', '18+')
+        - participants (optional, semicolon-separated list, e.g. "Ana;Bruno;Carla")
 
     Args:
         file: Uploaded CSV file containing event data.
@@ -693,27 +636,23 @@ async def upload_csv(
 
     total = 0
     created_events: List[Event] = []
+    errors = 0
 
     for idx, row in enumerate(reader, start=1):
         try:
-            payload = EventCreate(
-                title=row["title"],
-                description=row["description"],
-                status=row["status"],
-                
-                start_time=row["start_time"],
-                end_time=row["end_time"],
-                timezone=row["timezone"],
-        
-                city=row["city"],
-                age_restriction=row["age_restriction"],
-                
-                participants=row["participants"].split(";") if row.get("participants") else [],
-                # Se quiser suportar local_id/forecast_id no CSV, adiciona aqui
-            )
+            csv_row = EventCsvRow.from_csv_row(row)
+            
+            if not csv_row.title:
+                raise ValueError("Missing title")
+            if not csv_row.description:
+                raise ValueError("Missing description")
+            if not csv_row.city:
+                raise ValueError("Missing city")
+            
+            payload = from_event_csv_row(csv_row)
 
             event = service.create_event(payload, changed_by="anonymous")
-            created_events.append(event)
+            # created_events.append(event) # TODO
             total += 1
             
             # Adiciona task em background para buscar forecast depois
@@ -726,6 +665,7 @@ async def upload_csv(
         except Exception as e:
             # registra no console + WebSocket
             logger.exception("Error on CSV line %s: %s", idx, e)
+            errors += 1
             await notify_upload_error(str(e))
 
     await notify_upload_end(len(created_events))

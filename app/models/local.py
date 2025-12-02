@@ -17,8 +17,8 @@ class Local:
     
     # Address Block
     address_street: str | None = None
-    address_city: str
-    address_state: str
+    address_city: str | None = None
+    address_state: str | None = None
     
     # geo & timezone
     latitude: float | None = None
@@ -39,7 +39,8 @@ class Local:
     images: list[str] = field(default_factory=list)
 
     venue_type: VenueType | None = None
-    # manually_edited: bool = False
+    
+    manually_edited: bool = False
     
     created_at: datetime | None = None
     updated_at: datetime | None = None

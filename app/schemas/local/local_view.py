@@ -6,10 +6,10 @@ from app.schemas.local.local_create import LocalCreate
 from app.models.event_local_enums import VenueType
 
 class LocalView(LocalCreate):
-    id: int
+    id: Annotated[int, Field(description="Identifier of the Local")]
     manually_edited: bool = Field(default=False, description="Flag indicando se os dados foram alterados manualmente pelo usuário")
-    created_at: datetime
-    updated_at: datetime | None = None
+    created_at: datetime = Field(description="Timestamp when the local was created.")
+    updated_at: datetime | None = Field(ndefault=None,description="Timestamp of the last update, if any.",)
     
     class Config:
         from_attributes = True  # pydantic v2 (no v1: orm_mode = True)

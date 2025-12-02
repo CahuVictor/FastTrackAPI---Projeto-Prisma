@@ -4,25 +4,26 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query, Body, UploadFile, File, BackgroundTasks, Request, status, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
-from datetime import datetime, timezone
 from structlog import get_logger
 from io import StringIO
-import inspect
 import csv
-import asyncio
-import json
-from pathlib import Path
+from typing import Iterable, Set, Type, Annotated
 
+from app.controllers.local_controller_helpers import to_local_view, from_local_view, to_local_filters, from_local_filters, from_local_csv_row
 # from app.core.rate_limit_config import limiter
 from app.core.deps import provide_event_service, provide_local_service
 from app.schemas.local.local_create import LocalCreate
 from app.schemas.local.local_update import LocalUpdate
 from app.schemas.local.local_view import LocalView
+from app.schemas.local.local_filters import LocalFilters
 from app.schemas.local.local_conflict_group import LocalConflictGroup
 from app.schemas.local.local_merge_request import LocalMergeRequest
+from app.schemas.local.local_csv_row import LocalCsvRow
 from app.models.local import Local
+from app.models.event_local_enums import VenueType
 from app.services.event_service import EventService
-from app.services.local_service import LocalService, DuplicateLocalError
+from app.services.local_service import LocalService
+from app.services.errors import DuplicateLocalError
 from app.infra.cache.cache import cached_json
 from app.utils.http import raise_http
 from app.utils.security import require_roles, auth_dep # TODO Essas funções deveriam estar em úteis, elas usam classes da camada service
@@ -32,77 +33,11 @@ logger = get_logger().bind(module="local")
 _provide_event_service = Depends(provide_event_service)
 _provide_local_service = Depends(provide_local_service)
 
-logger = get_logger().bind(module="local")
-
 router = APIRouter(
     prefix="/local",
     tags=["local"],
     # dependencies=[auth_dep]
 )
-
-
-# ------------------------------------------------------------------ #
-# Helper methods for common actions
-# ------------------------------------------------------------------ #
-def _to_local_view(local: Local) -> LocalView:
-    """
-    Map a domain `Local` entity into an `LocalView` schema.
-
-    This helper is used by the controller layer to ensure a single,
-    centralized mapping between the domain model and the HTTP response
-    schema, avoiding duplication and keeping the mapping consistent
-    across all endpoints.
-
-    Args:
-        local: Domain `Local` instance.
-
-    Returns:
-        An `LocalView` instance populated with data from the given local.
-    """
-    return LocalView(
-        id=local.id,  # type: ignore[arg-type]
-        location_name=local.location_name,
-        capacity=local.capacity,
-        venue_type=local.venue_type,
-        is_accessible=local.is_accessible,
-        address=local.address,
-        manually_edited=local.manually_edited,
-        created_at=local.created_at,
-        updated_at=local.updated_at,
-    )
-    
-def _from_local_view(view: LocalView) -> Local:
-    """
-    Map an `LocalView` schema into a domain `Local` entity.
-
-    This helper is intended for specific use cases where the API needs to
-    accept a full local representation (e.g., replace endpoints) and
-    convert it back into the domain model.
-
-    Important:
-        - The `id` field is intentionally set to `None` here; the service
-          layer is responsible for enforcing or overriding the actual ID.
-        - Audit-related fields such as `created_at` and `updated_at`
-          should normally be controlled by the repository / infrastructure
-          layer and not blindly trusted from the client.
-
-    Args:
-        view: An `LocalView` instance received from the API layer.
-
-    Returns:
-        A domain `Local` entity built from the given view.
-    """
-    return Local(
-        # id=view.id,  # type: ignore[arg-type]
-        location_name=view.location_name,
-        capacity=view.capacity,
-        venue_type=view.venue_type,
-        is_accessible=view.is_accessible,
-        address=view.address,
-        # manually_edited=view.manually_edited,
-        # created_at=view.created_at,
-        # updated_at=view.updated_at,
-    )
 
 
 # ---------------------------------------------------------------------- #
@@ -120,15 +55,8 @@ def _from_local_view(view: LocalView) -> Local:
 )
 # @cached_json("list", ttl=86400)              # ???  24 h _a “mágica” está aqui_
 def list_locals(
-    skip: int = Query(0, ge=0, description="How many records to skip"),
-    limit: int = Query(20, le=100, description="Page size"),
-    location_name: str | None = Query(None, description="Filter by location name (partial match allowed)"),
-    capacity: int | None = Query(None, description="Filter by capacity"),
-    is_accessible: bool | None = Query(None, description="Filter by accessibility"),
-    address: str | None = Query(None, description="Filter by address (partial match allowed)"),
-    manually_edited: bool | None = Query(None, description="Filter by manual override flag"),
-    created_at: datetime | None = Query(None, description="Return locals created on or after this datetime (UTC)"),
-    updated_at: datetime | None = Query(None, description="Return locals updated on or after this datetime (UTC)"),
+    request: Request,
+    filters: Annotated[LocalFilters, Depends()],
     service: LocalService = _provide_local_service,
 ) -> list[LocalView]:
     """
@@ -138,36 +66,24 @@ def list_locals(
     is using. These records can come from the internal LocalInfo API or be
     manually created/edited as a fallback when that API is unavailable or
     outdated.
+    
+    The query parameters are mapped into a `LocalFilters` DTO, which is
+    shared between controller and service. At runtime we also log warnings
+    if there is any mismatch between:
+    - Query parameters declared in this endpoint.
+    - Fields defined in `LocalFilters`.
     """
-    logger.info(
-        "Local list query started",
-        skip=skip,
-        limit=limit,
-        location_name=location_name,
-        capacity=capacity,
-        is_accessible=is_accessible,
-        manually_edited=manually_edited,
-        created_at=created_at,
-        updated_at=updated_at,
-    )
-
-    locals_ = service.list_locals(
-        skip=skip,
-        limit=limit,
-        location_name=location_name,
-        capacity=capacity,
-        venue_type=None,  # could be added as a query param later
-        is_accessible=is_accessible,
-        address=address,
-        manually_edited=manually_edited,
-        created_at=created_at,
-        updated_at=updated_at,
-    )
+    filter_model = from_local_filters(filters)
+    
+    logger.info("Local list query started", filters=filter_model)
+    
+    locals_ = service.list_locals(filters=filter_model)
 
     if not locals_:
-        raise_http(logger.warning, 404, "No locals found")
+        raise_http(logger.warning, 404, "No locals found", filters=filter_model)
 
-    return [_to_local_view(local) for local in locals_]
+    return [to_local_view(local) for local in locals_]
+    
 
 
 # ---------------------------------------------------------------------- #
@@ -196,7 +112,7 @@ def get_local_by_id(
     if not local:
         raise_http(logger.warning, 404, "Local not found", local_id=local_id)
 
-    return _to_local_view(local)
+    return to_local_view(local)
 
 
 # ---------------------------------------------------------------------- #
@@ -229,8 +145,11 @@ def post_create_local(
     """
     logger.info(
         "Received request to create local",
-        location_name=payload.location_name,
+        name=payload.name,
+        venue_type=str(payload.venue_type) if payload.venue_type else None,
         capacity=payload.capacity,
+        city=payload.address_city,
+        state=payload.address_state,
     )
 
     try:
@@ -240,13 +159,14 @@ def post_create_local(
             logger.warning,
             409,
             str(exc),
-            location_name=payload.location_name,
+            name=payload.name,
             venue_type=str(payload.venue_type) if payload.venue_type else None,
-            address=payload.address,
+            city=payload.address_city,
+            state=payload.address_state,
         )
 
 
-    return _to_local_view(local)
+    return to_local_view(local)
 
 
 # ---------------------------------------------------------------------- #
@@ -283,7 +203,7 @@ def patch_local(
     except KeyError:
         raise_http(logger.warning, 404, "Local not found", local_id=local_id)
 
-    return _to_local_view(local)
+    return to_local_view(local)
 
 
 # ---------------------------------------------------------------------- #
@@ -328,7 +248,7 @@ def post_locals_batch(
             str(exc),
         )
 
-    return [_to_local_view(local) for local in locals_]
+    return [to_local_view(local) for local in locals_]
 
 
 # ---------------------------------------------------------------------- #
@@ -358,6 +278,15 @@ async def upload_locals_csv(
     - venue_type (optional, matches the VenueType enum value)
     - is_accessible (optional, truthy string like 'true', '1', 'yes')
     - address (optional)
+    - external_id
+    - source
+    - is_indoor
+    - has_cover
+    - capacity_seated
+    - capacity_standing
+    - latitude
+    - longitude
+    - timezone
 
     Rules:
     - Rows that cannot be parsed are logged and counted as errors.
@@ -385,33 +314,12 @@ async def upload_locals_csv(
     for idx, row in enumerate(reader, start=1):
         total_rows += 1
         try:
-            location_name = row.get("location_name") or ""
-            capacity_str = row.get("capacity") or "0"
-            venue_type_str = row.get("venue_type") or None
-            is_accessible_str = (row.get("is_accessible") or "").strip().lower()
-            address = row.get("address") or None
+            csv_row = LocalCsvRow.from_csv_row(row)
 
-            if not location_name:
+            if not csv_row.name:
                 raise ValueError("Missing location_name")
-            try:
-                capacity = int(capacity_str)
-            except ValueError:
-                raise ValueError("Invalid capacity value")
 
-            from app.models.event_local_enums import VenueType  # import here to avoid cycles
-            venue_type = None
-            if venue_type_str:
-                venue_type = VenueType(venue_type_str)
-
-            is_accessible = is_accessible_str in {"1", "true", "yes", "y", "sim"}
-
-            payload = LocalCreate(
-                location_name=location_name,
-                capacity=capacity,
-                venue_type=venue_type,
-                is_accessible=is_accessible,
-                address=address,
-            )
+            payload = from_local_csv_row(csv_row)
 
             service.create_local(payload)
             imported += 1
@@ -523,7 +431,7 @@ def download_locals(
     if not locals_:
         raise_http(logger.warning, 404, "No locals found")
 
-    payload = [_to_local_view(local) for local in locals_]
+    payload = [to_local_view(local) for local in locals_]
 
     # Force JSON encoding to avoid issues with non-serializable types
     return JSONResponse(content=jsonable_encoder(payload))

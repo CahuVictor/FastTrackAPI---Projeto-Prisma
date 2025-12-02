@@ -4,16 +4,14 @@ from __future__ import annotations
 import abc
 
 from app.models.event import Event
+from app.models.event_filters import EventFilterCriteria
 
 class EventRepository(abc.ABC):    
     @abc.abstractmethod
     def list(
         self,
         *,
-        skip: int = 0,
-        limit: int = 20,
-        city: str | None = None,
-        # **filters
+        filter: EventFilterCriteria | None,
     ) -> list[Event]:
         """."""
     

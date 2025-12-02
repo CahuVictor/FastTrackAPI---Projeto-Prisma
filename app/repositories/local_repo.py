@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import List
 
 from app.models.local import Local
+from app.models.local_filters import LocalFilterCriteria
 from app.models.event_local_enums import VenueType
 
 
@@ -14,17 +15,7 @@ class LocalRepository(abc.ABC):
     def list(
         self,
         *,
-        skip: int = 0,
-        limit: int = 20,
-        location_name: str | None = None,
-        capacity: int | None = None,
-        venue_type: VenueType | None = None,
-        is_accessible: bool | None = None,
-        address: str | None = None,
-        manually_edited: bool | None = None,
-        created_at: datetime | None = None,
-        updated_at: datetime | None = None,
-        # **filters
+        filter: LocalFilterCriteria | None,
     ) -> list[Local]:
         """
         List locals with pagination and optional filters.

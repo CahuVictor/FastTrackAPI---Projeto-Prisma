@@ -2,24 +2,19 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List
+from typing import Any, Dict, List, Set
 from structlog import get_logger
-import httpx
-import re
-import unicodedata
+import inspect
 
-from app.models.event_local_enums import VenueType
 from app.models.local import Local
-from app.models.local import LocalSource
+from app.models.local_filters import LocalFilterCriteria
+from app.models.local_external_query import ExternalLocalQueryCriteria
+from app.models.event_local_enums import VenueType, LocalSource
 from app.repositories.local_repo import LocalRepository
 from app.schemas.local.local_create import LocalCreate
 from app.schemas.local.local_update import LocalUpdate
 from app.utils.text_normalization import normalize_text
-
-class DuplicateLocalError(Exception):
-    """Raised when attempting to create or update a Local that already exists
-    with the same normalized (location_name, venue_type, address)."""
-    pass
+from app.services.errors import DuplicateLocalError
 
 logger = get_logger().bind(module="local_service")
 
@@ -33,7 +28,303 @@ class LocalService:
     - Enforcing business rules (manual override vs. external source).
     - Calling the repository (LocalRepository).
     """
+    
+    
+    # ------------------------------------------------------------------ #
+    # Internal helpers for field mapping and diagnostics
+    # ------------------------------------------------------------------ #
+    @staticmethod
+    def _get_model_field_names(model_or_instance: Any) -> Set[str]:
+        """
+        Best-effort helper to retrieve field names from Pydantic v1/v2 models
+        or plain dataclasses/objects.
 
+        Returns:
+            A set of field names for the given model/instance.
+        """
+        # Pydantic v2
+        fields = getattr(model_or_instance, "model_fields", None)
+        if isinstance(fields, dict):
+            return set(fields.keys())
+
+        # Pydantic v1
+        fields = getattr(model_or_instance, "__fields__", None)
+        if isinstance(fields, dict):
+            return set(fields.keys())
+
+        # Fallback: use __dict__ keys if it's an instance
+        if hasattr(model_or_instance, "__dict__"):
+            return set(model_or_instance.__dict__.keys())
+
+        return set()
+
+    def _log_unused_fields(
+        self,
+        context: str,
+        source_name: str,
+        used_fields: Set[str],
+        model_or_instance: Any,
+        ignore_fields: Set[str] | None = None,
+    ) -> None:
+        """
+        Logs a warning if there are fields defined in the model that are not
+        used by the mapping logic.
+
+        Args:
+            context: Logical context, e.g. "create_local" or "update_local".
+            source_name: Name of the model, e.g. "LocalCreate" or "Local".
+            used_fields: Set of field names that are actively mapped/used.
+            model_or_instance: Pydantic model class/instance or dataclass.
+            ignore_fields: Fields that are expected to be ignored (e.g. id).
+        """
+        all_fields = self._get_model_field_names(model_or_instance)
+        ignored = ignore_fields or set()
+        unused = all_fields - used_fields - ignored
+
+        if unused:
+            logger.warning(
+                "Unused fields detected in mapping",
+                context=context,
+                model=source_name,
+                unused_fields=sorted(unused),
+            )
+
+    def _build_local_from_create(self, payload: LocalCreate) -> Local:
+        """
+        Build a Local domain entity from a LocalCreate payload.
+
+        This helper also:
+        - Validates that all mapped fields exist in both LocalCreate and Local.
+        - Raises ValueError if the mapping references a non-existing field.
+        - Logs warnings for fields present in LocalCreate or Local that are
+          not used by the mapping (to simplify future refactors/debugging).
+
+        Returns:
+            A Local domain entity (not yet persisted).
+        """
+        # Default source rule
+        source = payload.source or LocalSource.MANUAL
+
+        # # Explicit mapping between LocalCreate fields and Local fields
+        # field_map: Dict[str, str] = {
+        #     "location_name": "location_name",   # or "name" if o modelo estiver assim
+        #     "capacity": "capacity",
+        #     "venue_type": "venue_type",
+        #     "is_accessible": "is_accessible",
+        #     "address": "address",               # se Local ainda tiver "address"
+        #     "external_id": "external_id",
+        #     "is_indoor": "is_indoor",
+        #     "has_cover": "has_cover",
+        #     "capacity_seated": "capacity_seated",
+        #     "capacity_standing": "capacity_standing",
+        #     "latitude": "latitude",
+        #     "longitude": "longitude",
+        #     "timezone": "timezone",
+        #     # source será calculado, mas também existe em Local/LocalCreate
+        #     "source": "source",
+        # }
+
+        # # --- Validation of mapping against models -----------------------
+        # payload_fields = self._get_model_field_names(LocalCreate)
+        # local_fields = self._get_model_field_names(Local)
+
+        # # All mapped source fields must exist in LocalCreate
+        # for src in field_map.keys():
+        #     if src not in payload_fields:
+        #         raise ValueError(
+        #             f"Mapping references field '{src}' which does not exist in LocalCreate"
+        #         )
+
+        # # All mapped target fields must exist in Local
+        # for dst in field_map.values():
+        #     if dst not in local_fields:
+        #         raise ValueError(
+        #             f"Mapping references field '{dst}' which does not exist in Local"
+        #         )
+
+        # used_payload_fields = set(field_map.keys())
+        # used_local_fields = set(field_map.values())
+
+        # # Fields we explicitly expect to be managed elsewhere in Local
+        # ignore_local_fields: Set[str] = {
+        #     "id",
+        #     "created_at",
+        #     "updated_at",
+        #     "manually_edited",
+        #     "parking_available",
+        #     "images",
+        #     "contact_phone",
+        # }
+
+        # # Log unused fields from LocalCreate and Local
+        # self._log_unused_fields(
+        #     context="create_local",
+        #     source_name="LocalCreate",
+        #     used_fields=used_payload_fields,
+        #     model_or_instance=LocalCreate,
+        # )
+        # self._log_unused_fields(
+        #     context="create_local",
+        #     source_name="Local",
+        #     used_fields=used_local_fields,
+        #     model_or_instance=Local,
+        #     ignore_fields=ignore_local_fields,
+        # )
+
+        # # --- Build the kwargs for Local ---------------------------------
+        # local_kwargs: Dict[str, Any] = {}
+
+        # for src, dst in field_map.items():
+        #     value = getattr(payload, src)
+        #     # Special handling for source: override with default if None
+        #     if src == "source":
+        #         value = source
+        #     local_kwargs[dst] = value
+
+        # # Extra defaults that are domain-specific
+        # local_kwargs.setdefault("parking_available", False)
+        # local_kwargs.setdefault("contact_phone", None)
+        # local_kwargs.setdefault("images", [])
+        # # Regra de negócio: criado manualmente → manual override
+        # local_kwargs.setdefault(
+        #     "manually_edited",
+        #     source == LocalSource.MANUAL,
+        # )
+
+        # return Local(**local_kwargs)
+        return Local(
+            name=payload.name,
+            capacity=payload.capacity,
+            is_accessible=payload.is_accessible,
+            parking_available=payload.parking_available,
+            
+            # Address Block
+            address_street=payload.address_street,
+            address_city=payload.address_city,
+            address_state=payload.address_state,
+            # 
+            # # geo & timezone
+            latitude=payload.latitude,
+            longitude=payload.longitude,
+            timezone=payload.timezone,
+            # integration and origin metadata
+            external_id=payload.external_id,
+            source=source,
+            
+            # physical characteristics
+            is_indoor=payload.is_indoor,
+            has_cover=payload.has_cover,
+            capacity_seated=payload.capacity_seated,
+            capacity_standing=payload.capacity_standing,
+            
+            contact_phone=payload.contact_phone,
+            images=payload.images,
+            
+            venue_type=payload.venue_type,
+        )
+
+    def _apply_update_from_payload(self, local: Local, payload: LocalUpdate) -> None:
+        """
+        Apply patch semantics from LocalUpdate to an existing Local entity.
+
+        Fields with value None in payload are ignored.
+        This helper also logs unused fields to help keep mapping and model aligned.
+        """
+        field_map: Dict[str, str] = {
+            "location_name": "location_name",
+            "capacity": "capacity",
+            "venue_type": "venue_type",
+            "is_accessible": "is_accessible",
+            "address": "address",
+            "external_id": "external_id",
+            "source": "source",
+            "is_indoor": "is_indoor",
+            "has_cover": "has_cover",
+            "capacity_seated": "capacity_seated",
+            "capacity_standing": "capacity_standing",
+            "latitude": "latitude",
+            "longitude": "longitude",
+            "timezone": "timezone",
+            "manually_edited": "manually_edited",
+        }
+
+        payload_fields = self._get_model_field_names(LocalUpdate)
+        local_fields = self._get_model_field_names(Local)
+
+        # Validate mapping references
+        for src in field_map.keys():
+            if src not in payload_fields:
+                raise ValueError(
+                    f"Update mapping references field '{src}' "
+                    f"which does not exist in LocalUpdate"
+                )
+        for dst in field_map.values():
+            if dst not in local_fields:
+                raise ValueError(
+                    f"Update mapping references field '{dst}' "
+                    f"which does not exist in Local"
+                )
+
+        used_payload_fields = set(field_map.keys())
+        used_local_fields = set(field_map.values())
+
+        ignore_local_fields: Set[str] = {
+            "id",
+            "created_at",
+            "updated_at",
+            "parking_available",
+            "images",
+            "contact_phone",
+        }
+
+        self._log_unused_fields(
+            context="update_local",
+            source_name="LocalUpdate",
+            used_fields=used_payload_fields,
+            model_or_instance=LocalUpdate,
+        )
+        self._log_unused_fields(
+            context="update_local",
+            source_name="Local",
+            used_fields=used_local_fields,
+            model_or_instance=Local,
+            ignore_fields=ignore_local_fields,
+        )
+
+        # Apply only non-None values
+        for src, dst in field_map.items():
+            value = getattr(payload, src)
+            if value is not None:
+                setattr(local, dst, value)
+
+        # Regra específica para manually_edited:
+        # - Se o payload trouxer um valor explícito, respeitamos.
+        # - Caso contrário, qualquer update feito pelo sistema marca como True.
+        if payload.manually_edited is None:
+            local.manually_edited = True
+
+    def _from_filters_to_dict(self, filters: LocalFilterCriteria):
+        # Dict com apenas campos preenchidos (None removido)
+        raw_filters = filters.model_dump(exclude_none=True)
+
+        # Descobre quais parâmetros o repositório realmente aceita
+        repo_sig = inspect.signature(self.repo.list)
+        allowed_keys = set(repo_sig.parameters.keys())
+
+        repo_kwargs = {k: v for k, v in raw_filters.items() if k in allowed_keys}
+        ignored_for_repo = set(raw_filters.keys()) - allowed_keys
+        if ignored_for_repo:
+            logger.warning(
+                "Some LocalFilterCriteria fields are not supported by repository; ignoring",
+                ignored_fields=sorted(ignored_for_repo),
+            )
+        
+        return repo_kwargs
+
+    # ------------------------------------------------------------------ #
+    # Basic CRUD
+    # ------------------------------------------------------------------ #
+    
     def __init__(self, repo: LocalRepository) -> None:
         """
         Args:
@@ -45,66 +336,33 @@ class LocalService:
     # ------------------------------------------------------------------ #
     # Basic CRUD (internal Local management / fallback for external API)
     # ------------------------------------------------------------------ #
-    def list_locals(
-        self,
-        *,
-        skip: int = 0,
-        limit: int = 20,
-        location_name: str | None = None,
-        capacity: int | None = None,
-        venue_type: VenueType | None = None,
-        is_accessible: bool | None = None,
-        address: str | None = None,
-        manually_edited: bool | None = None,
-        created_at: datetime | None = None,
-        updated_at: datetime | None = None,
-    ) -> List[Local]:
+    def list_locals(self, filters: LocalFilterCriteria) -> list[Local]:
         """
         List locals with pagination and optional filters.
 
         This endpoint returns the locals that the system is effectively using,
         regardless of whether they were originally fetched from the internal
         LocalInfo API or manually created/edited as a fallback.
+        
+        This method returns the locals that the system is effectively using,
+        regardless of whether they were originally fetched from the internal
+        LocalInfo API or manually created/edited as a fallback.
+
+        Unknown filters passed via **extra_filters are ignored, but a warning
+        is logged so that callers and maintainers can align the contract.
 
         Args:
-            skip: How many records to skip (offset).
-            limit: Maximum number of records to return.
-            location_name: Partial or full name to filter by.
-            capacity: Exact capacity filter.
-            venue_type: Filter by venue type.
-            is_accessible: Filter by accessibility flag.
-            address: Partial address filter.
-            manually_edited: Filter by manual override flag.
-            created_at: Return only locals created on or after this timestamp.
-            updated_at: Return only locals updated on or after this timestamp.
+            filters: Strongly-typed filter DTO coming from the controller.
 
         Returns:
             A list of Local entities.
         """
-        locals_ = self.repo.list(
-            skip=skip,
-            limit=limit,
-            location_name=location_name,
-            capacity=capacity,
-            venue_type=venue_type,
-            is_accessible=is_accessible,
-            address=address,
-            manually_edited=manually_edited,
-            created_at=created_at,
-            updated_at=updated_at,
-        )
+        locals_ = self.repo.list(filters)
+        
         logger.info(
             "Locals listed successfully",
             total=len(locals_),
-            skip=skip,
-            limit=limit,
-            location_name=location_name,
-            capacity=capacity,
-            venue_type=str(venue_type) if venue_type else None,
-            is_accessible=is_accessible,
-            manually_edited=manually_edited,
-            created_at=created_at,
-            updated_at=updated_at,
+            filters=filters,
         )
         return locals_
 
@@ -114,19 +372,9 @@ class LocalService:
 
         This method is mainly intended for internal use, such as
         background jobs or administrative tooling.
-        """
-        locals_ = self.repo.list(
-            skip=0,
-            limit=0,
-            location_name=None,
-            capacity=None,
-            venue_type=None,
-            is_accessible=None,
-            address=None,
-            manually_edited=None,
-            created_at=None,
-            updated_at=None,
-        )
+        """    
+        locals_ = self.repo.list()
+        
         logger.info("All locals listed", total=len(locals_))
         return locals_
 
@@ -142,7 +390,7 @@ class LocalService:
         """
         local = self.repo.get(local_id)
         if local:
-            logger.info("Local retrieved", local_id=local_id, location_name=local.location_name)
+            logger.info("Local retrieved", local_id=local_id, location_name=local.name)
         else:
             logger.info("Local not found in get_local", local_id=local_id)
         return local
@@ -162,43 +410,36 @@ class LocalService:
         Any Local created through this service is considered a manual override
         unless a specific source is explicitly provided.
         """
-        source = payload.source or LocalSource.MANUAL
-        
+        # Enforce uniqueness _before_ creating the entity
         if self._is_duplicate_local(
-            location_name=payload.location_name,
+            name=payload.name,
             venue_type=payload.venue_type,
-            address=payload.address,
+            address=None, # payload.address, # TODO
             exclude_id=None,
         ):
             logger.warning(
                 "Attempt to create duplicate Local",
-                location_name=payload.location_name,
+                name=payload.name,
                 venue_type=str(payload.venue_type) if payload.venue_type else None,
-                address=payload.address,
+                city=payload.address_city,
+                state=payload.address_state,
+                # TODO LATITUDE LONGITUDE?
             )
             raise DuplicateLocalError(
                 "A Local with the same name, venue type and address already exists"
             )
 
-        local = Local(
-            location_name=payload.location_name,
-            capacity=payload.capacity,
-            venue_type=payload.venue_type,
-            is_accessible=payload.is_accessible,
-            address=payload.address,
-            manually_edited=True,
-            external_id=payload.external_id,
-            source=source,
-            is_indoor=payload.is_indoor,
-            has_cover=payload.has_cover,
-            capacity_seated=payload.capacity_seated,
-            capacity_standing=payload.capacity_standing,
-            latitude=payload.latitude,
-            longitude=payload.longitude,
-            timezone=payload.timezone,
-        )
+        # Build the domain entity from the payload
+        local = self._build_local_from_create(payload)
+        
         created = self.repo.add(local)
-        logger.info("Local created successfully", local_id=created.id, location_name=created.location_name, source=created.source,)
+        logger.info(
+            "Local created successfully",
+            local_id=created.id,
+            location_name=created.name,
+            source=created.source,
+            created_at=created.created_at,
+        )
         return created
 
     def update_local(self, local_id: int, payload: LocalUpdate) -> Local:
@@ -224,63 +465,36 @@ class LocalService:
             logger.warning("Attempt to update non-existing Local", local_id=local_id)
             raise KeyError("Local not found")
 
-        if payload.location_name is not None:
-            local.location_name = payload.location_name
-        if payload.capacity is not None:
-            local.capacity = payload.capacity
-        if payload.venue_type is not None:
-            local.venue_type = payload.venue_type
-        if payload.is_accessible is not None:
-            local.is_accessible = payload.is_accessible
-        if payload.address is not None:
-            local.address = payload.address
-        
-        if payload.external_id is not None:
-            local.external_id = payload.external_id
-        if payload.source is not None:
-            local.source = payload.source
-        if payload.is_indoor is not None:
-            local.is_indoor = payload.is_indoor
-        if payload.has_cover is not None:
-            local.has_cover = payload.has_cover
-        if payload.capacity_seated is not None:
-            local.capacity_seated = payload.capacity_seated
-        if payload.capacity_standing is not None:
-            local.capacity_standing = payload.capacity_standing
-        if payload.latitude is not None:
-            local.latitude = payload.latitude
-        if payload.longitude is not None:
-            local.longitude = payload.longitude
-        if payload.timezone is not None:
-            local.timezone = payload.timezone
-        
-        if payload.manually_edited is not None:
-            # The caller can force the flag, but we also ensure it becomes True
-            local.manually_edited = payload.manually_edited
-
-        # Always mark as manually edited after any update in our system
-        local.manually_edited = True
+        # Apply patch semantics from payload to entity
+        self._apply_update_from_payload(local, payload)
         
         # Enforce uniqueness after applying changes
         if self._is_duplicate_local(
-            location_name=local.location_name,
+            name=local.name,
             venue_type=local.venue_type,
-            address=local.address,
-            exclude_id=local_id,
+            address=None, # TODO
+            exclude_id=None, # TODO
         ):
             logger.warning(
                 "Attempt to update Local into a duplicate combination",
-                local_id=local_id,
-                location_name=local.location_name,
+                local_id=local.id,
+                name=local.name,
+                capacity=local.capacity,
+                is_accessible=local.is_accessible,
                 venue_type=str(local.venue_type) if local.venue_type else None,
-                address=local.address,
+                
+                
             )
             raise DuplicateLocalError(
                 "Another Local with the same name, venue type and address already exists"
             )
 
         updated = self.repo.update(local)
-        logger.info("Local updated successfully", local_id=updated.id, source=updated.source)
+        logger.info(
+            "Local updated successfully",
+            local_id=updated.id,
+            source=updated.source
+        )
         return updated
 
     def delete_local(self, local_id: int) -> None:
@@ -358,15 +572,7 @@ class LocalService:
     # ------------------------------------------------------------------ #
     async def search_locals_external(
         self,
-        *,
-        location_name: str | None = None,
-        capacity_min: int | None = None,
-        capacity_max: int | None = None,
-        venue_types: list[VenueType] | None = None,
-        is_accessible: bool | None = None,
-        address: str | None = None,
-        skip: int = 0,
-        limit: int = 20,
+        criteria: ExternalLocalQueryCriteria,
     ) -> list[Local]:
         """
         Search venues in the internal LocalInfo API.
@@ -376,30 +582,24 @@ class LocalService:
         to:
         - just show a preview to the user; or
         - import one or more venues into our own Local repository.
+        
+        This method is responsible for:
+        - Translating `ExternalLocalQueryCriteria` into the HTTP payload required
+          by the external API.
+        - Calling the external API client/integration.
+        - Mapping the external payload into domain `Local` instances
+          (without necessarily persisting them in the local repository).
 
         Args:
-            location_name: Name or partial name to search for (fuzzy match).
-            capacity_min: Minimum capacity (inclusive).
-            capacity_max: Maximum capacity (inclusive).
-            venue_types: List of allowed venue types.
-            is_accessible: Filter by accessibility flag.
-            address: Address or partial address for fuzzy search.
-            skip: Pagination offset.
-            limit: Pagination limit.
+            criteria: 
 
         Returns:
             A list of Local domain entities built from the external payload.
+        
+        Raises:
+            NotImplementedError: While the integration is not yet implemented.
         """
-        payload = self._build_external_search_payload(
-            location_name=location_name,
-            capacity_min=capacity_min,
-            capacity_max=capacity_max,
-            venue_types=venue_types,
-            is_accessible=is_accessible,
-            address=address,
-            skip=skip,
-            limit=limit,
-        )
+        payload = self._build_external_search_payload(criteria)
 
         logger.info("Calling external Local API", payload=payload)
 
@@ -435,15 +635,7 @@ class LocalService:
 
     def _build_external_search_payload(
         self,
-        *,
-        location_name: str | None,
-        capacity_min: int | None,
-        capacity_max: int | None,
-        venue_types: list[VenueType] | None,
-        is_accessible: bool | None,
-        address: str | None,
-        skip: int,
-        limit: int,
+        criteria: ExternalLocalQueryCriteria,
     ) -> dict:
         """
         Build the payload (or query parameters) for the external LocalInfo API.
@@ -452,28 +644,53 @@ class LocalService:
         independent of how we persist our own Local entities.
         """
         payload: dict[str, Any] = {
-            "skip": skip,
-            "limit": limit,
+            "skip": criteria.skip,
+            "limit": criteria.limit,
         }
 
-        if location_name is not None:
-            payload["location_name"] = location_name
+        if criteria.name is not None:
+            payload["location_name"] = criteria.name
 
-        if capacity_min is not None:
-            payload["capacity_min"] = capacity_min
+        if criteria.capacity_min is not None:
+            payload["capacity_min"] = criteria.capacity_min
 
-        if capacity_max is not None:
-            payload["capacity_max"] = capacity_max
-
-        if venue_types:
+        if criteria.capacity_max is not None:
+            payload["capacity_max"] = criteria.capacity_max
+            
+        if criteria.is_accessible is not None:
+            payload["is_accessible"] = criteria.is_accessible
+        
+        if criteria.is_accessible is not None:
+            payload["is_accessible"] = criteria.is_accessible
+        
+        
+        if criteria.latitude is not None:
+            payload["is_accessible"] = criteria.latitude
+        
+        if criteria.longitude is not None:
+            payload["is_accessible"] = criteria.longitude
+        
+        
+        # external_id, 
+        
+        
+        # Physical / capacity details
+        if criteria.is_indoor is not None:
+            payload["is_indoor"] = criteria.is_indoor
+        
+        if criteria.has_cover is not None:
+            payload["has_cover"] = criteria.has_cover
+        
+        if criteria.capacity_seated is not None:
+            payload["is_accessible"] = criteria.capacity_seated
+        
+        if criteria.capacity_standing is not None:
+            payload["is_accessible"] = criteria.capacity_standing
+        
+        
+        if criteria.venue_types:
             # Usually we send enum values as strings to external APIs.
-            payload["venue_types"] = [vt.value for vt in venue_types]
-
-        if is_accessible is not None:
-            payload["is_accessible"] = is_accessible
-
-        if address is not None:
-            payload["address"] = address
+            payload["venue_types"] = [vt.value for vt in criteria.venue_types]
 
         return payload
 
@@ -521,17 +738,17 @@ class LocalService:
     # ------------------------------------------------------------------ #
     # Uniqueness rule helpers
     # ------------------------------------------------------------------ #
-    def _is_duplicate_local(
+    def _is_duplicate_local( # TODO atualizar para usar name, venue_type, latitude, longitude. Latitude e Longitude deve ser usado valores próximos calcular a distancia por exemplo
         self,
         *,
-        location_name: str,
+        name: str,
         venue_type: VenueType | None,
         address: str | None,
         exclude_id: int | None = None,
     ) -> bool:
         """
         Checks whether there is already a Local with the same
-        (location_name, venue_type, address) combination.
+        (name, venue_type, address) combination.
 
         Comparison is:
         - case-insensitive,
@@ -549,25 +766,38 @@ class LocalService:
             True if another Local with the same normalized triple exists,
             False otherwise.
         """
-        norm_name = normalize_text(location_name)
+        norm_name = normalize_text(name)
         norm_addr = normalize_text(address)
 
         for existing in self.list_all_locals():
             if exclude_id is not None and existing.id == exclude_id:
                 continue
 
-            if normalize_text(existing.location_name) != norm_name:
+            if normalize_text(existing.name) != norm_name:
                 continue
 
             if existing.venue_type != venue_type:
                 continue
 
-            if normalize_text(existing.address) != norm_addr:
-                continue
+            # if normalize_text(existing.address) != norm_addr: # TODO
+            #     continue
 
             return True
 
         return False
+    
+    def _build_conflict_key(self, local: Local) -> str:
+        """
+        Build a normalized key used to detect possible duplicate Locals.
+
+        The key combines normalized location_name, address and venue_type.
+        """
+        name_norm = normalize_text(local.name or "")
+        # addr_norm = normalize_text(local.address or "") # TODO
+        venue_norm = (
+            normalize_text(local.venue_type.value) if local.venue_type is not None else ""
+        )
+        # return "|".join([name_norm, addr_norm, venue_norm]) # TODO
     
     async def sync_local_from_external(self, local_id: int) -> Local:
         """
@@ -601,17 +831,10 @@ class LocalService:
 
     async def import_locals_from_external(
         self,
-        *,
-        location_name: str | None = None,
-        capacity_min: int | None = None,
-        capacity_max: int | None = None,
-        venue_types: list[VenueType] | None = None,
-        is_accessible: bool | None = None,
-        address: str | None = None,
-        limit: int = 50,
+        criteria: ExternalLocalQueryCriteria,
     ) -> list[Local]:
         """
-        Import Locals from the external LocalInfo API into the internal repository.
+        Import Locals from the external Local API into the internal repository.
 
         Flow (to be implemented):
         - Build a payload with the given filters.
@@ -622,31 +845,25 @@ class LocalService:
             - update existing ones based on external_id,
             - or skip duplicates.
         - Return the list of persisted Local entities.
-        """
-        logger.info(
-            "import_locals_from_external called but not implemented",
-            location_name=location_name,
-            capacity_min=capacity_min,
-            capacity_max=capacity_max,
-            venue_types=[str(v) for v in venue_types] if venue_types else None,
-            is_accessible=is_accessible,
-            address=address,
-            limit=limit,
-        )
-        raise NotImplementedError("External LocalInfo bulk import not implemented yet")
-    
-    def _build_conflict_key(self, local: Local) -> str:
-        """
-        Build a normalized key used to detect possible duplicate Locals.
+        
+        Responsibilities:
+        - Use `ExternalLocalQueryCriteria` to fetch venues from the external API.
+        - Map them into domain `Local` instances.
+        - Persist them via the Local repository, taking care to:
+          * avoid duplicates (according to domain rules);
+          * set proper `source` / `external_id`.
 
-        The key combines normalized location_name, address and venue_type.
+        Returns:
+            List of `Local` entities that were actually imported.
+
+        Raises:
+            NotImplementedError: While the integration is not yet implemented.
         """
-        name_norm = normalize_text(local.location_name or "")
-        addr_norm = normalize_text(local.address or "")
-        venue_norm = (
-            normalize_text(local.venue_type.value) if local.venue_type is not None else ""
-        )
-        return "|".join([name_norm, addr_norm, venue_norm])
+        payload = self._build_external_search_payload(criteria)
+
+        logger.info("import_locals_from_external called but not implemented", payload=payload)
+
+        raise NotImplementedError("External LocalInfo bulk import not implemented yet")
 
     def find_conflicting_locals(self) -> list[list[Local]]:
         """
