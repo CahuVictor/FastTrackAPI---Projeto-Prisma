@@ -61,46 +61,14 @@ class LogoutRequest(BaseModel):
 # @limiter.limit("10/minute")
 def login(
     request: Request,  # ? Necessário para funcionar com @limiter.limit
-    # TODO 
     payload: AuthLogin,
     service: AuthService = _provide_auth_service,
-    # form_data: OAuth2PasswordRequestForm = Depends(),
-    # repo: UserRepository = Depends(provide_user_repo),
-    # TODO 
 ) -> AuthToken:
     """
     Perform login with username and password.
 
     Returns an access token and a refresh token (if enabled).
     """
-    # logger.info("Tentativa de login recebida", username=form_data.username)
-    # user = authenticate(form_data.username, form_data.password, repo=repo)
-    # if not user:
-    #     raise_http(logger.warning, 401, "Credenciais inválidas", username=form_data.username)
-    # user_agent = request.headers.get("User-Agent")
-    # ip_address = request.client.host if request.client else None
-    
-    # gera token “enxuto” (sub + exp)
-    # access_token = create_access_token(subject=user.username)
-    # se quiser voltar a embutir papéis, use:
-    # access_token = create_access_token(user.username, roles=user.roles)
-    
-    # try:
-    #     access_token, refresh_token, expires_in = auth_service.login(
-    #         username=payload.username,
-    #         password=payload.password,
-    #         user_agent=user_agent,
-    #         ip_address=ip_address,
-    #     )
-    # except InvalidCredentialsError as exc:
-    #     logger.info("Login failed", username=payload.username)
-    #     raise HTTPException(
-    #         status_code=status.HTTP_401_UNAUTHORIZED,
-    #         detail="Incorrect username or password",
-    #     ) from exc
-
-    # logger.info("Login bem-sucedido", username=user.username)
-    
     access_token, refresh_token, expires_in = service.authenticate_and_issue_token(
         username=payload.username,
         password=payload.password,

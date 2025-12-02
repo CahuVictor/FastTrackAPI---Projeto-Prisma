@@ -10,7 +10,7 @@ from app.core.deps import provide_user_service
 from app.schemas.user.user_create import UserCreate
 from app.schemas.user.user_update import UserUpdate
 from app.schemas.user.user_view import UserView
-from app.schemas.common import MessageResponse
+from app.schemas.common.common import MessageResponse
 from app.models.user import User
 from app.services.user_service import ( # user_service
     UserService,
@@ -84,7 +84,7 @@ def _from_user_view(view: UserView) -> User:
 def listar_usuarios(
     request: Request,  # Necessário para funcionar com @limiter.limit
     service: UserService = _provide_user_service,
-):
+) -> UserView:
     """
     Endpoint que lista todos os usuários cadastrados.
 
@@ -113,7 +113,7 @@ def buscar_usuario(
     request: Request,  # Necessário para funcionar com @limiter.limit
     username: str,
     service: UserService = _provide_user_service,
-):
+) -> UserView:
     """
     Endpoint que busca um usuário a partir do username.
 
@@ -144,7 +144,7 @@ def criar_usuario(
     request: Request,  # Necessário para funcionar com @limiter.limit
     payload: UserCreate,
     service: UserService = _provide_user_service,
-):
+) -> UserView:
     """
     Endpoint responsável por criar um novo usuário.
 

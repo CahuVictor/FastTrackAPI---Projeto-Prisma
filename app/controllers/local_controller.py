@@ -498,67 +498,6 @@ def post_merge_locals(
     return LocalView.model_validate(merged)
 
 
-@router.get(
-    "/suggestions-for-event/{event_id}",
-    summary="Suggest locals for a given event",
-    response_model=list[LocalView],
-    dependencies=[auth_dep, Depends(require_roles("admin", "editor", "viewer"))],
-    responses={
-        200: {"description": "Suggested locals returned."},
-        404: {"description": "Event not found."},
-    },
-)
-def suggest_locals_for_event(
-    event_id: int, # = Path(..., description="Event identifier"),
-    max_results: int = Query(
-        10, ge=1, le=50, description="Maximum number of suggestions to return"
-    ),
-    local_service: LocalService = _provide_local_service,
-    event_service: EventService = _provide_event_service,
-) -> list[LocalView]:
-    """
-    Suggest locals for a given event.
-
-    Current heuristic (simple placeholder):
-    - Ensures the event exists.
-    - Returns up to `max_results` locals, ordered by capacity (when available)
-      and location_name.
-
-    This can be improved later to take into account city, expected audience,
-    indoor/outdoor, etc.
-    """
-    event = event_service.get_event(event_id)
-    if not event:
-        raise_http(logger.warning, 404, "Event not found", event_id=event_id)
-
-    locals_ = local_service.list_locals(
-        skip=0,
-        limit=0,  # fetch all, we'll slice manually
-        location_name=None,
-        capacity=None,
-        venue_type=None,
-        is_accessible=None,
-        address=None,
-        manually_edited=None,
-        created_at=None,
-        updated_at=None,
-    )
-
-    # simple ordering: by capacity (None last) then by name
-    locals_sorted = sorted(
-        locals_,
-        key=lambda l: (
-            l.capacity is None,
-            l.capacity if l.capacity is not None else 0,
-            (l.location_name or "").lower(),
-        ),
-    )
-
-    locals_sorted = locals_sorted[:max_results]
-
-    return [LocalView.model_validate(local) for local in locals_sorted]
-
-
 # # ---------------------------------------------------------------------- #
 # # PATCH /{event_id}/local
 # # ---------------------------------------------------------------------- #

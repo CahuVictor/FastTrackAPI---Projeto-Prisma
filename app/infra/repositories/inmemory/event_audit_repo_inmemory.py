@@ -5,14 +5,14 @@ from typing import Dict, List
 from structlog import get_logger
 
 from app.infra.db.tables.event_audit_table import EventAuditTable
-from app.services.event_audit_service import EventAuditRepository
+from app.repositories.event_audit_repo import EventAuditRepository
 
 logger = get_logger().bind(module="event_audit_repo_inmemory")
 
 
 class EventAuditRepoInMemory(EventAuditRepository):
     """
-    In-memory implementation of EventAuditRepositoryProtocol.
+    In-memory implementation of EventAuditRepository.
 
     This repository is useful for:
     - unit tests (no database required);
@@ -102,6 +102,23 @@ class EventAuditRepoInMemory(EventAuditRepository):
         )
         return logs
 
+    # def list_all(self) -> List[EventAuditTable]:
+    #     """
+    #     Return all audit log entries stored in memory.
+
+    #     Returns:
+    #         List of EventAuditTable entries ordered by `changed_at`
+    #         ascending.
+    #     """
+    #     logs = list(self._storage.values())
+    #     logs.sort(key=lambda a: a.changed_at)
+
+    #     logger.info(
+    #         "All event audit logs fetched from memory",
+    #         total=len(logs),
+    #     )
+    #     return logs
+
     def list_recent(self, limit: int = 50) -> List[EventAuditTable]:
         """
         Return the most recent audit log entries across all events.
@@ -129,3 +146,12 @@ class EventAuditRepoInMemory(EventAuditRepository):
             limit=limit,
         )
         return selected
+
+	# # Opcional: helper para testes
+    # def clear(self) -> None:
+    #     """
+    #     Clear all stored audit records (mainly for testing purposes).
+    #     """
+    #     self._storage.clear()
+    #     self._next_id = 1
+    #     logger.info("All in-memory event audit logs have been cleared")
