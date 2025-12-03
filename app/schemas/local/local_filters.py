@@ -6,7 +6,7 @@ from typing import Annotated
 
 from pydantic import BaseModel, Field, ConfigDict
 
-from app.models.event_local_enums import VenueType, LocalSource
+from app.models.enums import VenueType, LocalSource
 
 
 class LocalFilters(BaseModel):

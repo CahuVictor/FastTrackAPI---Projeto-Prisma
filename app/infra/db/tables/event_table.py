@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from datetime import datetime
 
 from app.infra.db.base import Base
-from app.models.event_local_enums import EventStatus, EventEnvironment
+from app.models.enums import EventStatus, EventEnvironment
 
 if TYPE_CHECKING:
     from app.infra.db.tables.local_table import LocalTable

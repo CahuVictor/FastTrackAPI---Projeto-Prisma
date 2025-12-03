@@ -83,3 +83,26 @@ class EventEnvironment(str, Enum):
     OUTDOOR = "outdoor"
     HYBRID = "hybrid"
     UNRESTRICTED = "unrestricted"
+
+class AuditAction(str, Enum):
+    """
+    Allowed action types for audit entries.
+
+    Values:
+        CREATED:
+            A new row was inserted.
+        UPDATED:
+            An existing row was modified.
+        DELETED:
+            A row was hard-deleted (physically removed).
+        SOFT_DELETED:
+            A row was logically deleted (soft delete flag set).
+        RESTORED:
+            A previously soft-deleted row was restored.
+    """
+
+    CREATED = "created"
+    UPDATED = "updated"
+    DELETED = "deleted"
+    SOFT_DELETED = "soft_deleted"
+    RESTORED = "restored"

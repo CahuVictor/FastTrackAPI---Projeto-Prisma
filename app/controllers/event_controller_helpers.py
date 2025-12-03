@@ -5,7 +5,7 @@ from structlog import get_logger
 
 from app.models.event import Event
 from app.models.event_filters import EventFilterCriteria
-from app.models.event_local_enums import EventStatus, EventEnvironment
+from app.models.enums import EventStatus, EventEnvironment
 from app.schemas.event.event_view import EventView
 from app.schemas.event.event_filters import EventFilters
 from app.schemas.event.event_csv_row import EventCsvRow

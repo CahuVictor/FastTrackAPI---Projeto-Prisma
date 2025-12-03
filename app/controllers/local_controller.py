@@ -20,7 +20,7 @@ from app.schemas.local.local_conflict_group import LocalConflictGroup
 from app.schemas.local.local_merge_request import LocalMergeRequest
 from app.schemas.local.local_csv_row import LocalCsvRow
 from app.models.local import Local
-from app.models.event_local_enums import VenueType
+from app.models.enums import VenueType
 from app.services.event_service import EventService
 from app.services.local_service import LocalService
 from app.services.errors import DuplicateLocalError

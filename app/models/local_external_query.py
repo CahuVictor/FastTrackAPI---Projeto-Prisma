@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List
 
-from app.models.event_local_enums import VenueType
+from app.models.enums import VenueType
 
 
 @dataclass(slots=True)

@@ -5,7 +5,7 @@ from structlog import get_logger
 
 from app.models.local import Local
 from app.models.local_filters import LocalFilterCriteria
-from app.models.event_local_enums import VenueType, LocalSource
+from app.models.enums import VenueType, LocalSource
 from app.schemas.local.local_create import LocalCreate
 from app.schemas.local.local_view import LocalView
 from app.schemas.local.local_filters import LocalFilters

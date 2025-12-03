@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field, field_validator, ValidationInfo
 from typing import Annotated, Any
 from datetime import datetime, timezone
 
-from app.models.event_local_enums import EventStatus, EventEnvironment
+from app.models.enums import EventStatus, EventEnvironment
 
 class EventCreate(BaseModel):
     """

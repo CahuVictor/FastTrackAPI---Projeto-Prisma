@@ -7,7 +7,7 @@ from typing import List
 
 from app.models.local import Local
 from app.models.local_filters import LocalFilterCriteria
-from app.models.event_local_enums import VenueType
+from app.models.enums import VenueType
 
 
 class LocalRepository(abc.ABC):

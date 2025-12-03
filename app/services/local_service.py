@@ -9,7 +9,7 @@ import inspect
 from app.models.local import Local
 from app.models.local_filters import LocalFilterCriteria
 from app.models.local_external_query import ExternalLocalQueryCriteria
-from app.models.event_local_enums import VenueType, LocalSource
+from app.models.enums import VenueType, LocalSource
 from app.repositories.local_repo import LocalRepository
 from app.schemas.local.local_create import LocalCreate
 from app.schemas.local.local_update import LocalUpdate

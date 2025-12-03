@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import List, Annotated
 from pydantic import BaseModel, Field
 
-from app.models.event_local_enums import VenueType
+from app.models.enums import VenueType
 
 
 class ExternalLocalSearch(BaseModel):

@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
-from app.models.event_local_enums import EventStatus, EventEnvironment
+from app.models.enums import EventStatus, EventEnvironment
 
 @dataclass(slots=True, kw_only=True)
 class Event:

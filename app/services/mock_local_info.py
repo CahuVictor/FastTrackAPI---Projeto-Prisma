@@ -5,7 +5,7 @@ from structlog import get_logger
 from app.schemas.local.local_create import LocalInfoResponse
 from app.services.interfaces.local_info_protocol import AbstractLocalInfoService
 
-from app.models.event_local_enums import VenueType
+from app.models.enums import VenueType
 
 logger = get_logger().bind(module="mock_local_info")
 

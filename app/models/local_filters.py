@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import List
 
-from app.models.event_local_enums import VenueType, LocalSource
+from app.models.enums import VenueType, LocalSource
 
 
 @dataclass(slots=True)

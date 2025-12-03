@@ -6,7 +6,7 @@ from structlog import get_logger
 
 from app.infra.db.tables.local_table import LocalTable
 from app.models.local import Local
-from app.models.event_local_enums import VenueType
+from app.models.enums import VenueType
 from app.repositories.local_repo import LocalRepository
 
 

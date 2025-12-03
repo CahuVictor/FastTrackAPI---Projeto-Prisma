@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field, ConfigDict
 from typing import Annotated
 from datetime import datetime
 
-from app.models.event_local_enums import EventStatus, EventEnvironment
+from app.models.enums import EventStatus, EventEnvironment
 
 class EventUpdate(BaseModel):
     """

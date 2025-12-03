@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field, ConfigDict
 from typing import Annotated
 from datetime import datetime
 
-from app.models.event_local_enums import VenueType
+from app.models.enums import VenueType
 from app.models.local import LocalSource
 
 class LocalUpdate(BaseModel):

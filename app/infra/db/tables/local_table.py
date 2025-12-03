@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from datetime import datetime
 
 from app.infra.db.base import Base
-from app.models.event_local_enums import VenueType
+from app.models.enums import VenueType
 
 if TYPE_CHECKING:
     from app.infra.db.tables.event_table import EventTable

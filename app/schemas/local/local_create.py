@@ -2,7 +2,7 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import Annotated
 
-from app.models.event_local_enums import VenueType
+from app.models.enums import VenueType
 from app.models.local import LocalSource
 
 class LocalCreate(BaseModel):
