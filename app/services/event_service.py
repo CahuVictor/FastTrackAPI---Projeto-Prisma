@@ -8,10 +8,11 @@ from structlog import get_logger
 from app.models.event import Event
 from app.models.event_patch import EventPatch
 from app.models.event_filters import EventFilterCriteria
+from app.models.audit_log_input import AuditLogInput
+from app.models.enums import AuditEntityName
 from app.repositories.event_repo import EventRepository
 from app.utils.h_events import order_and_slice, ensure_aware
-
-from app.services.event_audit_service import EventAuditService, EventAuditAction
+from app.services.audit_service import AuditService
 
 logger = get_logger().bind(module="event_service")
 
@@ -82,13 +83,13 @@ class EventService:
     - mapping between HTTP schemas and the Event domain entity;
     - business rules (status, views, time-based filters);
     - calls to the EventRepository (SQLAlchemy, in-memory, etc.).
-    - optional audit logging (EventAuditService).
+    - optional audit logging (AuditService).
     """
 
     def __init__(
         self,
         repo: EventRepository,
-        audit_service: EventAuditService | None = None,
+        audit_service: AuditService | None = None,
     ) -> None:
         """
         Args:
@@ -97,7 +98,7 @@ class EventService:
                 persist and retrieve Event entities.
                 (SQLAlchemy, InMemory, etc.).
             audit_service:
-                Optional EventAuditService used to record audit logs.
+                Optional AuditService used to record audit logs.
                 If None, audit logging is simply skipped.
         """
         self.repo = repo
@@ -106,22 +107,31 @@ class EventService:
     # ------------------------------------------------------------------ #
     # Internal helpers
     # ------------------------------------------------------------------ #
-    def _safe_log_created(self, event: Event, changed_by: str | None) -> None:
+    def _safe_log_created(self, event: Event, changed_by: int | None) -> None:
         """
         Internal helper to log a 'created' action if audit_service is set.
         """
         if not self.audit_service or event.id is None:
             return
-        self.audit_service.log_created(
-            event=event,
-            changed_by=changed_by,
+        
+        audit_log = AuditLogInput(
+            entity_name=AuditEntityName.EVENTS,
+            row_id=event.id,
+            changed_by_user_id=None, # TODO adicionar o changed_by_user_id
+            changes=None,
             snapshot=self._snapshot_from_event(event),
+            reason="User created event",
+            ip_address=None,
+            changed_at=None
         )
+            
+        
+        self.audit_service.log_created(audit_log)
 
     def _safe_log_updated(
         self,
         event: Event,
-        changed_by: str | None,
+        changed_by: int | None,
         changes: dict | None,
     ) -> None:
         """
@@ -129,24 +139,39 @@ class EventService:
         """
         if not self.audit_service or event.id is None:
             return
-        self.audit_service.log_updated(
-            event=event,
-            changed_by=changed_by,
+        
+        audit_log = AuditLogInput(
+            entity_name=AuditEntityName.EVENTS,
+            row_id=event.id,
+            changed_by_user_id=None, # TODO adicionar o changed_by_user_id
             changes=changes,
             snapshot=self._snapshot_from_event(event),
+            reason="User updated event",
+            ip_address=None,
+            changed_at=None
         )
+        
+        self.audit_service.log_updated(audit_log)
 
-    def _safe_log_deleted(self, event: Event, changed_by: str | None) -> None:
+    def _safe_log_deleted(self, event: Event, changed_by: int | None) -> None:
         """
         Internal helper to log a 'deleted' action if audit_service is set.
         """
         if not self.audit_service or event.id is None:
             return
-        self.audit_service.log_deleted(
-            event=event,
-            changed_by=changed_by,
-            snapshot=self._snapshot_from_event(event),
+        
+        audit_log = AuditLogInput(
+            entity_name=AuditEntityName.EVENTS,
+            row_id=event.id,
+            changed_by_user_id=None, # TODO adicionar o changed_by_user_id
+            changes=None,
+            snapshot=None,
+            reason="User deleted event",
+            ip_address=None,
+            changed_at=None
         )
+        
+        self.audit_service.log_deleted(audit_log)
 
     def _snapshot_from_event(self, event: Event) -> dict:
         """
@@ -300,7 +325,6 @@ class EventService:
         # Aplica alterações e coleta diff
         event, changes = _apply_event_changes(event, patch)
         
-        # audit only if something really changed
         if changes:
             updated = self.repo.update(event)
             logger.info("Event updated successfully", event_id=updated.id) # "Evento atualizado com sucesso"

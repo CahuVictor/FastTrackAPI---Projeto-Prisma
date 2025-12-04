@@ -6,7 +6,7 @@ from structlog import get_logger
 from app.infra.repositories.inmemory.auth_session_repo_inmemory import AuthSessionRepoInMemory
 from app.infra.repositories.inmemory.user_repo_inmemory import UserRepoInMemory
 from app.infra.repositories.inmemory.event_repo_inmemory import EventRepoInMemory
-from app.infra.repositories.inmemory.event_audit_repo_inmemory import EventAuditRepoInMemory
+from app.infra.repositories.inmemory.audit_repo_inmemory import AuditRepoInMemory
 from app.infra.repositories.inmemory.local_repo_inmemory import LocalRepoInMemory
 
 logger = get_logger().bind(module="deps_singletons")
@@ -15,7 +15,7 @@ logger = get_logger().bind(module="deps_singletons")
 _in_memory_auth_session_repo_instance: AuthSessionRepoInMemory | None = None
 _in_memory_user_repo_instance: UserRepoInMemory | None = None
 _in_memory_event_repo_instance: EventRepoInMemory | None = None
-_in_memory_event_audit_repo_instance: EventAuditRepoInMemory | None = None
+_in_memory_audit_repo_instance: AuditRepoInMemory | None = None
 _in_memory_local_repo_instance: LocalRepoInMemory | None = None
 
 def get_in_memory_auth_session_repo() -> AuthSessionRepoInMemory:
@@ -50,19 +50,19 @@ def get_in_memory_event_repo() -> EventRepoInMemory:
             raise RuntimeError("Repositório Event em memória não foi inicializado corretamente.")
     return _in_memory_event_repo_instance
 
-def get_in_memory_event_audit_repo() -> EventAuditRepoInMemory:
+def get_in_memory_audit_repo() -> AuditRepoInMemory:
     """
-    Lazily create and return the global in-memory EventAudit repository.
+    Lazily create and return the global in-memory Audit repository.
 
     This mirrors the pattern already used for EventRepoInMemory so that
     the same in-memory instance is reused across requests.
     """
-    global _in_memory_event_audit_repo_instance
-    if _in_memory_event_audit_repo_instance is None:
-        _in_memory_event_audit_repo_instance = EventAuditRepoInMemory()
-        if _in_memory_event_audit_repo_instance is None:
-            raise RuntimeError("Repositório EventAudit em memória não foi inicializado corretamente.")
-    return _in_memory_event_audit_repo_instance
+    global _in_memory_audit_repo_instance
+    if _in_memory_audit_repo_instance is None:
+        _in_memory_audit_repo_instance = AuditRepoInMemory()
+        if _in_memory_audit_repo_instance is None:
+            raise RuntimeError("Repositório Audit em memória não foi inicializado corretamente.")
+    return _in_memory_audit_repo_instance
 
 def get_in_memory_local_repo() -> LocalRepoInMemory:
     global _in_memory_local_repo_instance

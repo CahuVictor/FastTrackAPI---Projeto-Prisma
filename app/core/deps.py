@@ -10,22 +10,22 @@ from app.infra.db.session import get_db
 from app.repositories.auth_session_repo import AuthSessionRepository
 from app.repositories.user_repo import UserRepository
 from app.repositories.event_repo import EventRepository
-from app.repositories.event_audit_repo import EventAuditRepository
+from app.repositories.audit_repo import AuditRepository
 from app.repositories.local_repo import LocalRepository
 from app.repositories.forecast_repo import ForecastRepository
 
 from app.infra.repositories.sqlalchemy.user_repo_sqlalchemy import UserRepoSQLAlchemy
 from app.infra.repositories.sqlalchemy.event_repo_sqlalchemy import EventRepoSQLAlchemy
-from app.infra.repositories.sqlalchemy.event_audit_repo_sqlalchemy import EventAuditRepoSQLAlchemy
+from app.infra.repositories.sqlalchemy.audit_repo_sqlalchemy import AuditRepoSQLAlchemy
 from app.infra.repositories.inmemory.auth_session_repo_inmemory import AuthSessionRepoInMemory
 from app.infra.repositories.inmemory.user_repo_inmemory import UserRepoInMemory
 from app.infra.repositories.inmemory.event_repo_inmemory import EventRepoInMemory
-from app.infra.repositories.inmemory.event_audit_repo_inmemory import EventAuditRepoInMemory
+from app.infra.repositories.inmemory.audit_repo_inmemory import AuditRepoInMemory
 from app.infra.repositories.inmemory.local_repo_inmemory import LocalRepoInMemory
 from app.services.auth_service import AuthService
 from app.services.user_service import UserService
 from app.services.event_service import EventService
-from app.services.event_audit_service import EventAuditService
+from app.services.audit_service import AuditService
 from app.services.local_service import LocalService
 
 # from app.services.interfaces.user_protocol import UserRepository
@@ -106,25 +106,25 @@ def provide_event_repo(db: Session = Depends(get_db)) -> EventRepository:
     logger.debug("Injetando repositório Event (SQLAlchemy)")
     return EventRepoSQLAlchemy(db)
 
-def provide_event_audit_repo(db: Session = Depends(get_db)) -> EventAuditRepository:
+def provide_audit_repo(db: Session = Depends(get_db)) -> AuditRepository:
     """
-    Dependency provider for event audit repository.
+    Dependency provider for audit repository.
 
     Rules:
     - If the current EventRepository is in-memory, we also use an
-      in-memory EventAudit repository (global singleton).
-    - Otherwise, we create a SQLAlchemy-based EventAudit repository
+      in-memory Audit repository (global singleton).
+    - Otherwise, we create a SQLAlchemy-based Audit repository
       using the current DB session.
 
     This keeps audit storage aligned with how events are being stored
     in the current environment (tests vs production, etc.).
     """
     if _settings.environment == "test.inmemory":
-        from app.core.deps_singletons import get_in_memory_event_audit_repo
-        logger.debug("Injetando instância global de repositório 'EventAudit' em memória (via singleton manual)")
-        return get_in_memory_event_audit_repo()
-    logger.debug("Injetando repositório 'EventAudit' (SQLAlchemy)")
-    return EventAuditRepoSQLAlchemy(db)
+        from app.core.deps_singletons import get_in_memory_audit_repo
+        logger.debug("Injetando instância global de repositório 'Audit' em memória (via singleton manual)")
+        return get_in_memory_audit_repo()
+    logger.debug("Injetando repositório 'Audit' (SQLAlchemy)")
+    return AuditRepoSQLAlchemy(db)
 
 def provide_local_repo(db: Session = Depends(get_db)) -> None: # LocalRepository:
     """
@@ -160,7 +160,7 @@ async def provide_redis() -> Redis:
 
 def provide_event_service(
     repo: EventRepository = Depends(provide_event_repo),
-    audit_repo: EventAuditRepository = Depends(provide_event_audit_repo),
+    audit_repo: AuditRepository = Depends(provide_audit_repo),
 ) -> EventService:
     """
     Factory de EventService para injeção de dependência nos controllers.
@@ -170,34 +170,34 @@ def provide_event_service(
     
     It wires:
     - the main EventRepository (SQLAlchemy or in-memory);
-    - the EventAuditService, which itself uses the chosen audit repository.
+    - the AuditService, which itself uses the chosen audit repository.
 
     Returns:
         Instância de EventService.
     """
     # return EventService(repo)
-    audit_service = EventAuditService(repo=audit_repo)
+    audit_service = AuditService(repo=audit_repo)
     service = EventService(repo=repo, audit_service=audit_service)
     
     logger.debug("EventService instance created and wired with audit service")
     return service
 
-def provide_event_audit_service(
-    repo: EventAuditRepository = Depends(provide_event_audit_repo),
-) -> EventAuditService:
+def provide_audit_service(
+    repo: AuditRepository = Depends(provide_audit_repo),
+) -> AuditService:
     """
-    Dependency factory for EventAuditService.
+    Dependency factory for AuditService.
 
     It wires:
-    - the chosen EventAuditRepository implementation (in-memory or SQLAlchemy),
-      selected by `provide_event_audit_repo` according to the current
+    - the chosen AuditRepository implementation (in-memory or SQLAlchemy),
+      selected by `provide_audit_repo` according to the current
       environment.
 
     Returns:
-        Configured EventAuditService instance.
+        Configured AuditService instance.
     """
-    service = EventAuditService(repo=repo)
-    logger.debug("EventAuditService instance created and wired with EventAuditRepository")
+    service = AuditService(repo=repo)
+    logger.debug("AuditService instance created and wired with AuditRepository")
     return service
 
 def provide_local_service(

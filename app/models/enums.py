@@ -107,6 +107,25 @@ class AuditAction(str, Enum):
     SOFT_DELETED = "soft_deleted"
     RESTORED = "restored"
 
+class AuditEntityName(str, Enum):
+    """
+    Lista controlada de entidades/tabelas que podem gerar logs de auditoria.
+
+    Usamos string Enum para:
+    - evitar erros de digitação em 'entity_name';
+    - manter compatibilidade com JSON / Pydantic / banco.
+
+    Adicione novos valores conforme forem surgindo novas tabelas auditadas.
+    """
+    EVENTS = "events"
+    USERS = "users"
+    LOCALS = "locals"
+
+    # Exemplo de expansão futura:
+    # FORECASTS = "forecasts"
+    # ASSOCIATIONS = "associations"
+    # RESPONSIBLES = "responsibles"
+
 class AgeRestriction(str, Enum):
     LIVRE = "Livre"
     TEN = "10+"
