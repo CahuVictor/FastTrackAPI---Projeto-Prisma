@@ -5,8 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pydantic import BaseModel
 
-from app.models.event_local_enums import EventStatus
-from app.infra.db.tables.event_audit_table import EventAuditAction
+from app.models.enums import EventStatus, AuditAction
 
 
 @dataclass(slots=True)
@@ -21,7 +20,7 @@ class EventAuditFilterCriteria:
     skip: int = 0
     limit: int = 20
     event_id: int | None = None
-    action: EventAuditAction | None = None
+    action: AuditAction | None = None
     changed_by: str | None = None
     date_from: datetime | None = None
     date_to: datetime | None = None
