@@ -106,3 +106,11 @@ class AuditAction(str, Enum):
     DELETED = "deleted"
     SOFT_DELETED = "soft_deleted"
     RESTORED = "restored"
+
+class AgeRestriction(str, Enum):
+    LIVRE = "Livre"
+    TEN = "10+"
+    TWELVE = "12+"
+    FOURTEEN = "14+"
+    SIXTEEN = "16+"
+    EIGHTEEN = "18+"

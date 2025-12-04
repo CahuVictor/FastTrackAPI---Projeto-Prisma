@@ -3,10 +3,9 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Annotated
-
 from pydantic import BaseModel, Field, ConfigDict
 
-from app.models.enums import EventStatus, EventEnvironment
+from app.models.enums import EventStatus, EventEnvironment, AgeRestriction
 
 
 class EventFilters(BaseModel):
@@ -40,26 +39,31 @@ class EventFilters(BaseModel):
 
     # Core content
     title: Annotated[
-        list[str] | str | None,
+        str | None,
         Field(
             default=None,
-            description="Filter events by title (accepts single value or list).",
+            description="Filter events by title (substring match).",
         ),
     ] = None
 
     description: Annotated[
-        list[str] | str | None,
+        str | None,
         Field(
             default=None,
-            description="Filter events by description (accepts single value or list).",
+            description="Filter events by description (substring match).",
         ),
     ] = None
 
     status: Annotated[
-        list[EventStatus] | EventStatus | None,
+        str | None,
         Field(
             default=None,
-            description="Filter events by lifecycle status (single or multiple).",
+            description=(
+                "Filter events by lifecycle status. "
+                "Accepted values: draft,published,cancelled. "
+                "Multiple values allowed, separated by commas "
+                "(e.g. 'draft,published')."
+            ),
         ),
     ] = None
 
@@ -90,10 +94,15 @@ class EventFilters(BaseModel):
     ] = None
 
     age_restriction: Annotated[
-        list[str] | str | None,
+        str | None,
         Field(
             default=None,
-            description="Filter events by age restriction (single or multiple).",
+            description=(
+                "Filter events by age restriction. "
+                "Accepted values: Livre,10+,12+,14+,16+,18+. "
+                "Multiple values allowed, separated by commas "
+                "(e.g. 'Livre,16+')."
+            ),
         ),
     ] = None
 
@@ -106,19 +115,28 @@ class EventFilters(BaseModel):
     ] = None
 
     environment: Annotated[
-        list[EventEnvironment] | EventEnvironment | None,
+        str | None,
         Field(
             default=None,
-            description="Filter events by environment (single or multiple).",
+            description=(
+                "Filter events by environment. "
+                "Accepted values: indoor,outdoor,hybrid,unrestricted. "
+                "Multiple values allowed, separated by commas "
+                "(e.g. 'indoor,hybrid')."
+            ),
         ),
     ] = None
 
     # Engagement
     participants: Annotated[
-        list[str] | str | None,
+        str | None,
         Field(
             default=None,
-            description="Filter events by participant names (single or multiple).",
+            description=(
+                "Filter events by participant names. "
+                "Multiple values allowed, separated by commas "
+                "(e.g. 'Alice,Bob,Carol')."
+            ),
         ),
     ] = None
 
@@ -190,26 +208,36 @@ class EventFilters(BaseModel):
     ] = None
 
     created_by: Annotated[
-        list[str] | str | None,
+        str | None,
         Field(
             default=None,
-            description="Filter events by user who created them (single or multiple).",
+            description=(
+                "Filter events by user who created them. "
+                "Multiple values allowed, separated by commas "
+                "(e.g. '1,42,99')."
+            ),
         ),
     ] = None
 
     updated_by: Annotated[
-        list[str] | str | None,
+        str | None,
         Field(
             default=None,
-            description="Filter events by user who last updated them (single or multiple).",
+            description=(
+                "Filter events by user who last updated them. "
+                "Multiple values allowed, separated by commas."
+            ),
         ),
     ] = None
 
     deleted_by: Annotated[
-        list[str] | str | None,
+        str | None,
         Field(
             default=None,
-            description="Filter events by user who deleted them (single or multiple).",
+            description=(
+                "Filter events by user who deleted them. "
+                "Multiple values allowed, separated by commas."
+            ),
         ),
     ] = None
 

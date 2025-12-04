@@ -31,42 +31,20 @@ def _apply_filter_and_sort(
     # Core content filters
     # -------------------------
     if filter.title is not None:
-        if isinstance(filter.title, list):
-            needles = [t.lower() for t in filter.title]
-            events_list = [
-                e
-                for e in events_list
-                if any(n in e.title.lower() for n in needles)
-            ]
-        else:
-            needle = filter.title.lower()
-            events_list = [e for e in events_list if needle in e.title.lower()]
+        needle = filter.title.lower()
+        events_list = [e for e in events_list if needle in e.title.lower()]
 
     if filter.description is not None:
-        if isinstance(filter.description, list):
-            needles = [d.lower() for d in filter.description]
-            events_list = [
-                e
-                for e in events_list
-                if any(
-                    n in (e.description or "").lower()
-                    for n in needles
-                )
-            ]
-        else:
-            needle = filter.description.lower()
-            events_list = [
-                e
-                for e in events_list
-                if e.description and needle in e.description.lower()
-            ]
+        needle = filter.description.lower()
+        events_list = [
+            e
+            for e in events_list
+            if e.description and needle in e.description.lower()
+        ]
 
-    if filter.status is not None:
-        if isinstance(filter.status, list):
-            allowed = set(filter.status)
-            events_list = [e for e in events_list if e.status in allowed]
-        else:
-            events_list = [e for e in events_list if e.status == filter.status]
+    if filter.status:
+        allowed_status = set(filter.status)  # list[EventStatus]
+        events_list = [e for e in events_list if e.status in allowed_status]
 
     # -------------------------
     # Scheduling filters
@@ -92,21 +70,14 @@ def _apply_filter_and_sort(
             if e.city is not None and needle in e.city.lower()
         ]
 
-    if filter.age_restriction is not None:
-        if isinstance(filter.age_restriction, list):
-            allowed = {a.lower() for a in filter.age_restriction}
-            events_list = [
-                e
-                for e in events_list
-                if e.age_restriction and e.age_restriction.lower() in allowed
-            ]
-        else:
-            needle = filter.age_restriction.lower()
-            events_list = [
-                e
-                for e in events_list
-                if e.age_restriction and e.age_restriction.lower() == needle
-            ]
+    if filter.age_restriction:
+        # filter.age_restriction: list[AgeRestriction]
+        allowed_age = set(filter.age_restriction)
+        events_list = [
+            e
+            for e in events_list
+            if e.age_restriction is not None and e.age_restriction in allowed_age
+        ]
 
     if filter.expected_audience is not None:
         events_list = [
@@ -115,36 +86,26 @@ def _apply_filter_and_sort(
             if e.expected_audience == filter.expected_audience
         ]
 
-    if filter.environment is not None:
-        if isinstance(filter.environment, list):
-            allowed = set(filter.environment)
-            events_list = [e for e in events_list if e.environment in allowed]
-        else:
-            events_list = [
-                e for e in events_list if e.environment == filter.environment
-            ]
+    if filter.environment:
+        allowed_env = set(filter.environment)  # list[EventEnvironment]
+        events_list = [
+            e for e in events_list if e.environment in allowed_env
+        ]
 
     # -------------------------
     # Engagement filters
     # -------------------------
-    if filter.participants is not None:
-        if isinstance(filter.participants, list):
-            needles = [p.lower() for p in filter.participants]
-            events_list = [
-                e
-                for e in events_list
-                if any(
-                    p.lower() in [ep.lower() for ep in e.participants]
-                    for p in needles
-                )
-            ]
-        else:
-            needle = filter.participants.lower()
-            events_list = [
-                e
-                for e in events_list
-                if any(needle == p.lower() for p in e.participants)
-            ]
+    if filter.participants:
+        # filter.participants: list[str]
+        needles = [p.lower() for p in filter.participants]
+
+        def _match_participants(event: Event) -> bool:
+            if not event.participants:
+                return False
+            event_participants = [p.lower() for p in event.participants]
+            return any(n in event_participants for n in needles)
+
+        events_list = [e for e in events_list if _match_participants(e)]
 
     if filter.views_min is not None:
         events_list = [
@@ -201,37 +162,40 @@ def _apply_filter_and_sort(
             if e.deleted_at is not None and e.deleted_at <= filter.deleted_to
         ]
 
-    # created_by / updated_by / deleted_by como igualdade simples ou lista
-    def _match_str_field(value: str | None, criterion: list[str] | str | None) -> bool:
-        if criterion is None:
+    # -------------------------
+    # created_by / updated_by / deleted_by (listas de strings)
+    # -------------------------
+    def _match_str_list(
+        value: str | int | None,
+        allowed_list: list[str] | None,
+    ) -> bool:
+        if allowed_list is None:
             return True
         if value is None:
             return False
-        if isinstance(criterion, list):
-            allowed = {c.lower() for c in criterion}
-            return value.lower() in allowed
-        return value.lower() == criterion.lower()
+        value_str = str(value).lower()
+        allowed = {v.lower() for v in allowed_list}
+        return value_str in allowed
 
     events_list = [
         e
         for e in events_list
-        if _match_str_field(e.created_by, filter.created_by)
+        if _match_str_list(e.created_by, filter.created_by)
     ]
     events_list = [
         e
         for e in events_list
-        if _match_str_field(e.updated_by, filter.updated_by)
+        if _match_str_list(e.updated_by, filter.updated_by)
     ]
     events_list = [
         e
         for e in events_list
-        if _match_str_field(e.deleted_by, filter.deleted_by)
+        if _match_str_list(e.deleted_by, filter.deleted_by)
     ]
 
     # -------------------------
     # Sorting & pagination
     # -------------------------
-    # Deterministic ordering: by start_time then id
     events_list.sort(key=lambda e: (e.start_time, e.id or 0))
 
     # Pagination
@@ -350,7 +314,7 @@ class EventRepoInMemory(EventRepository):
     def list(
         self,
         *,
-        filter: EventFilterCriteria | None,
+        filter: EventFilterCriteria | None = None,
     ) -> list[Event]:
         """
         Returns a paginated slice of events with optional filters.
@@ -359,12 +323,10 @@ class EventRepoInMemory(EventRepository):
 
         Args:
             skip: Number of records to skip from the beginning.
-            limit: Maximum number of records to return; if <= 0, no limit is applied.
-            city: If provided, filters events whose `city` matches exactly.
-            **filters: Reserved for future dynamic filtering support.
+            filter: 
 
         Returns:
-            A list of Event entities matching the filter and pagination.
+            A list of Event entities matching the filter.
         """
         events_list = list(self._storage.values())
 

@@ -2,20 +2,77 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import List
+from typing import List, Any, Dict
 from structlog import get_logger
 
 from app.models.event import Event
+from app.models.event_patch import EventPatch
 from app.models.event_filters import EventFilterCriteria
-from app.models.event_local_enums import EventStatus
 from app.repositories.event_repo import EventRepository
-from app.schemas.event.event_create import EventCreate
-from app.schemas.event.event_update import EventUpdate
 from app.utils.h_events import order_and_slice, ensure_aware
 
 from app.services.event_audit_service import EventAuditService, EventAuditAction
 
 logger = get_logger().bind(module="event_service")
+
+def _apply_event_changes(
+    event: Event,
+    payload: EventPatch,
+) -> tuple[Event, Dict[str, Dict[str, Any]]]:
+    """
+    Apply partial changes from `payload` onto the given `event`.
+
+    For each non-None field in `payload`, the corresponding attribute in
+    `event` is updated. A `changes` dictionary is built describing the
+    modifications performed.
+
+    Args:
+        event:
+            The current persisted Event entity loaded from the repository.
+        patch:
+            The patch model containing optional new values.
+
+    Returns:
+        A tuple `(event, changes)` where:
+            - `event` is the same instance, mutated with the new values;
+            - `changes` is a dict in the form:
+                {
+                    "field_name": {"old": old_value, "new": new_value},
+                    ...
+                }
+              representing only the fields that actually changed.
+    """
+    changes: Dict[str, Dict[str, Any]] = {}
+
+    def _track_and_set(field: str, new_value: Any) -> None:
+        old_value = getattr(event, field)
+        if old_value != new_value:
+            changes[field] = {"old": old_value, "new": new_value}
+            setattr(event, field, new_value)
+
+    # Lista dos campos do domínio que podem ser atualizados via patch
+    candidate_fields = [
+        "title",
+        "description",
+        "status",
+        "start_time",
+        "end_time",
+        "timezone",
+        "city",
+        "age_restriction",
+        "expected_audience",
+        "environment",
+        "participants",
+    ]
+
+    for field in candidate_fields:
+        if hasattr(payload, field):
+            value = getattr(payload, field)
+            # Em patch, None significa "não enviar alteração"
+            if value is not None:
+                _track_and_set(field, value)
+
+    return event, changes
 
 class EventService:
     """
@@ -131,7 +188,7 @@ class EventService:
         Returns:
             List of `Event` domain entities that match the filters.
         """
-        events = self.repo.list(filter=filters) # TODO corrigir repo.list para receber filters (skip=skip, limit=limit, city=city)
+        events = self.repo.list(filter=filters)
         
         logger.info(
             "Events listed successfully",
@@ -192,56 +249,41 @@ class EventService:
         updated = self.repo.update(event)
         return updated
 
-    def create_event(self, payload: EventCreate, *, changed_by: str | None = None) -> Event:
+    def create_event(self, event: Event, *, changed_by: int | None = None) -> Event:
         """
-        Create a new event from the given payload.
+        Create a new event from the given domain entity.
 
         Args:
             payload:
-                Validated EventCreate data.
+                Validated Event data.
             changed_by:
                 Optional user identifier who initiated the creation.
 
         Returns:
             The created and persisted Event entity.
         """
-        event = Event(
-            # Core content
-            title=payload.title,
-            description=payload.description,
-            status=payload.status,
-            # Scheduling
-            start_time=payload.start_time,
-            end_time=payload.end_time,
-            timezone=payload.timezone,
-            # Context / classification
-            city=payload.city,
-            age_restriction=payload.age_restriction,
-            # Engagement
-            participants=payload.participants,
-            # created_at/updated_at ficam a cargo do repo
-        )
         created = self.repo.add(event)
+        
         logger.info("Event created successfully", event_id=created.id, title=created.title) # "Evento criado com sucesso"
         
         # audit
-        self._safe_log_created(created, changed_by=changed_by)
+        self._safe_log_created(created, changed_by=None)  # TODO adicionar o changed_by_user_id
         
         return created
 
     def update_event(
         self,
         event_id: int,
-        payload: EventUpdate,
+        patch: EventPatch,
         *,
-        changed_by: str | None = None,
+        changed_by: int | None = None,
     ) -> Event:
         """
         Apply a partial update (patch) to an existing event.
 
         Args:
             event_id: Identifier of the event to update.
-            payload: Partial data with fields to modify.
+            patch: Domain-level `EventPatch` with fields to modify.
             changed_by: Optional user identifier who initiated the update.
 
         Returns:
@@ -255,60 +297,27 @@ class EventService:
             logger.warning("Attempt to update non-existent event", event_id=event_id) # "Tentativa de atualizar evento inexistente"
             raise KeyError("Event not found")
 
-        # build a simple changes diff
-        changes: dict[str, dict[str, object]] = {}
-
-        def _track_change(field: str, old, new) -> None:
-            if old != new:
-                changes[field] = {"old": old, "new": new}
-
-        if payload.title is not None:
-            _track_change("title", event.title, payload.title)
-            event.title = payload.title
-        if payload.description is not None:
-            _track_change("description", event.description, payload.description)
-            event.description = payload.description
-        if payload.status is not None:
-            _track_change("status", event.status, payload.status)
-            event.status = payload.status
-            
-        if payload.start_time is not None:
-            _track_change("start_time", event.start_time, payload.start_time)
-            event.start_time = payload.start_time
-        if payload.end_time is not None:
-            _track_change("end_time", event.end_time, payload.end_time)
-            event.end_time = payload.end_time
-        if payload.timezone is not None:
-            _track_change("timezone", event.timezone, payload.timezone)
-            event.timezone = payload.timezone
-            
-        if payload.city is not None:
-            _track_change("city", event.city, payload.city)
-            event.city = payload.city
-        if payload.age_restriction is not None:
-            _track_change("age_restriction", event.age_restriction, payload.age_restriction)
-            event.age_restriction = payload.age_restriction
-        if payload.expected_audience is not None:
-            _track_change("expected_audience", event.expected_audience, payload.expected_audience)
-            event.expected_audience = payload.expected_audience
-        if payload.environment is not None:
-            _track_change("environment", event.environment, payload.environment)
-            event.environment = payload.environment
-            
-        if payload.participants is not None:
-            _track_change("participants", event.participants, payload.participants)
-            event.participants = payload.participants
-
-        updated = self.repo.update(event)
-        logger.info("Event updated successfully", event_id=updated.id) # "Evento atualizado com sucesso"
+        # Aplica alterações e coleta diff
+        event, changes = _apply_event_changes(event, patch)
         
         # audit only if something really changed
         if changes:
-            self._safe_log_updated(updated, changed_by=changed_by, changes=changes)
+            updated = self.repo.update(event)
+            logger.info("Event updated successfully", event_id=updated.id) # "Evento atualizado com sucesso"
+        
+            # audit only if something really changed
+            self._safe_log_updated(updated, changed_by=None, changes=changes) # TODO adicionar o changed_by_user_id
             
-        return updated
+            return updated
+        else:
+            # Não houve mudança – nada a persistir
+            logger.debug(
+                "Event update had no effect (no fields changed)",
+                event_id=event.id,
+            )
+            return event
 
-    def delete_event(self, event_id: int, *, changed_by: str | None = None) -> None:
+    def delete_event(self, event_id: int, *, changed_by: int | None = None) -> None:
         """
         Remove an existing event.
 
@@ -325,7 +334,7 @@ class EventService:
             raise KeyError("Event not found")
         
         # capture snapshot before deletion
-        self._safe_log_deleted(event, changed_by=changed_by)
+        self._safe_log_deleted(event, changed_by=None) # TODO adicionar o changed_by_user_id
 
         self.repo.delete(event_id)
         logger.info("Event deleted successfully", event_id=event_id) # "Evento deletado com sucesso"
@@ -351,12 +360,12 @@ class EventService:
 
         future_events = [
             ev for ev in events
-            if ensure_aware(ev.event_date) >= now
+            if ensure_aware(ev.start_time) >= now
         ]
 
         most_soon = order_and_slice(
             future_events,
-            key_fn=lambda ev: ev.event_date,
+            key_fn=lambda ev: ev.start_time,
             limit=limit,
         )
 
@@ -385,7 +394,7 @@ class EventService:
 
         most_viewed = order_and_slice(
             events,
-            key_fn=lambda ev: (-ev.views, ev.event_date),
+            key_fn=lambda ev: (-ev.views, ev.start_time),
             limit=limit,
         )
 
@@ -396,19 +405,22 @@ class EventService:
         )
         return most_viewed
 
-    def create_events_batch(self, payloads: List[EventCreate]) -> List[Event]:
+    def create_events_batch(self, events: List[Event], *, changed_by: int | None = None,) -> List[Event]:
         """
         Create multiple events in a single batch operation.
 
         Args:
-            payloads: List of EventCreate payloads.
+            events: List of domain `Event` entities (usually created from
+                HTTP payloads at the controller layer).
+            changed_by: Optional user identifier.
 
         Returns:
             List of newly created Event entities.
         """
         created_events: List[Event] = []
-        for payload in payloads:
-            created = self.create_event(payload)
+        for event in events:
+            created = self.create_event(event)
+            self._safe_log_created(created, changed_by=None) # TODO adicionar o changed_by_user_id
             created_events.append(created)
 
         logger.info(
@@ -421,7 +433,7 @@ class EventService:
         self,
         new_events: List[Event],
         *,
-        changed_by: str | None = None,
+        changed_by: int | None = None,
     ) -> List[Event]:
         """
         Completely replace the event collection with a new list.
@@ -443,7 +455,7 @@ class EventService:
         existing = self.list_all_events()
         for ev in existing:
             # audit delete per event
-            self._safe_log_deleted(ev, changed_by=changed_by)
+            self._safe_log_deleted(ev, changed_by=None) # TODO adicionar o changed_by_user_id
             self.repo.delete(ev.id)  # type: ignore[arg-type]
 
 
@@ -456,7 +468,7 @@ class EventService:
             created = self.repo.add(ev)
             persisted.append(created)
             # audit created per event
-            self._safe_log_created(created, changed_by=changed_by)
+            self._safe_log_created(created, changed_by=None) # TODO adicionar o changed_by_user_id
 
         logger.info(
             "All events replaced", # "Todos os eventos foram substituídos",
@@ -469,7 +481,7 @@ class EventService:
         event_id: int,
         new_event: Event,
         *,
-        changed_by: str | None = None,
+        changed_by: int | None = None,
     ) -> Event:
         """
         Completely replace the data of a single event.
@@ -507,6 +519,6 @@ class EventService:
         )
         
         # log as UPDATED (or a custom action if you prefer)
-        self._safe_log_updated(replaced, changed_by=changed_by, changes=changes or None)
+        self._safe_log_updated(replaced, changed_by=None, changes=changes or None) # TODO adicionar o changed_by_user_id
         
         return replaced

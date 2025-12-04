@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 
-from app.models.enums import EventStatus, EventEnvironment
+from app.models.enums import EventStatus, EventEnvironment, AgeRestriction
 
 
 @dataclass(slots=True)
@@ -21,9 +21,9 @@ class EventFilterCriteria:
     limit: int = 20
 
     # Core content
-    title: list[str] | str | None = None
-    description: list[str] | str | None = None
-    status: list[EventStatus] | EventStatus | None = None
+    title: str | None = None
+    description: str | None = None
+    status: list[EventStatus] | None = None
 
     # Scheduling
     start_from: datetime | None = None
@@ -31,12 +31,12 @@ class EventFilterCriteria:
 
     # Context / classification
     city: str | None = None
-    age_restriction: list[str] | str | None = None
+    age_restriction: list[AgeRestriction] | None = None
     expected_audience: int | None = None
-    environment: list[EventEnvironment] | EventEnvironment | None = None
+    environment: list[EventEnvironment] | None = None
 
     # Engagement
-    participants: list[str] | str | None = None
+    participants: list[str] | None = None
     views_min: int | None = None
     views_max: int | None = None
 
@@ -48,6 +48,6 @@ class EventFilterCriteria:
     deleted_from: datetime | None = None
     deleted_to: datetime | None = None
 
-    created_by: list[str] | str | None = None
-    updated_by: list[str] | str | None = None
-    deleted_by: list[str] | str | None = None
+    created_by: list[str] | None = None
+    updated_by: list[str] | None = None
+    deleted_by: list[str] | None = None

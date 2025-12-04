@@ -5,13 +5,10 @@ from fastapi import APIRouter, Depends, Query, Body, UploadFile, File, Backgroun
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from typing import List, Annotated
-from datetime import datetime, timezone
 from structlog import get_logger
 from io import StringIO
-import inspect
 import csv
 import asyncio
-import json
 
 from app.core.rate_limit_config import limiter
 
@@ -21,9 +18,11 @@ from app.schemas.event.event_update import EventUpdate
 from app.schemas.event.event_view import EventView
 from app.schemas.event.event_filters import EventFilters
 from app.schemas.event.event_csv_row import EventCsvRow
-from app.models.event import Event
 from app.schemas.common.common import MessageResponse
+from app.models.event import Event
 from app.controllers.event_controller_helpers import (
+    from_event_create,
+    from_event_update,
     to_event_view,
     from_event_view,
     from_event_filters,
@@ -178,9 +177,14 @@ def post_create_event(
     Returns:
         An `EventView` instance representing the created event.
     """
+    # 1) HTTP -> domínio
+    event = from_event_create(payload)
+    
+    # 2) Log já com dados de domínio
     logger.info("Received request to create event", title=payload.title, city=payload.city, start_time=payload.start_time, end_time=payload.end_time,)
 
-    event = service.create_event(payload, changed_by="anonymous")
+    # 3) Chama serviço com entidade de domínio
+    event = service.create_event(event, changed_by=None)
 
     return to_event_view(event)
 
@@ -223,10 +227,12 @@ async def put_events(
 
     asyncio.create_task(notify_replace_started())
 
-    # Convert input schemas to domain entities
-    domain_events: List[Event] = [from_event_view(event) for event in events_new]
+    # HTTP -> domínio
+    domain_events: List[Event] = [
+        from_event_create(event_schema) for event_schema in events_new
+    ]
 
-    events = service.replace_all_events(domain_events, changed_by="anonymous")
+    events = service.replace_all_events(domain_events, changed_by=None)
 
     asyncio.create_task(notify_replace_done())
     asyncio.create_task(notify_user_count())
@@ -271,7 +277,7 @@ def put_event_by_id(
     domain_event = from_event_view(new_event)
 
     try:
-        event = service.replace_event_by_id(event_id, domain_event, changed_by="anonymous")
+        event = service.replace_event_by_id(event_id, domain_event, changed_by=None)
     except KeyError:
         raise HTTPException(status_code=404, detail="Event not found")
 
@@ -337,7 +343,7 @@ def delete_event(
     logger.info("Received request to delete event", event_id=event_id)
 
     try:
-        service.delete_event(event_id, changed_by="anonymous")
+        service.delete_event(event_id, changed_by=None)
     except KeyError:
         raise HTTPException(status_code=404, detail="Event not found")
 
@@ -381,9 +387,12 @@ def patch_event(
         HTTPException(404): If the event is not found.
     """
     logger.info("Received partial update request", event_id=event_id)
+    
+    # 1) HTTP -> domínio
+    patch = from_event_update(payload)
 
     try:
-        event = service.update_event(event_id, payload, changed_by="anonymous")
+        event = service.update_event(event_id, patch, changed_by=None)
     except KeyError:
         raise HTTPException(status_code=404, detail="Event not found")
 
@@ -556,7 +565,10 @@ async def post_events_batch(
     if not events:
         raise_http(logger.warning, 400, "Empty list provided")
 
-    created_events = service.create_events_batch(events, changed_by="anonymous")
+    # HTTP -> domínio
+    domain_events: list[Event] = [from_event_create(e) for e in events]
+    
+    created_events = service.create_events_batch(domain_events, changed_by=None)
 
     # Aqui poderia adicionar tasks de forecast em background se tiver
     # uma função do tipo `atualizar_forecast_em_background`.
@@ -651,7 +663,7 @@ async def upload_csv(
             
             payload = from_event_csv_row(csv_row)
 
-            event = service.create_event(payload, changed_by="anonymous")
+            event = service.create_event(payload, changed_by=None)
             # created_events.append(event) # TODO
             total += 1
             

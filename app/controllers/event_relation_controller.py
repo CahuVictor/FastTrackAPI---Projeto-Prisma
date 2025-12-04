@@ -166,14 +166,14 @@ def attach_local_to_event(
         raise_http(logger.warning, 404, "Local not found", local_id=local_id)
 
     event.local_id = local_id
-    event_service.update_event_entity(event, changed_by="anonymous")  # <-- crie esse método se ainda não existir
+    event_service.update_event_entity(event, changed_by=None)  # <-- crie esse método se ainda não existir
 	# 3) Delegate to the service layer
     #
     # Aqui você tem duas opções de implementação, dependendo do seu modelo:
     #
     # (a) Se ainda estiver usando `event.local_id`:
     #     event.local_id = local_id
-    #     event_service.update_event_entity(event, changed_by="anonymous")
+    #     event_service.update_event_entity(event, changed_by=None)
     #
     # (b) Se já estiver usando uma tabela de histórico (`EventVenueHistoryTable`):
     #     event_service.attach_local_with_history(
@@ -181,7 +181,7 @@ def attach_local_to_event(
     #         local_id=local_id,
     #         source=payload.source,
     #         comment=payload.comment,
-    #         changed_by="anonymous",
+    #         changed_by=None,
     #     )
     #
     # Para não quebrar nada agora, vamos deixar explícito que a
@@ -270,7 +270,7 @@ def attach_forecast_to_event(
     #     )
     #
     # event.forecast_id = forecast.id
-    # event_service.update_event_entity(event, changed_by="anonymous")
+    # event_service.update_event_entity(event, changed_by=None)
     #
 
     # 3) Por enquanto, apenas deixamos explícito que falta implementação
